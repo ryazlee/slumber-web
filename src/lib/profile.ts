@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { filterWearableSleepRows } from './sleepPostCustom';
 import type { WebProfile } from './types';
 
 export async function fetchProfileSummary(userId: string): Promise<WebProfile | null> {
@@ -13,7 +14,7 @@ export async function fetchProfileSummary(userId: string): Promise<WebProfile | 
   const [asleepRes, streakRes, prRes, friendsCountRes, postsCountRes, recordRes] = await Promise.all([
     supabase
       .from('sleep_posts')
-      .select('asleep_minutes')
+      .select('asleep_minutes, source_device, is_custom')
       .eq('user_id', userId)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -34,7 +35,8 @@ export async function fetchProfileSummary(userId: string): Promise<WebProfile | 
     supabase.rpc('get_challenge_record', { p_user_id: userId }),
   ]);
 
-  const asleepSamples = (asleepRes.data ?? []).map((p) => p.asleep_minutes as number);
+  const asleepSamples = filterWearableSleepRows(asleepRes.data ?? [])
+    .map((p) => p.asleep_minutes as number);
   const avgAsleepMinutes = asleepSamples.length > 0
     ? Math.round(asleepSamples.reduce((s, m) => s + m, 0) / asleepSamples.length)
     : 0;

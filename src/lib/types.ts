@@ -30,6 +30,7 @@ export type SleepPost = {
   isPR: boolean;
   createdAt: string;
   sourceDevice: string;
+  isCustom?: boolean;
 };
 
 export type WebProfile = {

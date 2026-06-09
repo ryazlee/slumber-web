@@ -27,6 +27,7 @@ type PostRow = {
   is_private: boolean | null;
   created_at: string;
   source_device: string | null;
+  is_custom?: boolean | null;
   profiles?: { username: string; avatar_url: string | null } | null;
 };
 
@@ -70,6 +71,7 @@ function mapPostRow(
     isPR: prPostIds.has(row.id),
     createdAt: row.created_at,
     sourceDevice: row.source_device ?? 'Unknown',
+    isCustom: row.is_custom === true,
   };
 }
 

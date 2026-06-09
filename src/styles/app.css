@@ -184,6 +184,49 @@
   color: #c9a0dc;
 }
 
+.post-badge-manual {
+  background: rgba(52, 199, 89, 0.12);
+  color: #86efac;
+}
+
+.manual-sleep-block {
+  background: #1a1a1e;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: grid;
+  gap: 4px;
+}
+
+.manual-sleep-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.manual-sleep-duration {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.manual-sleep-times {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.manual-sleep-footnote {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
 .post-title {
   font-size: 1.15rem;
   font-weight: 600;

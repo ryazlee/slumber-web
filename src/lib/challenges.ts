@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { filterWearableSleepRows } from './sleepPostCustom';
 import type {
   Challenge,
   ChallengeContributionPost,
@@ -134,7 +135,7 @@ export async function fetchChallengeContributions(challengeId: string): Promise<
 
   const { data, error } = await supabase
     .from('sleep_posts')
-    .select('id, user_id, sleep_date, asleep_minutes, title, bedtime, wake_time, created_at, is_private')
+    .select('id, user_id, sleep_date, asleep_minutes, title, bedtime, wake_time, created_at, is_private, source_device, is_custom')
     .in('user_id', participantIds)
     .is('deleted_at', null)
     .gte('sleep_date', startDate)
@@ -144,7 +145,7 @@ export async function fetchChallengeContributions(challengeId: string): Promise<
 
   if (error) throw error;
 
-  return (data ?? []).map((row): ChallengeContributionPost => {
+  return filterWearableSleepRows(data ?? []).map((row): ChallengeContributionPost => {
     const participant = participantMap.get(row.user_id);
     return {
       postId: row.id,
