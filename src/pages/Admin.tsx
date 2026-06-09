@@ -165,12 +165,14 @@ export default function Admin() {
 
   if (!sessionEmail) {
     return (
-      <LoginForm
-        eyebrow="Admin"
-        description={
-          'Requires a role with is_admin in role_definitions (e.g. developer, founder) on your profile.'
-        }
-      />
+      <div className="admin-page admin-page--centered">
+        <LoginForm
+          eyebrow="Admin"
+          description={
+            'Requires a role with is_admin in role_definitions (e.g. developer, founder) on your profile.'
+          }
+        />
+      </div>
     );
   }
 

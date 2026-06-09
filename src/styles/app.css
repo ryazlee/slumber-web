@@ -102,9 +102,53 @@
   min-height: 60vh;
 }
 
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.login-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(15, 15, 16, 0.92);
+  backdrop-filter: blur(10px);
+}
+
+.login-page-nav {
+  display: flex;
+  gap: 20px;
+  font-size: 15px;
+}
+
+.login-page-nav a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.login-page-nav a:hover {
+  color: var(--text);
+}
+
+.login-page-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px;
+}
+
+.login-card {
+  width: 100%;
+}
+
 .app-page-header h1 {
   font-size: 1.75rem;
-  margin-bottom: 8px;
 }
 
 .app-muted {

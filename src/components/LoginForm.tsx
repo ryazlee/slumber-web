@@ -60,57 +60,55 @@ export default function LoginForm({
   };
 
   return (
-    <div className="admin-page admin-page--centered">
-      <div className="admin-card admin-card-narrow">
-        <p className="eyebrow">{eyebrow}</p>
-        <h1>{title}</h1>
-        <p className="lead admin-lead">{description}</p>
+    <div className="admin-card admin-card-narrow login-card">
+      <p className="eyebrow">{eyebrow}</p>
+      <h1>{title}</h1>
+      <p className="lead admin-lead">{description}</p>
 
-        {authStep === 'email' ? (
-          <form className="admin-form" onSubmit={handleSendOtp}>
-            <label className="admin-label" htmlFor="login-email">Email</label>
-            <input
-              id="login-email"
-              className="admin-input"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(ev) => setEmail(ev.target.value)}
-              required
-            />
-            {authError && <p className="admin-error">{authError}</p>}
-            <button className="admin-button" type="submit" disabled={authLoading}>
-              {authLoading ? 'Sending…' : 'Send code'}
-            </button>
-          </form>
-        ) : (
-          <form className="admin-form" onSubmit={handleVerifyOtp}>
-            <p className="admin-muted">Code sent to {email}</p>
-            <label className="admin-label" htmlFor="login-otp">Verification code</label>
-            <input
-              id="login-otp"
-              className="admin-input"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              value={otp}
-              onChange={(ev) => setOtp(ev.target.value)}
-              required
-            />
-            {authError && <p className="admin-error">{authError}</p>}
-            <button className="admin-button" type="submit" disabled={authLoading}>
-              {authLoading ? 'Verifying…' : 'Sign in'}
-            </button>
-            <button
-              className="admin-button admin-button-ghost"
-              type="button"
-              onClick={() => { setAuthStep('email'); setOtp(''); setAuthError(null); }}
-            >
-              Use a different email
-            </button>
-          </form>
-        )}
-      </div>
+      {authStep === 'email' ? (
+        <form className="admin-form" onSubmit={handleSendOtp}>
+          <label className="admin-label" htmlFor="login-email">Email</label>
+          <input
+            id="login-email"
+            className="admin-input"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(ev) => setEmail(ev.target.value)}
+            required
+          />
+          {authError && <p className="admin-error">{authError}</p>}
+          <button className="admin-button" type="submit" disabled={authLoading}>
+            {authLoading ? 'Sending…' : 'Send code'}
+          </button>
+        </form>
+      ) : (
+        <form className="admin-form" onSubmit={handleVerifyOtp}>
+          <p className="admin-muted">Code sent to {email}</p>
+          <label className="admin-label" htmlFor="login-otp">Verification code</label>
+          <input
+            id="login-otp"
+            className="admin-input"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            value={otp}
+            onChange={(ev) => setOtp(ev.target.value)}
+            required
+          />
+          {authError && <p className="admin-error">{authError}</p>}
+          <button className="admin-button" type="submit" disabled={authLoading}>
+            {authLoading ? 'Verifying…' : 'Sign in'}
+          </button>
+          <button
+            className="admin-button admin-button-ghost"
+            type="button"
+            onClick={() => { setAuthStep('email'); setOtp(''); setAuthError(null); }}
+          >
+            Use a different email
+          </button>
+        </form>
+      )}
     </div>
   );
 }
