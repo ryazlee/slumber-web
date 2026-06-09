@@ -37,7 +37,7 @@ Built with React + Vite. Run `npm install && npm run dev` from this folder for l
 
 ## Admin page
 
-1. Apply migrations `043` then `044` on production Supabase (`043` = comment reports, `044` = `user_roles` + admin RPCs).
+1. Apply migrations `043`–`048` on production Supabase (`043` comment reports, `044` user_roles + moderation RPCs, `045` dashboard + tags, `046` assign roles to users, `047` `role_definitions` table, `048` role definition admin RPCs).
 2. Grant yourself admin roles via `user_roles` (order matters for app avatar ring only, not admin access):
 
 ```sql
@@ -57,7 +57,7 @@ WHERE username = 'your_username';
 4. For GitHub Pages, add repo secrets `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
 5. Visit `https://<your-user>.github.io/slumber-home/admin` and sign in with email OTP.
 
-Accounts need `developer` or `founder` in `user_roles` to load reports (`is_moderator` RPC, migration `044`).
+Accounts need a role with `is_admin = true` in `role_definitions` (seeded: `developer`, `founder`) assigned in `profiles.user_roles`. The **Roles** tab edits definitions; the **Users** tab assigns them.
 
 ## App config
 

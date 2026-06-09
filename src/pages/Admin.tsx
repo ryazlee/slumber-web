@@ -1,23 +1,30 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { supabase } from '../lib/supabase';
+import AdminOverview from '../components/admin/AdminOverview';
+import AdminReports from '../components/admin/AdminReports';
+import AdminRoles from '../components/admin/AdminRoles';
+import AdminTags from '../components/admin/AdminTags';
+import AdminUsers from '../components/admin/AdminUsers';
 import {
   checkIsModerator,
+  fetchAdminRoleDefinitions,
+  fetchAdminTags,
   fetchCommentReports,
+  fetchDashboardMetrics,
   fetchPostReports,
+  fetchRecentUsers,
+  type AdminRoleDefinitionRow,
+  type AdminTagRow,
   type CommentReportRow,
+  type DashboardMetrics,
   type PostReportRow,
+  type RecentUserRow,
 } from '../lib/admin';
+import { supabase } from '../lib/supabase';
 
 type AuthStep = 'email' | 'otp';
-type Tab = 'posts' | 'comments';
-
-function formatWhen(iso: string) {
-  return new Date(iso).toLocaleString(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
-}
+type MainTab = 'overview' | 'reports' | 'users' | 'roles' | 'tags';
+type ReportTab = 'posts' | 'comments';
 
 export default function Admin() {
   const [booting, setBooting] = useState(true);
@@ -30,11 +37,26 @@ export default function Admin() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
 
-  const [tab, setTab] = useState<Tab>('posts');
+  const [mainTab, setMainTab] = useState<MainTab>('overview');
+  const [reportTab, setReportTab] = useState<ReportTab>('posts');
+  const [refreshing, setRefreshing] = useState(false);
+
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [recentUsers, setRecentUsers] = useState<RecentUserRow[]>([]);
+  const [overviewError, setOverviewError] = useState<string | null>(null);
+
   const [postReports, setPostReports] = useState<PostReportRow[]>([]);
   const [commentReports, setCommentReports] = useState<CommentReportRow[]>([]);
-  const [reportsLoading, setReportsLoading] = useState(false);
   const [reportsError, setReportsError] = useState<string | null>(null);
+
+  const [tags, setTags] = useState<AdminTagRow[]>([]);
+  const [tagsError, setTagsError] = useState<string | null>(null);
+
+  const [roleDefinitions, setRoleDefinitions] = useState<AdminRoleDefinitionRow[]>([]);
+  const [rolesError, setRolesError] = useState<string | null>(null);
+
+  const [usersError, setUsersError] = useState<string | null>(null);
+  const [usersRefreshToken, setUsersRefreshToken] = useState(0);
 
   const loadSession = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -56,8 +78,21 @@ export default function Admin() {
     return () => subscription.unsubscribe();
   }, [loadSession]);
 
+  const loadOverview = useCallback(async () => {
+    setOverviewError(null);
+    try {
+      const [m, u] = await Promise.all([
+        fetchDashboardMetrics(),
+        fetchRecentUsers(25),
+      ]);
+      setMetrics(m);
+      setRecentUsers(u);
+    } catch (e: unknown) {
+      setOverviewError(e instanceof Error ? e.message : 'Could not load metrics.');
+    }
+  }, []);
+
   const loadReports = useCallback(async () => {
-    setReportsLoading(true);
     setReportsError(null);
     try {
       const [posts, comments] = await Promise.all([
@@ -67,18 +102,56 @@ export default function Admin() {
       setPostReports(posts);
       setCommentReports(comments);
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Could not load reports.';
-      setReportsError(message);
-    } finally {
-      setReportsLoading(false);
+      setReportsError(e instanceof Error ? e.message : 'Could not load reports.');
     }
   }, []);
 
-  useEffect(() => {
-    if (sessionEmail && isModerator) {
-      loadReports();
+  const loadTags = useCallback(async () => {
+    setTagsError(null);
+    try {
+      setTags(await fetchAdminTags());
+    } catch (e: unknown) {
+      setTagsError(e instanceof Error ? e.message : 'Could not load tags.');
     }
-  }, [sessionEmail, isModerator, loadReports]);
+  }, []);
+
+  const loadRoles = useCallback(async () => {
+    setRolesError(null);
+    try {
+      setRoleDefinitions(await fetchAdminRoleDefinitions());
+    } catch (e: unknown) {
+      setRolesError(e instanceof Error ? e.message : 'Could not load roles.');
+    }
+  }, []);
+
+  const refreshCurrentTab = useCallback(async () => {
+    if (!isModerator) return;
+    setRefreshing(true);
+    try {
+      if (mainTab === 'overview') await loadOverview();
+      else if (mainTab === 'reports') await loadReports();
+      else if (mainTab === 'tags') await loadTags();
+      else if (mainTab === 'roles') await loadRoles();
+      else if (mainTab === 'users') setUsersRefreshToken((n) => n + 1);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [isModerator, mainTab, loadOverview, loadReports, loadTags, loadRoles]);
+
+  useEffect(() => {
+    if (!sessionEmail || !isModerator) return;
+    fetchDashboardMetrics()
+      .then(setMetrics)
+      .catch(() => { /* badge counts optional */ });
+  }, [sessionEmail, isModerator]);
+
+  useEffect(() => {
+    if (!sessionEmail || !isModerator) return;
+    if (mainTab === 'overview') loadOverview();
+    else if (mainTab === 'reports') loadReports();
+    else if (mainTab === 'roles') loadRoles();
+    else if (mainTab === 'tags') loadTags();
+  }, [sessionEmail, isModerator, mainTab, loadOverview, loadReports, loadRoles, loadTags]);
 
   const handleSendOtp = async (e: FormEvent) => {
     e.preventDefault();
@@ -121,8 +194,12 @@ export default function Admin() {
     await supabase.auth.signOut();
     setAuthStep('email');
     setOtp('');
+    setMetrics(null);
+    setRecentUsers([]);
     setPostReports([]);
     setCommentReports([]);
+    setTags([]);
+    setRoleDefinitions([]);
     await loadSession();
   };
 
@@ -136,19 +213,17 @@ export default function Admin() {
 
   if (!sessionEmail) {
     return (
-      <div className="admin-page">
+      <div className="admin-page admin-page--centered">
         <div className="admin-card admin-card-narrow">
-          <p className="eyebrow">Moderation</p>
-          <h1>Admin sign in</h1>
+          <p className="eyebrow">Admin</p>
+          <h1>Sign in</h1>
           <p className="lead admin-lead">
-            Sign in with your Slumber account. Requires <code>developer</code> or <code>founder</code> in your <code>user_roles</code>.
+            Requires a role with <code>is_admin</code> in <code>role_definitions</code> (e.g. <code>developer</code>, <code>founder</code>) on your profile.
           </p>
 
           {authStep === 'email' ? (
             <form className="admin-form" onSubmit={handleSendOtp}>
-              <label className="admin-label" htmlFor="admin-email">
-                Email
-              </label>
+              <label className="admin-label" htmlFor="admin-email">Email</label>
               <input
                 id="admin-email"
                 className="admin-input"
@@ -166,9 +241,7 @@ export default function Admin() {
           ) : (
             <form className="admin-form" onSubmit={handleVerifyOtp}>
               <p className="admin-muted">Code sent to {email}</p>
-              <label className="admin-label" htmlFor="admin-otp">
-                Verification code
-              </label>
+              <label className="admin-label" htmlFor="admin-otp">Verification code</label>
               <input
                 id="admin-otp"
                 className="admin-input"
@@ -199,39 +272,42 @@ export default function Admin() {
 
   if (!isModerator) {
     return (
-      <div className="admin-page">
+      <div className="admin-page admin-page--centered">
         <div className="admin-card admin-card-narrow">
           <h1>Access denied</h1>
           <p className="lead admin-lead">
-            Signed in as {sessionEmail}, but this account cannot access moderation.
-            Add <code>developer</code> or <code>founder</code> to <code>profiles.user_roles</code> in Supabase.
+            Signed in as {sessionEmail}. Assign an admin role (e.g. <code>developer</code>) in <code>profiles.user_roles</code>.
           </p>
-          <button className="admin-button" type="button" onClick={handleSignOut}>
-            Sign out
-          </button>
+          <button className="admin-button" type="button" onClick={handleSignOut}>Sign out</button>
         </div>
       </div>
     );
   }
 
-  const rows = tab === 'posts' ? postReports : commentReports;
+  const pageTitle = {
+    overview: 'Overview',
+    reports: 'Reports',
+    users: 'Users',
+    roles: 'Roles',
+    tags: 'Tags',
+  }[mainTab];
 
   return (
     <div className="admin-page">
       <div className="admin-toolbar">
         <div>
-          <p className="eyebrow">Moderation</p>
-          <h1 className="admin-title">Reports</h1>
+          <p className="eyebrow">Slumber Admin</p>
+          <h1 className="admin-title">{pageTitle}</h1>
           <p className="admin-muted">Signed in as {sessionEmail}</p>
         </div>
         <div className="admin-toolbar-actions">
           <button
             className="admin-button admin-button-ghost"
             type="button"
-            onClick={loadReports}
-            disabled={reportsLoading}
+            onClick={refreshCurrentTab}
+            disabled={refreshing}
           >
-            {reportsLoading ? 'Refreshing…' : 'Refresh'}
+            {refreshing ? 'Refreshing…' : 'Refresh'}
           </button>
           <button className="admin-button admin-button-ghost" type="button" onClick={handleSignOut}>
             Sign out
@@ -239,87 +315,103 @@ export default function Admin() {
         </div>
       </div>
 
-      <div className="admin-tabs" role="tablist" aria-label="Report type">
+      <div className="admin-tabs" role="tablist" aria-label="Admin sections">
         <button
           type="button"
           role="tab"
-          aria-selected={tab === 'posts'}
-          className={tab === 'posts' ? 'admin-tab active' : 'admin-tab'}
-          onClick={() => setTab('posts')}
+          aria-selected={mainTab === 'overview'}
+          className={mainTab === 'overview' ? 'admin-tab active' : 'admin-tab'}
+          onClick={() => setMainTab('overview')}
         >
-          Post reports ({postReports.length})
+          Overview
         </button>
         <button
           type="button"
           role="tab"
-          aria-selected={tab === 'comments'}
-          className={tab === 'comments' ? 'admin-tab active' : 'admin-tab'}
-          onClick={() => setTab('comments')}
+          aria-selected={mainTab === 'reports'}
+          className={mainTab === 'reports' ? 'admin-tab active' : 'admin-tab'}
+          onClick={() => setMainTab('reports')}
         >
-          Comment reports ({commentReports.length})
+          Reports
+          {(metrics?.pending_post_reports ?? 0) + (metrics?.pending_comment_reports ?? 0) > 0
+            ? ` (${(metrics?.pending_post_reports ?? 0) + (metrics?.pending_comment_reports ?? 0)})`
+            : ''}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mainTab === 'users'}
+          className={mainTab === 'users' ? 'admin-tab active' : 'admin-tab'}
+          onClick={() => setMainTab('users')}
+        >
+          Users
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mainTab === 'roles'}
+          className={mainTab === 'roles' ? 'admin-tab active' : 'admin-tab'}
+          onClick={() => setMainTab('roles')}
+        >
+          Roles
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mainTab === 'tags'}
+          className={mainTab === 'tags' ? 'admin-tab active' : 'admin-tab'}
+          onClick={() => setMainTab('tags')}
+        >
+          Tags
         </button>
       </div>
 
-      {reportsError && <p className="admin-error admin-error-banner">{reportsError}</p>}
+      {mainTab === 'overview' && (
+        <AdminOverview
+          metrics={metrics}
+          users={recentUsers}
+          loading={refreshing && !metrics}
+          error={overviewError}
+        />
+      )}
 
-      {rows.length === 0 && !reportsLoading ? (
-        <p className="admin-muted admin-empty">No {tab} reports yet.</p>
-      ) : (
-        <div className="admin-table-wrap">
-          <table className="admin-table">
-            <thead>
-              {tab === 'posts' ? (
-                <tr>
-                  <th>When</th>
-                  <th>Reason</th>
-                  <th>Reporter</th>
-                  <th>Author</th>
-                  <th>Post</th>
-                  <th>Post ID</th>
-                </tr>
-              ) : (
-                <tr>
-                  <th>When</th>
-                  <th>Reason</th>
-                  <th>Reporter</th>
-                  <th>Author</th>
-                  <th>Comment</th>
-                  <th>IDs</th>
-                </tr>
-              )}
-            </thead>
-            <tbody>
-              {tab === 'posts'
-                ? postReports.map((row) => (
-                  <tr key={row.id}>
-                    <td>{formatWhen(row.created_at)}</td>
-                    <td>{row.reason}</td>
-                    <td>@{row.reporter}</td>
-                    <td>@{row.author}</td>
-                    <td>{row.title || '—'}</td>
-                    <td>
-                      <code className="admin-code">{row.post_id}</code>
-                    </td>
-                  </tr>
-                ))
-                : commentReports.map((row) => (
-                  <tr key={row.id}>
-                    <td>{formatWhen(row.created_at)}</td>
-                    <td>{row.reason}</td>
-                    <td>@{row.reporter}</td>
-                    <td>@{row.author}</td>
-                    <td className="admin-comment-cell">{row.comment_text}</td>
-                    <td>
-                      <div className="admin-id-stack">
-                        <code className="admin-code" title="comment id">{row.comment_id}</code>
-                        <code className="admin-code" title="post id">{row.post_id}</code>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
+      {mainTab === 'reports' && (
+        <AdminReports
+          tab={reportTab}
+          onTabChange={setReportTab}
+          postReports={postReports}
+          commentReports={commentReports}
+          loading={refreshing && postReports.length === 0 && commentReports.length === 0}
+          error={reportsError}
+        />
+      )}
+
+      {mainTab === 'users' && (
+        <AdminUsers
+          loading={refreshing}
+          error={usersError}
+          refreshToken={usersRefreshToken}
+          onError={setUsersError}
+          onReload={loadOverview}
+        />
+      )}
+
+      {mainTab === 'roles' && (
+        <AdminRoles
+          roles={roleDefinitions}
+          loading={refreshing && roleDefinitions.length === 0}
+          error={rolesError}
+          onChanged={loadRoles}
+        />
+      )}
+
+      {mainTab === 'tags' && (
+        <AdminTags
+          tags={tags}
+          loading={refreshing && tags.length === 0}
+          error={tagsError}
+          onChanged={loadTags}
+        />
       )}
     </div>
   );
