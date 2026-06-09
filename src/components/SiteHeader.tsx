@@ -3,54 +3,70 @@ import { useAuth } from '../context/AuthContext';
 
 const base = import.meta.env.BASE_URL;
 
-function navClass({ isActive }: { isActive: boolean }) {
-  return isActive ? 'active' : undefined;
+function metaClass({ isActive }: { isActive: boolean }) {
+  return isActive ? 'site-header-link active' : 'site-header-link';
+}
+
+function appTabClass(active: boolean) {
+  return active ? 'site-app-tab active' : 'site-app-tab';
 }
 
 export default function SiteHeader() {
   const { session, user, signOut } = useAuth();
-  const location = useLocation();
   const isLoggedIn = Boolean(session);
-  const profileActive = location.pathname === '/profile' || location.pathname.startsWith('/profile/');
+  const location = useLocation();
   const profilePath = user ? `/profile/${user.id}` : '/profile';
+  const profileActive = location.pathname === '/profile' || location.pathname.startsWith('/profile/');
+
+  const brandTarget = isLoggedIn ? '/feed' : '/home';
 
   return (
     <header className="site-header">
-      <div className="site-header-inner">
-        <NavLink to="/home" className="brand">
-          <img src={`${base}moon.png`} alt="" width={28} height={28} />
-          Slumber
-        </NavLink>
+      <div className={`site-header-bar content-wrap${isLoggedIn ? ' site-header-bar--app' : ''}`}>
+        <div className="site-header-start">
+          <NavLink to={brandTarget} className="brand">
+            <img src={`${base}moon.png`} alt="" width={28} height={28} />
+            <span>Slumber</span>
+          </NavLink>
 
-        <nav className="site-nav" aria-label="Main">
-          <NavLink to="/home" className={navClass}>Home</NavLink>
-          {isLoggedIn ? (
-            <>
-              <NavLink to="/feed" className={navClass}>Feed</NavLink>
-              <NavLink to={profilePath} className={profileActive ? 'active' : undefined}>Profile</NavLink>
-              <NavLink to="/challenges" className={navClass}>Challenges</NavLink>
-            </>
-          ) : (
-            <NavLink to="/" end className={navClass}>Sign in</NavLink>
+          {isLoggedIn && (
+            <nav className="site-app-nav" aria-label="App">
+              <NavLink to="/feed" className={({ isActive }) => appTabClass(isActive)}>
+                Feed
+              </NavLink>
+              <NavLink to={profilePath} className={appTabClass(profileActive)}>
+                Profile
+              </NavLink>
+              <NavLink to="/challenges" className={({ isActive }) => appTabClass(isActive)}>
+                Challenges
+              </NavLink>
+            </nav>
           )}
-          <NavLink to="/privacy" className={navClass}>Privacy</NavLink>
-          <NavLink to="/terms" className={navClass}>Terms</NavLink>
-        </nav>
+        </div>
 
-        {isLoggedIn && (
+        <div className="site-header-end">
+          <nav className="site-header-links" aria-label="Site">
+            <NavLink to="/home" className={metaClass}>Home</NavLink>
+            <NavLink to="/privacy" className={metaClass}>Privacy</NavLink>
+            <NavLink to="/terms" className={metaClass}>Terms</NavLink>
+          </nav>
+
           <div className="site-header-actions">
-            <span className="site-user-email" title={user?.email ?? undefined}>
-              {user?.email}
-            </span>
-            <button
-              className="admin-button admin-button-ghost site-sign-out"
-              type="button"
-              onClick={() => signOut()}
-            >
-              Sign out
-            </button>
+            {isLoggedIn ? (
+              <button
+                className="site-header-btn site-header-btn--ghost"
+                type="button"
+                onClick={() => signOut()}
+              >
+                Log out
+              </button>
+            ) : (
+              <NavLink to="/" end className="site-header-btn site-header-btn--primary">
+                Log in
+              </NavLink>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </header>
   );

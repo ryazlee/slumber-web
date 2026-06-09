@@ -11,6 +11,7 @@ type LegalPageProps = {
 
 export default function LegalPage({ title, updated, sections }: LegalPageProps) {
   return (
+    <div className="content-wrap">
     <article className="page legal-doc">
       <h1>{title}</h1>
       <p className="legal-updated">Last updated {updated}</p>
@@ -30,5 +31,6 @@ export default function LegalPage({ title, updated, sections }: LegalPageProps) 
         </section>
       ))}
     </article>
+    </div>
   );
 }

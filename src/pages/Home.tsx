@@ -1,6 +1,6 @@
 export default function Home() {
   return (
-    <div className="page-wide">
+    <div className="page-wide content-wrap">
       <div className="page" style={{ paddingLeft: 0, paddingRight: 0 }}>
         <p className="eyebrow">iOS · Sleep tracking</p>
         <h1>Log your nights. Share with friends.</h1>

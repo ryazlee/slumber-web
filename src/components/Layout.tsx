@@ -8,7 +8,7 @@ export default function Layout() {
       </main>
 
       <footer className="site-footer">
-        <div className="site-footer-inner">
+        <div className="site-footer-inner content-wrap">
           <span>© {new Date().getFullYear()} Slumber</span>
           <NavLink to="/privacy">Privacy Policy</NavLink>
           <NavLink to="/terms">Terms of Service</NavLink>

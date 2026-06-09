@@ -1,3 +1,4 @@
+import { useAuth } from '../context/AuthContext';
 import type { SleepPost } from '../lib/types';
 import { formatMins, formatSleepDate } from '../lib/format';
 import PostSocial from './PostSocial';
@@ -29,7 +30,10 @@ function stageFlex(post: SleepPost): Array<{ type: string; flex: number }> {
 }
 
 export default function SleepPostCard({ post, showAuthor = true }: SleepPostCardProps) {
+  const { user } = useAuth();
   const segments = stageFlex(post);
+  const isOwnPost = user?.id === post.userId;
+  const canReadDream = Boolean(post.dreamLog) && (!post.blurDream || isOwnPost);
 
   return (
     <article className="post-card">
@@ -86,6 +90,27 @@ export default function SleepPostCard({ post, showAuthor = true }: SleepPostCard
       )}
 
       {post.notes && <p className="post-notes">{post.notes}</p>}
+
+      {post.dreamLog && (
+        <div className="post-dream">
+          {canReadDream ? (
+            <>
+              {post.blurDream && isOwnPost && (
+                <span className="post-dream-badge">Private dream</span>
+              )}
+              <p className="post-dream-text">
+                <span className="post-dream-icon" aria-hidden="true">💭</span>
+                {post.dreamLog}
+              </p>
+            </>
+          ) : (
+            <div className="post-dream-private">
+              <span className="post-dream-badge">Private dream</span>
+              <p className="post-dream-hint">Dream logged (only they can read it)</p>
+            </div>
+          )}
+        </div>
+      )}
 
       <PostSocial
         postId={post.id}

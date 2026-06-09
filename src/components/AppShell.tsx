@@ -7,9 +7,11 @@ export default function AppShell() {
         <Outlet />
       </main>
 
-      <footer className="app-footer">
+      <footer className="app-footer content-wrap">
         <span>Read-only web view</span>
-        <NavLink to="/home">About Slumber</NavLink>
+        <NavLink to="/home">About</NavLink>
+        <NavLink to="/privacy">Privacy</NavLink>
+        <NavLink to="/terms">Terms</NavLink>
       </footer>
     </div>
   );

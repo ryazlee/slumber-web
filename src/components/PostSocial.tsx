@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { fetchComments, fetchKudosUsers } from '../lib/posts';
 import { timeAgo } from '../lib/format';
 import type { Comment, KudosUser } from '../lib/types';
+import CommentRow from './CommentRow';
+import Popup from './Popup';
 import UserLink from './UserLink';
 
 type PostSocialProps = {
@@ -11,139 +13,153 @@ type PostSocialProps = {
   sourceDevice: string;
 };
 
-function socialLabel(kudosCount: number, commentCount: number): string {
-  const parts: string[] = [];
-  if (kudosCount > 0) {
-    parts.push(`${kudosCount} kudo${kudosCount === 1 ? '' : 's'}`);
-  }
-  if (commentCount > 0) {
-    parts.push(`${commentCount} comment${commentCount === 1 ? '' : 's'}`);
-  }
-  return parts.join(' · ');
-}
-
 export default function PostSocial({
   postId,
   kudosCount,
   commentCount,
   sourceDevice,
 }: PostSocialProps) {
-  const [expanded, setExpanded] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [kudosOpen, setKudosOpen] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [kudosLoading, setKudosLoading] = useState(false);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [kudosError, setKudosError] = useState<string | null>(null);
+  const [commentsError, setCommentsError] = useState<string | null>(null);
   const [kudos, setKudos] = useState<KudosUser[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
-  const [loaded, setLoaded] = useState(false);
-
-  const hasSocial = kudosCount > 0 || commentCount > 0;
-  const label = socialLabel(kudosCount, commentCount);
+  const [kudosLoaded, setKudosLoaded] = useState(false);
+  const [commentsLoaded, setCommentsLoaded] = useState(false);
 
   useEffect(() => {
-    if (!expanded || loaded) return;
+    setKudosOpen(false);
+    setCommentsOpen(false);
+    setKudos([]);
+    setComments([]);
+    setKudosLoaded(false);
+    setCommentsLoaded(false);
+    setKudosError(null);
+    setCommentsError(null);
+  }, [postId]);
+
+  useEffect(() => {
+    if (!kudosOpen || kudosLoaded || kudosCount === 0) return;
     let cancelled = false;
-    setLoading(true);
-    setError(null);
-    Promise.all([
-      kudosCount > 0 ? fetchKudosUsers(postId) : Promise.resolve([]),
-      commentCount > 0 ? fetchComments(postId) : Promise.resolve([]),
-    ])
-      .then(([kudosRows, commentRows]) => {
-        if (cancelled) return;
-        setKudos(kudosRows);
-        setComments(commentRows);
-        setLoaded(true);
+    setKudosLoading(true);
+    setKudosError(null);
+    fetchKudosUsers(postId)
+      .then((rows) => {
+        if (!cancelled) {
+          setKudos(rows);
+          setKudosLoaded(true);
+        }
       })
       .catch((e: unknown) => {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : 'Could not load activity.');
+          setKudosError(e instanceof Error ? e.message : 'Could not load kudos.');
         }
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setKudosLoading(false);
       });
     return () => { cancelled = true; };
-  }, [expanded, loaded, postId, kudosCount, commentCount]);
+  }, [kudosOpen, kudosLoaded, postId, kudosCount]);
 
-  const handleToggle = () => {
-    if (!hasSocial) return;
-    setExpanded((v) => !v);
-  };
+  useEffect(() => {
+    if (!commentsOpen || commentsLoaded || commentCount === 0) return;
+    let cancelled = false;
+    setCommentsLoading(true);
+    setCommentsError(null);
+    fetchComments(postId)
+      .then((rows) => {
+        if (!cancelled) {
+          setComments(rows);
+          setCommentsLoaded(true);
+        }
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) {
+          setCommentsError(e instanceof Error ? e.message : 'Could not load comments.');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setCommentsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [commentsOpen, commentsLoaded, postId, commentCount]);
+
+  const toggleComments = () => setCommentsOpen((v) => !v);
 
   return (
-    <div className={`post-social${expanded ? ' post-social--open' : ''}`}>
+    <div className={`post-social${commentsOpen ? ' post-social--comments-open' : ''}`}>
       <footer className="post-card-footer">
-        {hasSocial ? (
-          <button
-            type="button"
-            className="post-social-toggle"
-            onClick={handleToggle}
-            aria-expanded={expanded}
-          >
-            {label}
-          </button>
-        ) : (
-          <span className="post-social-empty" />
-        )}
+        <div className="post-social-actions">
+          {kudosCount > 0 && (
+            <button
+              type="button"
+              className="post-social-btn"
+              onClick={() => setKudosOpen(true)}
+            >
+              {kudosCount} kudo{kudosCount === 1 ? '' : 's'}
+            </button>
+          )}
+          {commentCount > 0 && (
+            <button
+              type="button"
+              className={`post-social-btn${commentsOpen ? ' post-social-btn--active' : ''}`}
+              onClick={toggleComments}
+              aria-expanded={commentsOpen}
+            >
+              {commentCount} comment{commentCount === 1 ? '' : 's'}
+            </button>
+          )}
+          {kudosCount === 0 && commentCount === 0 && (
+            <span className="post-social-empty" />
+          )}
+        </div>
         <span className="post-source">{sourceDevice}</span>
       </footer>
 
-      {expanded && (
-        <div className="post-social-body">
-          {loading && <p className="app-muted">Loading…</p>}
-          {error && <p className="admin-error">{error}</p>}
-
-          {loaded && !error && (
-            <>
-              {kudos.length > 0 && (
-                <section className="post-social-section">
-                  <h4 className="post-social-heading">Kudos</h4>
-                  <ul className="post-kudos-list">
-                    {kudos.map((user) => (
-                      <li key={`${user.id}-${user.createdAt}`} className="post-kudos-item">
-                        <UserLink
-                          userId={user.id}
-                          username={user.username}
-                          avatarUrl={user.avatarUrl}
-                          showAvatar
-                        />
-                        <span className="post-kudos-time">{timeAgo(user.createdAt)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              )}
-
-              {comments.length > 0 && (
-                <section className="post-social-section">
-                  <h4 className="post-social-heading">Comments</h4>
-                  <ul className="post-comment-list">
-                    {comments.map((comment) => (
-                      <li key={comment.id} className="post-comment-item">
-                        <UserLink
-                          userId={comment.userId}
-                          username={comment.username}
-                          avatarUrl={comment.avatarUrl}
-                          showAvatar
-                        />
-                        <div className="post-comment-content">
-                          <div className="post-comment-meta">
-                            <span className="post-comment-time">{timeAgo(comment.createdAt)}</span>
-                          </div>
-                          <p className="post-comment-text">{comment.text}</p>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              )}
-
-              {kudos.length === 0 && comments.length === 0 && (
-                <p className="app-muted">No activity to show.</p>
-              )}
-            </>
+      {commentsOpen && (
+        <section className="post-comments" aria-label="Comments">
+          {commentsLoading && <p className="post-comments-status">Loading comments…</p>}
+          {commentsError && <p className="admin-error">{commentsError}</p>}
+          {commentsLoaded && !commentsError && comments.length === 0 && (
+            <p className="post-comments-status">No comments yet.</p>
           )}
-        </div>
+          {commentsLoaded && comments.length > 0 && (
+            <ul className="comment-thread">
+              {comments.map((comment) => (
+                <CommentRow key={comment.id} comment={comment} />
+              ))}
+            </ul>
+          )}
+        </section>
       )}
+
+      <Popup open={kudosOpen} onClose={() => setKudosOpen(false)} title="Kudos">
+        {kudosLoading && <p className="popup-status">Loading…</p>}
+        {kudosError && <p className="admin-error">{kudosError}</p>}
+        {kudosLoaded && !kudosError && kudos.length === 0 && (
+          <p className="popup-status">No kudos yet.</p>
+        )}
+        {kudosLoaded && kudos.length > 0 && (
+          <ul className="kudos-list">
+            {kudos.map((user) => (
+              <li key={`${user.id}-${user.createdAt}`} className="kudos-row">
+                <UserLink
+                  userId={user.id}
+                  username={user.username}
+                  avatarUrl={user.avatarUrl}
+                  showAvatar
+                />
+                <span className="kudos-row-meta">
+                  gave kudos {timeAgo(user.createdAt)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Popup>
     </div>
   );
 }
