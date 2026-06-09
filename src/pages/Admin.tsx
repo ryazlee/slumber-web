@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { FormEvent } from 'react';
 import AdminOverview from '../components/admin/AdminOverview';
+import LoginForm from '../components/LoginForm';
+import { useAuth } from '../context/AuthContext';
 import AdminReports from '../components/admin/AdminReports';
 import AdminRoles from '../components/admin/AdminRoles';
 import AdminTags from '../components/admin/AdminTags';
@@ -20,22 +21,14 @@ import {
   type PostReportRow,
   type RecentUserRow,
 } from '../lib/admin';
-import { supabase } from '../lib/supabase';
-
-type AuthStep = 'email' | 'otp';
 type MainTab = 'overview' | 'reports' | 'users' | 'roles' | 'tags';
 type ReportTab = 'posts' | 'comments';
 
 export default function Admin() {
-  const [booting, setBooting] = useState(true);
-  const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+  const { user, loading: authLoading, signOut } = useAuth();
+  const sessionEmail = user?.email ?? null;
   const [isModerator, setIsModerator] = useState(false);
-
-  const [authStep, setAuthStep] = useState<AuthStep>('email');
-  const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [authLoading, setAuthLoading] = useState(false);
+  const [moderatorChecked, setModeratorChecked] = useState(false);
 
   const [mainTab, setMainTab] = useState<MainTab>('overview');
   const [reportTab, setReportTab] = useState<ReportTab>('posts');
@@ -58,25 +51,23 @@ export default function Admin() {
   const [usersError, setUsersError] = useState<string | null>(null);
   const [usersRefreshToken, setUsersRefreshToken] = useState(0);
 
-  const loadSession = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const nextEmail = session?.user.email ?? null;
-    setSessionEmail(nextEmail);
-    if (nextEmail) {
-      setIsModerator(await checkIsModerator());
-    } else {
-      setIsModerator(false);
-    }
-    setBooting(false);
-  }, []);
-
   useEffect(() => {
-    loadSession();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      loadSession();
+    if (authLoading) return;
+    if (!sessionEmail) {
+      setIsModerator(false);
+      setModeratorChecked(true);
+      return;
+    }
+    setModeratorChecked(false);
+    let cancelled = false;
+    checkIsModerator().then((ok) => {
+      if (!cancelled) {
+        setIsModerator(ok);
+        setModeratorChecked(true);
+      }
     });
-    return () => subscription.unsubscribe();
-  }, [loadSession]);
+    return () => { cancelled = true; };
+  }, [sessionEmail, authLoading]);
 
   const loadOverview = useCallback(async () => {
     setOverviewError(null);
@@ -153,57 +144,18 @@ export default function Admin() {
     else if (mainTab === 'tags') loadTags();
   }, [sessionEmail, isModerator, mainTab, loadOverview, loadReports, loadRoles, loadTags]);
 
-  const handleSendOtp = async (e: FormEvent) => {
-    e.preventDefault();
-    setAuthError(null);
-    setAuthLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: email.trim(),
-        options: { shouldCreateUser: false },
-      });
-      if (error) throw error;
-      setAuthStep('otp');
-    } catch (err: unknown) {
-      setAuthError(err instanceof Error ? err.message : 'Could not send code.');
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async (e: FormEvent) => {
-    e.preventDefault();
-    setAuthError(null);
-    setAuthLoading(true);
-    try {
-      const { error } = await supabase.auth.verifyOtp({
-        email: email.trim(),
-        token: otp.trim(),
-        type: 'email',
-      });
-      if (error) throw error;
-      await loadSession();
-    } catch (err: unknown) {
-      setAuthError(err instanceof Error ? err.message : 'Invalid code.');
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    setAuthStep('email');
-    setOtp('');
+    await signOut();
+    setModeratorChecked(false);
     setMetrics(null);
     setRecentUsers([]);
     setPostReports([]);
     setCommentReports([]);
     setTags([]);
     setRoleDefinitions([]);
-    await loadSession();
   };
 
-  if (booting) {
+  if (authLoading || (sessionEmail && !moderatorChecked)) {
     return (
       <div className="admin-page">
         <p className="admin-muted">Loading…</p>
@@ -213,60 +165,12 @@ export default function Admin() {
 
   if (!sessionEmail) {
     return (
-      <div className="admin-page admin-page--centered">
-        <div className="admin-card admin-card-narrow">
-          <p className="eyebrow">Admin</p>
-          <h1>Sign in</h1>
-          <p className="lead admin-lead">
-            Requires a role with <code>is_admin</code> in <code>role_definitions</code> (e.g. <code>developer</code>, <code>founder</code>) on your profile.
-          </p>
-
-          {authStep === 'email' ? (
-            <form className="admin-form" onSubmit={handleSendOtp}>
-              <label className="admin-label" htmlFor="admin-email">Email</label>
-              <input
-                id="admin-email"
-                className="admin-input"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(ev) => setEmail(ev.target.value)}
-                required
-              />
-              {authError && <p className="admin-error">{authError}</p>}
-              <button className="admin-button" type="submit" disabled={authLoading}>
-                {authLoading ? 'Sending…' : 'Send code'}
-              </button>
-            </form>
-          ) : (
-            <form className="admin-form" onSubmit={handleVerifyOtp}>
-              <p className="admin-muted">Code sent to {email}</p>
-              <label className="admin-label" htmlFor="admin-otp">Verification code</label>
-              <input
-                id="admin-otp"
-                className="admin-input"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                value={otp}
-                onChange={(ev) => setOtp(ev.target.value)}
-                required
-              />
-              {authError && <p className="admin-error">{authError}</p>}
-              <button className="admin-button" type="submit" disabled={authLoading}>
-                {authLoading ? 'Verifying…' : 'Sign in'}
-              </button>
-              <button
-                className="admin-button admin-button-ghost"
-                type="button"
-                onClick={() => { setAuthStep('email'); setOtp(''); setAuthError(null); }}
-              >
-                Use a different email
-              </button>
-            </form>
-          )}
-        </div>
-      </div>
+      <LoginForm
+        eyebrow="Admin"
+        description={
+          'Requires a role with is_admin in role_definitions (e.g. developer, founder) on your profile.'
+        }
+      />
     );
   }
 

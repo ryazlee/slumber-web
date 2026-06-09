@@ -1,69 +1,55 @@
-# Website
+# Slumber Web
 
-This folder holds the **Slumber marketing site** — home page, privacy policy, and terms of service. It is **not** part of the app codebase and is **not** tracked in this repo (except this README).
+Public web surfaces for Slumber — marketing pages, a read-only signed-in app view, and the admin dashboard. Source lives in this folder on disk for convenience; it deploys from its own public GitHub repo (nested git in `website/`).
 
-## Why it exists here
-
-The main Slumber repo is private. GitHub Pages needs a **public** repo. The site source lives in this directory on disk for convenience, but it deploys from its own remote.
+The main Slumber app repo only tracks this README; all other `website/*` files are gitignored here and live in the public repo.
 
 ## Public repo
 
-Initialize git here and push to a separate public repository, e.g.:
-
 | | |
 |---|---|
-| **Suggested name** | `slumber-home` |
+| **Repo name** | `slumber-web` (rename from `slumber-home` when ready) |
 | **Visibility** | Public |
-| **Deploy target** | GitHub Pages (via GitHub Actions on push to `main`) |
-| **Live URL** | `https://<your-user>.github.io/slumber-home/` (or a custom domain) |
+| **Deploy target** | GitHub Pages (GitHub Actions on push to `main`) |
+| **Live URL** | `https://<your-user>.github.io/slumber-web/` |
 
 ```bash
 cd website
-git init
-git remote add origin git@github.com:<your-user>/slumber-home.git
-# first push: git add . && git commit && git push -u origin main
+git remote set-url origin git@github.com:<your-user>/slumber-web.git
+npm install && npm run dev
 ```
 
-After the first push, enable **Settings → Pages → Source: GitHub Actions** on that repo.
+## Routes
 
-## What's in the site
+| Route | Auth | Purpose |
+|-------|------|---------|
+| `/` | Login | App entry — email OTP, redirects to `/feed` when signed in |
+| `/feed` | Yes | Friends feed (read-only) |
+| `/profile` | Yes | Your profile and recent posts |
+| `/challenges` | Yes | Active and completed challenges |
+| `/home` | No | Marketing / product overview |
+| `/privacy` | No | Privacy policy (App Store link) |
+| `/terms` | No | Terms of service |
+| `/admin` | OTP + admin role | Moderation dashboard |
 
-- `/` — product overview
-- `/privacy` — privacy policy (linked from the app via `EXPO_PUBLIC_PRIVACY_POLICY_URL`)
-- `/terms` — terms of service
-- `/admin` — moderation dashboard (not linked from public nav; Supabase OTP login)
+## Local setup
 
-Built with React + Vite. Run `npm install && npm run dev` from this folder for local preview.
-
-## Admin page
-
-1. Apply migrations `043`–`048` on production Supabase (`043` comment reports, `044` user_roles + moderation RPCs, `045` dashboard + tags, `046` assign roles to users, `047` `role_definitions` table, `048` role definition admin RPCs).
-2. Grant yourself admin roles via `user_roles` (order matters for app avatar ring only, not admin access):
-
-```sql
--- Add a role without removing existing ones
-UPDATE public.profiles
-SET user_roles = array_cat(user_roles, ARRAY['developer'])
-WHERE username = 'your_username'
-  AND NOT ('developer' = ANY(user_roles));
-
--- Or set roles explicitly (first = avatar ring)
-UPDATE public.profiles
-SET user_roles = ARRAY['developer', 'founder']
-WHERE username = 'your_username';
+```bash
+cp .env.example .env.local
+# VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY — same publishable key as the app
 ```
 
-3. Copy `.env.example` → `.env.local` and fill in Supabase URL + anon key (same publishable key as the app).
-4. For GitHub Pages, add repo secrets `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
-5. Visit `https://<your-user>.github.io/slumber-home/admin` and sign in with email OTP.
+For GitHub Pages, add repo secrets `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
 
-Accounts need a role with `is_admin = true` in `role_definitions` (seeded: `developer`, `founder`) assigned in `profiles.user_roles`. The **Roles** tab edits definitions; the **Users** tab assigns them.
+## Admin
+
+Requires `developer` or `founder` (or any role with `is_admin` in `role_definitions`) in `profiles.user_roles`. See migration docs in the main Slumber repo.
 
 ## App config
 
-Once deployed, point the app at the hosted URLs:
+```
+EXPO_PUBLIC_PRIVACY_POLICY_URL=https://<your-user>.github.io/slumber-web/privacy
+EXPO_PUBLIC_TERMS_OF_SERVICE_URL=https://<your-user>.github.io/slumber-web/terms
+```
 
-```
-EXPO_PUBLIC_PRIVACY_POLICY_URL=https://<your-user>.github.io/slumber-home/privacy
-EXPO_PUBLIC_TERMS_OF_SERVICE_URL=https://<your-user>.github.io/slumber-home/terms
-```
+Until the GitHub repo is renamed from `slumber-home`, keep existing URLs or add redirects.

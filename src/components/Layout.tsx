@@ -7,14 +7,15 @@ export default function Layout() {
     <>
       <header className="site-header">
         <div className="site-header-inner">
-          <NavLink to="/" className="brand" end>
+          <NavLink to="/home" className="brand">
             <img src={`${base}moon.png`} alt="" width={28} height={28} />
             Slumber
           </NavLink>
           <nav className="site-nav" aria-label="Main">
-            <NavLink to="/" end>
+            <NavLink to="/home">
               Home
             </NavLink>
+            <NavLink to="/">App</NavLink>
             <NavLink to="/privacy">Privacy</NavLink>
             <NavLink to="/terms">Terms</NavLink>
           </nav>
