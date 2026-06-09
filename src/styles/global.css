@@ -67,14 +67,20 @@ img {
   z-index: 10;
 }
 
+.site-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
 .site-header-inner {
   max-width: var(--wide-width);
   margin: 0 auto;
   padding: 14px 20px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 .brand {
@@ -99,18 +105,44 @@ img {
 
 .site-nav {
   display: flex;
-  gap: 20px;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 4px;
   font-size: 15px;
 }
 
 .site-nav a {
   color: var(--text-muted);
   text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 8px;
 }
 
 .site-nav a:hover,
 .site-nav a.active {
   color: var(--text);
+  background: var(--surface);
+}
+
+.site-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.site-user-email {
+  font-size: 13px;
+  color: var(--text-dim);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.site-sign-out {
+  padding: 8px 12px;
+  min-height: auto;
 }
 
 main {
@@ -945,8 +977,12 @@ h1 {
 
 @media (max-width: 600px) {
   .site-nav {
-    gap: 14px;
+    gap: 2px;
     font-size: 14px;
+  }
+
+  .site-nav a {
+    padding: 8px 10px;
   }
 
   .page,
