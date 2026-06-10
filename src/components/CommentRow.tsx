@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import CachedAvatar from './CachedAvatar';
 import { avatarColorFromName, timeAgo } from '../lib/format';
 import type { Comment } from '../lib/types';
+import MentionText from './MentionText';
 
 type CommentRowProps = {
   comment: Comment;
@@ -24,7 +25,7 @@ export default function CommentRow({ comment }: CommentRowProps) {
         <Link to={profilePath} className="comment-author">
           @{comment.username}
         </Link>
-        <p className="comment-text">{comment.text}</p>
+        <MentionText className="comment-text">{comment.text}</MentionText>
       </div>
       <time className="comment-time" dateTime={comment.createdAt}>
         {timeAgo(comment.createdAt)}

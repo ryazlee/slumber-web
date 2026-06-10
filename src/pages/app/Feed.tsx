@@ -13,6 +13,7 @@ export default function Feed() {
     error,
     hasMore,
     loadMore,
+    patchPost,
   } = usePaginatedPosts(fetchPage);
 
   return (
@@ -28,6 +29,7 @@ export default function Feed() {
         error={error}
         hasMore={hasMore}
         onLoadMore={loadMore}
+        onPatchPost={patchPost}
         emptyMessage="No posts yet. Log sleep in the iOS app to see it here."
       />
     </div>

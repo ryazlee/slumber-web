@@ -34,6 +34,7 @@ export default function Profile() {
     error: postsError,
     hasMore,
     loadMore,
+    patchPost,
   } = usePaginatedPosts(fetchPage, profileUserId ?? undefined);
 
   useEffect(() => {
@@ -145,6 +146,7 @@ export default function Profile() {
           error={postsError}
           hasMore={hasMore}
           onLoadMore={loadMore}
+          onPatchPost={patchPost}
           emptyMessage="No posts yet."
         />
       </section>

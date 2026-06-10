@@ -26,6 +26,7 @@ export type SleepPost = {
   notes?: string;
   isPrivate: boolean;
   kudosCount: number;
+  hasKudoed: boolean;
   commentCount: number;
   isPR: boolean;
   createdAt: string;

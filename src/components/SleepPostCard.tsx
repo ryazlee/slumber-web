@@ -4,13 +4,15 @@ import type { SleepPost } from '../lib/types';
 import { formatMins, formatSleepDate } from '../lib/format';
 import { isManualSleepPost } from '../lib/sleepPostCustom';
 import ManualLogSleepBlock from './ManualLogSleepBlock';
-import PostSocial from './PostSocial';
+import PostSocial, { type PostSocialPatch } from './PostSocial';
 import UserLink from './UserLink';
 
 type SleepPostCardProps = {
   post: SleepPost;
   showAuthor?: boolean;
   clickable?: boolean;
+  defaultCommentsOpen?: boolean;
+  onSocialPatch?: (postId: string, patch: PostSocialPatch) => void;
 };
 
 function stageFlex(post: SleepPost): Array<{ type: string; flex: number }> {
@@ -33,7 +35,13 @@ function stageFlex(post: SleepPost): Array<{ type: string; flex: number }> {
   return parts.map((p) => ({ ...p, flex: p.flex / total }));
 }
 
-export default function SleepPostCard({ post, showAuthor = true, clickable = true }: SleepPostCardProps) {
+export default function SleepPostCard({
+  post,
+  showAuthor = true,
+  clickable = true,
+  defaultCommentsOpen = false,
+  onSocialPatch,
+}: SleepPostCardProps) {
   const { user } = useAuth();
   const isManual = isManualSleepPost(post);
   const segments = stageFlex(post);
@@ -134,8 +142,11 @@ export default function SleepPostCard({ post, showAuthor = true, clickable = tru
         <PostSocial
           postId={post.id}
           kudosCount={post.kudosCount}
+          hasKudoed={post.hasKudoed}
           commentCount={post.commentCount}
           sourceDevice={isManual ? 'Manual log' : post.sourceDevice}
+          defaultCommentsOpen={defaultCommentsOpen}
+          onPatch={(patch) => onSocialPatch?.(post.id, patch)}
         />
       </div>
     </article>

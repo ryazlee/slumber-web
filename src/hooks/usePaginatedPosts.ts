@@ -32,6 +32,10 @@ export function usePaginatedPosts(
     loadInitial();
   }, [loadInitial, resetKey]);
 
+  const patchPost = useCallback((postId: string, patch: Partial<SleepPost>) => {
+    setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, ...patch } : p)));
+  }, []);
+
   const loadMore = async () => {
     const cursor = posts[posts.length - 1]?.createdAt;
     if (!cursor || loadingMore) return;
@@ -48,5 +52,5 @@ export function usePaginatedPosts(
     }
   };
 
-  return { posts, loading, loadingMore, error, hasMore, loadMore };
+  return { posts, loading, loadingMore, error, hasMore, loadMore, patchPost };
 }

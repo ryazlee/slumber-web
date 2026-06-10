@@ -40,6 +40,7 @@ async function getBlockedUserIds(): Promise<Set<string>> {
 function mapPostRow(
   row: PostRow,
   kudosCountMap: Record<string, number>,
+  myKudoPostIds: Set<string>,
   commentCountMap: Record<string, number>,
   prPostIds: Set<string>,
 ): SleepPost {
@@ -67,6 +68,7 @@ function mapPostRow(
     notes: row.morning_notes ?? undefined,
     isPrivate: row.is_private ?? false,
     kudosCount: kudosCountMap[row.id] ?? 0,
+    hasKudoed: myKudoPostIds.has(row.id),
     commentCount: commentCountMap[row.id] ?? 0,
     isPR: prPostIds.has(row.id),
     createdAt: row.created_at,
@@ -78,15 +80,20 @@ function mapPostRow(
 async function enrichRows(rows: PostRow[]): Promise<SleepPost[]> {
   if (rows.length === 0) return [];
   const postIds = rows.map((r) => r.id);
+  const { data: { user } } = await supabase.auth.getUser();
+  const currentUserId = user?.id ?? null;
+
   const [kudosRes, commentsRes, prRes] = await Promise.all([
-    supabase.from('kudos').select('post_id').in('post_id', postIds),
+    supabase.from('kudos').select('post_id, user_id').in('post_id', postIds),
     supabase.from('comments').select('post_id').in('post_id', postIds),
     supabase.from('personal_records').select('post_id').in('post_id', postIds).not('post_id', 'is', null),
   ]);
 
   const kudosCountMap: Record<string, number> = {};
+  const myKudoPostIds = new Set<string>();
   for (const k of kudosRes.data ?? []) {
     kudosCountMap[k.post_id] = (kudosCountMap[k.post_id] ?? 0) + 1;
+    if (k.user_id === currentUserId) myKudoPostIds.add(k.post_id);
   }
   const commentCountMap: Record<string, number> = {};
   for (const c of commentsRes.data ?? []) {
@@ -94,7 +101,7 @@ async function enrichRows(rows: PostRow[]): Promise<SleepPost[]> {
   }
   const prPostIds = new Set((prRes.data ?? []).map((r) => r.post_id as string));
 
-  return rows.map((row) => mapPostRow(row, kudosCountMap, commentCountMap, prPostIds));
+  return rows.map((row) => mapPostRow(row, kudosCountMap, myKudoPostIds, commentCountMap, prPostIds));
 }
 
 export async function fetchFeed(cursor?: string): Promise<SleepPost[]> {

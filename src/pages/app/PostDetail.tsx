@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import SleepPostCard from '../../components/SleepPostCard';
+import type { PostSocialPatch } from '../../components/PostSocial';
 import { fetchPost } from '../../lib/feed';
 import { formatMins } from '../../lib/format';
 import type { SleepPost } from '../../lib/types';
@@ -11,6 +12,10 @@ export default function PostDetail() {
   const [post, setPost] = useState<SleepPost | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const handleSocialPatch = useCallback((_postId: string, patch: PostSocialPatch) => {
+    setPost((prev) => (prev ? { ...prev, ...patch } : prev));
+  }, []);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -59,7 +64,13 @@ export default function PostDetail() {
         ← Back
       </button>
 
-      <SleepPostCard post={post} showAuthor clickable={false} />
+      <SleepPostCard
+        post={post}
+        showAuthor
+        clickable={false}
+        defaultCommentsOpen
+        onSocialPatch={handleSocialPatch}
+      />
 
       <dl className="post-detail-stats">
         <div>

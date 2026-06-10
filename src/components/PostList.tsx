@@ -1,4 +1,5 @@
 import SleepPostCard from './SleepPostCard';
+import type { PostSocialPatch } from './PostSocial';
 import type { SleepPost } from '../lib/types';
 
 type PostListProps = {
@@ -10,6 +11,7 @@ type PostListProps = {
   error?: string | null;
   hasMore?: boolean;
   onLoadMore?: () => void;
+  onPatchPost?: (postId: string, patch: PostSocialPatch) => void;
 };
 
 export default function PostList({
@@ -21,6 +23,7 @@ export default function PostList({
   error = null,
   hasMore = false,
   onLoadMore,
+  onPatchPost,
 }: PostListProps) {
   return (
     <>
@@ -33,7 +36,12 @@ export default function PostList({
 
       <div className="post-list">
         {posts.map((post) => (
-          <SleepPostCard key={post.id} post={post} showAuthor={showAuthor} />
+          <SleepPostCard
+            key={post.id}
+            post={post}
+            showAuthor={showAuthor}
+            onSocialPatch={onPatchPost}
+          />
         ))}
       </div>
 

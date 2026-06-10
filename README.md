@@ -1,6 +1,6 @@
 # Slumber Web
 
-Public web surfaces for Slumber — marketing pages, a read-only signed-in app view, and the admin dashboard. Source lives in this folder on disk for convenience; it deploys from its own public GitHub repo (nested git in `website/`).
+Public web surfaces for Slumber — marketing pages, a signed-in app view (feed, profiles, challenges, kudos, comments), and the admin dashboard. Source lives in this folder on disk for convenience; it deploys from its own public GitHub repo (nested git in `website/`).
 
 The main Slumber app repo only tracks this README; all other `website/*` files are gitignored here and live in the public repo.
 
@@ -24,7 +24,7 @@ npm install && npm run dev
 | Route | Auth | Purpose |
 |-------|------|---------|
 | `/` | Login | App entry — email OTP, redirects to `/feed` when signed in |
-| `/feed` | Yes | Friends feed (read-only) |
+| `/feed` | Yes | Friends feed — kudos + comments |
 | `/profile` | Yes | Your profile and recent posts |
 | `/challenges` | Yes | Active and completed challenges |
 | `/home` | No | Marketing / product overview |
