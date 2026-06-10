@@ -98,6 +98,29 @@
   padding: clamp(16px, 4vw, 24px);
 }
 
+.post-card--clickable {
+  position: relative;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.post-card--clickable:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.post-card-stretch-link {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  text-decoration: none;
+}
+
+.post-card-interactive {
+  position: relative;
+  z-index: 1;
+}
+
 .user-link {
   display: inline-flex;
   align-items: center;
@@ -232,6 +255,41 @@
   font-weight: 600;
   margin: 0 0 16px;
   letter-spacing: -0.02em;
+}
+
+.post-detail-page .post-card {
+  margin-top: 4px;
+}
+
+.post-detail-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 32px;
+  margin: 20px 0 0;
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.post-detail-stats div {
+  min-width: 80px;
+}
+
+.post-detail-stats dt {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
+.post-detail-stats dd {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
 }
 
 .post-hypno {
@@ -585,6 +643,17 @@
 .challenge-contribution-sub {
   font-size: 13px;
   color: var(--text-muted);
+}
+
+.challenge-contribution-title {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.challenge-contribution-title:hover {
+  color: var(--accent);
+  text-decoration: underline;
 }
 
 .challenge-contribution-sub span:nth-child(2) {

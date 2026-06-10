@@ -179,7 +179,9 @@ export default function ChallengeDetail() {
                   <span className="challenge-contribution-date">{formatSleepDate(row.sleepDate)}</span>
                 </div>
                 <div className="challenge-contribution-sub">
-                  <span>{row.title}</span>
+                  <Link to={`/post/${row.postId}`} className="challenge-contribution-title">
+                    {row.title}
+                  </Link>
                   <span>{formatMins(row.asleepMinutes)}</span>
                   {row.isPrivate && <span className="post-badge">Private</span>}
                 </div>

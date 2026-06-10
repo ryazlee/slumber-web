@@ -7,6 +7,7 @@ import AppEntry from './pages/app/AppEntry';
 import ChallengeDetail from './pages/app/ChallengeDetail';
 import Challenges from './pages/app/Challenges';
 import Feed from './pages/app/Feed';
+import PostDetail from './pages/app/PostDetail';
 import Profile from './pages/app/Profile';
 import Admin from './pages/Admin';
 import Home from './pages/Home';
@@ -29,6 +30,7 @@ export default function App() {
         <Route index element={<AppEntry />} />
         <Route element={<ProtectedAppShell />}>
           <Route path="feed" element={<Feed />} />
+          <Route path="post/:id" element={<PostDetail />} />
           <Route path="profile" element={<Profile />} />
           <Route path="profile/:userId" element={<Profile />} />
           <Route path="challenges" element={<Challenges />} />

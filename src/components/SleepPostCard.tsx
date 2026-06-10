@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import type { SleepPost } from '../lib/types';
 import { formatMins, formatSleepDate } from '../lib/format';
@@ -9,6 +10,7 @@ import UserLink from './UserLink';
 type SleepPostCardProps = {
   post: SleepPost;
   showAuthor?: boolean;
+  clickable?: boolean;
 };
 
 function stageFlex(post: SleepPost): Array<{ type: string; flex: number }> {
@@ -31,7 +33,7 @@ function stageFlex(post: SleepPost): Array<{ type: string; flex: number }> {
   return parts.map((p) => ({ ...p, flex: p.flex / total }));
 }
 
-export default function SleepPostCard({ post, showAuthor = true }: SleepPostCardProps) {
+export default function SleepPostCard({ post, showAuthor = true, clickable = true }: SleepPostCardProps) {
   const { user } = useAuth();
   const isManual = isManualSleepPost(post);
   const segments = stageFlex(post);
@@ -39,8 +41,16 @@ export default function SleepPostCard({ post, showAuthor = true }: SleepPostCard
   const canReadDream = Boolean(post.dreamLog) && (!post.blurDream || isOwnPost);
 
   return (
-    <article className="post-card">
-      <header className="post-card-header">
+    <article className={`post-card${clickable ? ' post-card--clickable' : ''}`}>
+      {clickable && (
+        <Link
+          to={`/post/${post.id}`}
+          className="post-card-stretch-link"
+          aria-label={`View post: ${post.title}`}
+        />
+      )}
+
+      <header className={`post-card-header${showAuthor ? ' post-card-interactive' : ''}`}>
         {showAuthor && (
           <UserLink
             userId={post.userId}
@@ -120,12 +130,14 @@ export default function SleepPostCard({ post, showAuthor = true }: SleepPostCard
         </div>
       )}
 
-      <PostSocial
-        postId={post.id}
-        kudosCount={post.kudosCount}
-        commentCount={post.commentCount}
-        sourceDevice={isManual ? 'Manual log' : post.sourceDevice}
-      />
+      <div className="post-card-interactive">
+        <PostSocial
+          postId={post.id}
+          kudosCount={post.kudosCount}
+          commentCount={post.commentCount}
+          sourceDevice={isManual ? 'Manual log' : post.sourceDevice}
+        />
+      </div>
     </article>
   );
 }

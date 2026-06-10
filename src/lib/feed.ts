@@ -127,6 +127,21 @@ export async function fetchFeed(cursor?: string): Promise<SleepPost[]> {
   return enrichRows((data ?? []) as PostRow[]);
 }
 
+export async function fetchPost(postId: string): Promise<SleepPost | null> {
+  const { data, error } = await supabase
+    .from('sleep_posts')
+    .select(`*, ${PROFILE_EMBED}`)
+    .eq('id', postId)
+    .is('deleted_at', null)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  const [post] = await enrichRows([data as PostRow]);
+  return post ?? null;
+}
+
 export async function fetchUserPosts(userId: string, cursor?: string): Promise<SleepPost[]> {
   let query = supabase
     .from('sleep_posts')
