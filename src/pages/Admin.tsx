@@ -6,6 +6,7 @@ import AdminReports from '../components/admin/AdminReports';
 import AdminRoles from '../components/admin/AdminRoles';
 import AdminTags from '../components/admin/AdminTags';
 import AdminUsers from '../components/admin/AdminUsers';
+import AdminNotify from '../components/admin/AdminNotify';
 import {
   checkIsModerator,
   fetchAdminRoleDefinitions,
@@ -21,7 +22,7 @@ import {
   type PostReportRow,
   type RecentUserRow,
 } from '../lib/admin';
-type MainTab = 'overview' | 'reports' | 'users' | 'roles' | 'tags';
+type MainTab = 'overview' | 'reports' | 'users' | 'notify' | 'roles' | 'tags';
 type ReportTab = 'posts' | 'comments';
 
 export default function Admin() {
@@ -50,6 +51,7 @@ export default function Admin() {
 
   const [usersError, setUsersError] = useState<string | null>(null);
   const [usersRefreshToken, setUsersRefreshToken] = useState(0);
+  const [notifyRefreshToken, setNotifyRefreshToken] = useState(0);
 
   useEffect(() => {
     if (authLoading) return;
@@ -124,6 +126,7 @@ export default function Admin() {
       else if (mainTab === 'tags') await loadTags();
       else if (mainTab === 'roles') await loadRoles();
       else if (mainTab === 'users') setUsersRefreshToken((n) => n + 1);
+      else if (mainTab === 'notify') setNotifyRefreshToken((n) => n + 1);
     } finally {
       setRefreshing(false);
     }
@@ -194,6 +197,7 @@ export default function Admin() {
     overview: 'Overview',
     reports: 'Reports',
     users: 'Users',
+    notify: 'Notify',
     roles: 'Roles',
     tags: 'Tags',
   }[mainTab];
@@ -255,6 +259,15 @@ export default function Admin() {
         <button
           type="button"
           role="tab"
+          aria-selected={mainTab === 'notify'}
+          className={mainTab === 'notify' ? 'admin-tab active' : 'admin-tab'}
+          onClick={() => setMainTab('notify')}
+        >
+          Notify
+        </button>
+        <button
+          type="button"
+          role="tab"
           aria-selected={mainTab === 'roles'}
           className={mainTab === 'roles' ? 'admin-tab active' : 'admin-tab'}
           onClick={() => setMainTab('roles')}
@@ -300,6 +313,10 @@ export default function Admin() {
           onError={setUsersError}
           onReload={loadOverview}
         />
+      )}
+
+      {mainTab === 'notify' && (
+        <AdminNotify refreshToken={notifyRefreshToken} />
       )}
 
       {mainTab === 'roles' && (

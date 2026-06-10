@@ -180,3 +180,27 @@ export async function deleteAdminRoleDefinition(key: string): Promise<void> {
   const { error } = await supabase.rpc('admin_delete_role_definition', { p_key: key });
   if (error) throw error;
 }
+
+export type SendNotificationResult = {
+  notification_id: string;
+  device_tokens: number;
+};
+
+export async function sendAdminNotification(
+  userId: string,
+  message: string,
+): Promise<SendNotificationResult> {
+  const { data, error } = await supabase.rpc('admin_send_notification', {
+    p_user_id: userId,
+    p_message: message,
+  });
+  if (error) throw error;
+  const row = data as SendNotificationResult | null;
+  if (!row?.notification_id) {
+    throw new Error('Unexpected response from server.');
+  }
+  return {
+    notification_id: row.notification_id,
+    device_tokens: row.device_tokens ?? 0,
+  };
+}
