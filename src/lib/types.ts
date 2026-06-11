@@ -3,6 +3,19 @@ export type StageSegment = {
   minutes: number;
 };
 
+export type SleepSessionData = {
+  bedtime: string;
+  wakeTime: string;
+  asleepMinutes: number;
+  inBedMinutes: number;
+  coreMinutes: number;
+  deepMinutes: number;
+  remMinutes: number;
+  awakeMinutes: number;
+  efficiency: number;
+  segments: StageSegment[];
+};
+
 export type SleepPost = {
   id: string;
   userId: string;
@@ -20,6 +33,7 @@ export type SleepPost = {
   remMinutes: number;
   awakeMinutes: number;
   stageSegments: StageSegment[];
+  sessionBreakdown?: SleepSessionData[];
   tags: string[];
   dreamLog?: string;
   blurDream: boolean;

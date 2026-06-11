@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { SleepPost, StageSegment } from './types';
+import type { SleepPost, SleepSessionData, StageSegment } from './types';
 import { avatarColorFromName } from './format';
 
 const PROFILE_EMBED = 'profiles(username, avatar_url)';
@@ -20,6 +20,7 @@ type PostRow = {
   rem_minutes: number | null;
   awake_minutes: number | null;
   raw_samples: StageSegment[] | null;
+  session_breakdown: SleepSessionData[] | null;
   tags: string[] | null;
   dream_log: string | null;
   blur_dream: boolean | null;
@@ -62,6 +63,7 @@ function mapPostRow(
     remMinutes: row.rem_minutes ?? 0,
     awakeMinutes: row.awake_minutes ?? 0,
     stageSegments: Array.isArray(row.raw_samples) ? row.raw_samples : [],
+    sessionBreakdown: Array.isArray(row.session_breakdown) ? row.session_breakdown : undefined,
     tags: row.tags ?? [],
     dreamLog: row.dream_log ?? undefined,
     blurDream: row.blur_dream ?? true,

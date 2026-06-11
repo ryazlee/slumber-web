@@ -22,14 +22,16 @@ export default function CommentRow({ comment }: CommentRowProps) {
         />
       </Link>
       <div className="comment-bubble">
-        <Link to={profilePath} className="comment-author">
-          @{comment.username}
-        </Link>
+        <div className="comment-header">
+          <Link to={profilePath} className="comment-author">
+            @{comment.username}
+          </Link>
+          <time className="comment-time" dateTime={comment.createdAt}>
+            {timeAgo(comment.createdAt)}
+          </time>
+        </div>
         <MentionText className="comment-text">{comment.text}</MentionText>
       </div>
-      <time className="comment-time" dateTime={comment.createdAt}>
-        {timeAgo(comment.createdAt)}
-      </time>
     </li>
   );
 }

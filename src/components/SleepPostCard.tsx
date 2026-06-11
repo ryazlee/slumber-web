@@ -3,8 +3,10 @@ import { useAuth } from '../context/AuthContext';
 import type { SleepPost } from '../lib/types';
 import { formatMins, formatSleepDate } from '../lib/format';
 import { isManualSleepPost } from '../lib/sleepPostCustom';
+import { segmentsForPost } from '../lib/timeline';
 import ManualLogSleepBlock from './ManualLogSleepBlock';
 import PostSocial, { type PostSocialPatch } from './PostSocial';
+import SleepTimelineBar from './SleepTimelineBar';
 import UserLink from './UserLink';
 
 type SleepPostCardProps = {
@@ -15,26 +17,6 @@ type SleepPostCardProps = {
   onSocialPatch?: (postId: string, patch: PostSocialPatch) => void;
 };
 
-function stageFlex(post: SleepPost): Array<{ type: string; flex: number }> {
-  if (post.stageSegments.length > 0) {
-    const total = post.stageSegments.reduce((s, seg) => s + seg.minutes, 0) || 1;
-    return post.stageSegments.map((seg) => ({
-      type: seg.type.toLowerCase(),
-      flex: seg.minutes / total,
-    }));
-  }
-
-  const parts = [
-    { type: 'core', flex: post.coreMinutes },
-    { type: 'deep', flex: post.deepMinutes },
-    { type: 'rem', flex: post.remMinutes },
-    { type: 'awake', flex: post.awakeMinutes },
-  ].filter((p) => p.flex > 0);
-
-  const total = parts.reduce((s, p) => s + p.flex, 0) || 1;
-  return parts.map((p) => ({ ...p, flex: p.flex / total }));
-}
-
 export default function SleepPostCard({
   post,
   showAuthor = true,
@@ -44,7 +26,8 @@ export default function SleepPostCard({
 }: SleepPostCardProps) {
   const { user } = useAuth();
   const isManual = isManualSleepPost(post);
-  const segments = stageFlex(post);
+  const timelineSegments = segmentsForPost(post);
+  const timelineVariant = clickable ? 'card' : 'detail';
   const isOwnPost = user?.id === post.userId;
   const canReadDream = Boolean(post.dreamLog) && (!post.blurDream || isOwnPost);
 
@@ -82,22 +65,14 @@ export default function SleepPostCard({
       {isManual ? (
         <ManualLogSleepBlock post={post} />
       ) : (
-        <div className="hypno-demo post-hypno">
-          <div className="hypno-labels">
-            <span>{post.bedtime}</span>
-            <span>{post.wakeTime}</span>
-          </div>
-          <div className="hypno-bar">
-            {segments.length > 0 ? segments.map((seg, i) => (
-              <div
-                key={`${seg.type}-${i}`}
-                className={`hypno-seg ${seg.type}`}
-                style={{ flex: seg.flex }}
-              />
-            )) : (
-              <div className="hypno-seg core" style={{ flex: 1 }} />
-            )}
-          </div>
+        <div className="post-card-interactive post-hypno-wrap">
+          <SleepTimelineBar
+            segments={timelineSegments}
+            bedtime={post.bedtime}
+            wakeTime={post.wakeTime}
+            sessionBreakdown={post.sessionBreakdown}
+            variant={timelineVariant}
+          />
           <div className="hypno-stats">
             <span><strong>{formatMins(post.asleepMinutes)}</strong> asleep</span>
             {post.coreMinutes > 0 && <span><strong>Core</strong> {formatMins(post.coreMinutes)}</span>}
