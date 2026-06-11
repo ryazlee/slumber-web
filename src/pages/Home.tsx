@@ -1,47 +1,43 @@
+import HomeScreenshots from '../components/HomeScreenshots';
+
 export default function Home() {
   return (
-    <div className="page-wide content-wrap">
-      <div className="page" style={{ paddingLeft: 0, paddingRight: 0 }}>
-        <p className="eyebrow">iOS · Sleep tracking</p>
-        <h1>Log your nights. Share with friends.</h1>
-        <p className="lead">
-          Slumber pulls sleep from Apple Health each morning—stages, duration, bed and wake
-          times—and lets you add context: how you felt, what you did the night before, dreams,
-          photos. Friends see your feed. You can race each other in sleep challenges.
-        </p>
+    <div className="content-wrap home-page-wrap">
+      <div className="home-page">
+        <header className="home-hero">
+          <p className="eyebrow">iOS · Sleep tracking</p>
+          <h1>Log your nights. Share with friends.</h1>
+          <p className="lead">
+            Slumber pulls sleep from Apple Health each morning—stages, duration, bed and wake
+            times—and lets you add context: how you felt, what you did the night before, dreams,
+            photos. Friends see your feed. You can race each other in sleep challenges.
+          </p>
 
-        <div className="hypno-demo" aria-hidden="true">
-          <div className="hypno-labels">
-            <span>10:42 PM</span>
-            <span>6:31 AM</span>
+          <div className="hypno-demo" aria-hidden="true">
+            <div className="hypno-labels">
+              <span>10:42 PM</span>
+              <span>6:31 AM</span>
+            </div>
+            <div className="hypno-bar">
+              <div className="hypno-seg core" />
+              <div className="hypno-seg deep" />
+              <div className="hypno-seg rem" />
+              <div className="hypno-seg awake" />
+              <div className="hypno-seg core" />
+              <div className="hypno-seg rem" />
+              <div className="hypno-seg deep" />
+            </div>
+            <div className="hypno-stats">
+              <span><strong>7h 12m</strong> asleep</span>
+              <span><strong>Core</strong> 3h 40m</span>
+              <span><strong>Deep</strong> 1h 28m</span>
+              <span><strong>REM</strong> 2h 04m</span>
+            </div>
           </div>
-          <div className="hypno-bar">
-            <div className="hypno-seg core" />
-            <div className="hypno-seg deep" />
-            <div className="hypno-seg rem" />
-            <div className="hypno-seg awake" />
-            <div className="hypno-seg core" />
-            <div className="hypno-seg rem" />
-            <div className="hypno-seg deep" />
-          </div>
-          <div className="hypno-stats">
-            <span>
-              <strong>7h 12m</strong> asleep
-            </span>
-            <span>
-              <strong>Core</strong> 3h 40m
-            </span>
-            <span>
-              <strong>Deep</strong> 1h 28m
-            </span>
-            <span>
-              <strong>REM</strong> 2h 04m
-            </span>
-          </div>
-        </div>
-      </div>
+        </header>
 
-      <div className="page" style={{ paddingLeft: 0, paddingRight: 0 }}>
+        <HomeScreenshots />
+
         <section className="section">
           <h2>How it works</h2>
           <p>

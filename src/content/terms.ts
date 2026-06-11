@@ -84,7 +84,7 @@ export const termsSections = [
   {
     heading: 'Contact',
     body: [
-      'Questions about these terms: hello@slumber.app',
+      'Questions about these terms: useslumber@gmail.com',
     ],
   },
   {

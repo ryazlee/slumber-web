@@ -2,7 +2,7 @@ import { supabase } from './supabase';
 import type { SleepPost, SleepSessionData, StageSegment } from './types';
 import { avatarColorFromName } from './format';
 
-const PROFILE_EMBED = 'profiles(username, avatar_url)';
+const PROFILE_EMBED = 'profiles(username, avatar_url, user_roles)';
 export const PAGE_SIZE = 20;
 
 type PostRow = {
@@ -29,7 +29,7 @@ type PostRow = {
   created_at: string;
   source_device: string | null;
   is_custom?: boolean | null;
-  profiles?: { username: string; avatar_url: string | null } | null;
+  profiles?: { username: string; avatar_url: string | null; user_roles?: string[] | null } | null;
 };
 
 async function getBlockedUserIds(): Promise<Set<string>> {
@@ -51,6 +51,7 @@ function mapPostRow(
     userId: row.user_id,
     username,
     avatarUrl: row.profiles?.avatar_url ?? undefined,
+    userRoles: row.profiles?.user_roles ?? undefined,
     title: row.title,
     sleepDate: row.sleep_date,
     bedtime: row.bedtime ?? '—',

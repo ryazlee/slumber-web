@@ -2,7 +2,7 @@ import { extractMentionUsernames } from './mentions';
 import { supabase } from './supabase';
 import type { Comment, KudosUser } from './types';
 
-const PROFILE_EMBED = 'profiles(username, avatar_url)';
+const PROFILE_EMBED = 'profiles(username, avatar_url, user_roles)';
 
 type MentionField = 'comment';
 
@@ -89,7 +89,7 @@ function mapCommentRow(row: {
   user_id: string;
   text: string;
   created_at: string;
-  profiles?: { username: string; avatar_url: string | null } | null;
+  profiles?: { username: string; avatar_url: string | null; user_roles?: string[] | null } | null;
 }): Comment {
   const username = row.profiles?.username ?? 'unknown';
   return {
@@ -98,6 +98,7 @@ function mapCommentRow(row: {
     userId: row.user_id,
     username,
     avatarUrl: row.profiles?.avatar_url ?? undefined,
+    userRoles: row.profiles?.user_roles ?? undefined,
     text: row.text,
     createdAt: row.created_at,
   };
@@ -122,7 +123,7 @@ export async function fetchKudosUsers(postId: string): Promise<KudosUser[]> {
 
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, username, avatar_url')
+    .select('id, username, avatar_url, user_roles')
     .in('id', uniqueIds);
 
   if (profilesError) throw profilesError;
@@ -136,6 +137,7 @@ export async function fetchKudosUsers(postId: string): Promise<KudosUser[]> {
         id: p.id,
         username: p.username,
         avatarUrl: p.avatar_url ?? undefined,
+        userRoles: p.user_roles ?? undefined,
         createdAt: k.createdAt,
       };
     })

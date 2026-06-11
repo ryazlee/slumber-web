@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import type { SleepPost } from '../lib/types';
-import { formatMins, formatSleepDate } from '../lib/format';
+import { formatMins, formatSleepDate, isLatestSleepPost } from '../lib/format';
 import { isManualSleepPost } from '../lib/sleepPostCustom';
 import { segmentsForPost } from '../lib/timeline';
 import ManualLogSleepBlock from './ManualLogSleepBlock';
 import PostSocial, { type PostSocialPatch } from './PostSocial';
 import SleepTimelineBar from './SleepTimelineBar';
+import PostTagList from './PostTagList';
 import UserLink from './UserLink';
 
 type SleepPostCardProps = {
@@ -30,9 +31,10 @@ export default function SleepPostCard({
   const timelineVariant = clickable ? 'card' : 'detail';
   const isOwnPost = user?.id === post.userId;
   const canReadDream = Boolean(post.dreamLog) && (!post.blurDream || isOwnPost);
+  const isLatest = isLatestSleepPost(post.sleepDate);
 
   return (
-    <article className={`post-card${clickable ? ' post-card--clickable' : ''}`}>
+    <article className={`post-card${clickable ? ' post-card--clickable' : ''}${isLatest ? ' post-card--latest' : ''}`}>
       {clickable && (
         <Link
           to={`/post/${post.id}`}
@@ -43,17 +45,22 @@ export default function SleepPostCard({
 
       <header className={`post-card-header${showAuthor ? ' post-card-interactive' : ''}`}>
         {showAuthor && (
-          <UserLink
-            userId={post.userId}
-            username={post.username}
-            avatarUrl={post.avatarUrl}
-            showAvatar
-            avatarSize="md"
-            className="post-author-link"
-          />
+          <div className="post-card-author">
+            <UserLink
+              userId={post.userId}
+              username={post.username}
+              avatarUrl={post.avatarUrl}
+              userRoles={post.userRoles}
+              showAvatar
+              avatarSize="md"
+              className="post-author-link"
+            />
+            {isLatest && <span className="post-badge post-badge-latest">🕒 Latest</span>}
+          </div>
         )}
         <div className="post-card-meta">
           <span className="post-date">{formatSleepDate(post.sleepDate)}</span>
+          {!showAuthor && isLatest && <span className="post-badge post-badge-latest">🕒 Latest</span>}
           {post.isPrivate && <span className="post-badge">Private</span>}
           {post.isPR && !isManual && <span className="post-badge post-badge-pr">PR</span>}
           {isManual && <span className="post-badge post-badge-manual">Manual</span>}
@@ -82,13 +89,7 @@ export default function SleepPostCard({
         </div>
       )}
 
-      {post.tags.length > 0 && (
-        <div className="post-tags">
-          {post.tags.map((tag) => (
-            <span key={tag} className="post-tag">{tag}</span>
-          ))}
-        </div>
-      )}
+      <PostTagList tags={post.tags} />
 
       {post.notes && <p className="post-notes">{post.notes}</p>}
 

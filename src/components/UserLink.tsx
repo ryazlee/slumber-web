@@ -1,13 +1,13 @@
 import { Link } from 'react-router-dom';
-import { avatarColorFromName } from '../lib/format';
-import CachedAvatar from './CachedAvatar';
+import Avatar from './Avatar';
 
 type UserLinkProps = {
   userId: string;
   username: string;
   avatarUrl?: string;
+  userRoles?: string[] | null;
   showAvatar?: boolean;
-  avatarSize?: 'sm' | 'md';
+  avatarSize?: 'sm' | 'md' | 'lg';
   className?: string;
 };
 
@@ -15,20 +15,20 @@ export default function UserLink({
   userId,
   username,
   avatarUrl,
+  userRoles,
   showAvatar = false,
   avatarSize = 'sm',
   className = '',
 }: UserLinkProps) {
-  const avatarClass = avatarSize === 'md' ? 'post-avatar' : 'post-avatar post-avatar-sm';
-
   return (
     <Link to={`/profile/${userId}`} className={`user-link ${className}`.trim()}>
       {showAvatar && (
-        <CachedAvatar
-          url={avatarUrl}
+        <Avatar
+          userId={userId}
           username={username}
-          className={avatarClass}
-          style={{ background: avatarColorFromName(username) }}
+          avatarUrl={avatarUrl}
+          userRoles={userRoles}
+          size={avatarSize}
         />
       )}
       <span className="user-link-name">@{username}</span>

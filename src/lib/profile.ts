@@ -47,6 +47,7 @@ export async function fetchProfileSummary(userId: string): Promise<WebProfile | 
     id: row.id,
     username: row.username,
     avatarUrl: row.avatar_url ?? undefined,
+    userRoles: row.user_roles ?? undefined,
     friendsCount: typeof friendsCountRes.data === 'number' ? friendsCountRes.data : 0,
     postsCount: postsCountRes.count ?? 0,
     streak: streakRes.data?.current_streak ?? 0,

@@ -303,6 +303,7 @@ export default function PostSocial({
                   userId={kudosUser.id}
                   username={kudosUser.username}
                   avatarUrl={kudosUser.avatarUrl}
+                  userRoles={kudosUser.userRoles}
                   showAvatar
                 />
                 <span className="kudos-row-meta">

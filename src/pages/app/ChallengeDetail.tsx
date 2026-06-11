@@ -1,22 +1,26 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import ChallengeContributionsByDay from '../../components/ChallengeContributionsByDay';
+import ChallengeProgressRow from '../../components/ChallengeProgressRow';
 import UserLink from '../../components/UserLink';
+import { useAuth } from '../../context/AuthContext';
 import {
   fetchChallenge,
   fetchChallengeContributions,
   fetchChallengeProgress,
 } from '../../lib/challenges';
+import { buildSplitBarsByUser } from '../../lib/challengeProgressBar';
+import { rankBySleepProgress } from '../../lib/challengeRank';
 import {
   formatChallengeRaceType,
   formatChallengeStartDate,
   formatChallengeStatus,
-  formatMins,
-  formatSleepDate,
-  goalHours,
 } from '../../lib/format';
 import type { Challenge, ChallengeContributionPost, ChallengeProgress } from '../../lib/types';
 
 export default function ChallengeDetail() {
+  const { user } = useAuth();
+  const currentUserId = user?.id ?? null;
   const { id } = useParams<{ id: string }>();
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [progress, setProgress] = useState<ChallengeProgress[]>([]);
@@ -52,6 +56,42 @@ export default function ChallengeDetail() {
     load();
   }, [load]);
 
+  const splitBarByUser = useMemo(
+    () => buildSplitBarsByUser(contributions, progress),
+    [contributions, progress],
+  );
+
+  const userRolesById = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const p of challenge?.participants ?? []) {
+      if (p.userRoles?.length) map.set(p.userId, p.userRoles);
+    }
+    return map;
+  }, [challenge?.participants]);
+
+  const rankedProgress = useMemo(() => {
+    const rows = rankBySleepProgress(
+      progress.map((p) => {
+        const split = splitBarByUser.find((s) => s.userId === p.userId);
+        return {
+          ...p,
+          accruedMinutes: split?.accruedMinutes ?? p.accruedMinutes,
+          nightsLogged: split?.nightsLogged ?? p.nightsLogged,
+        };
+      }),
+    );
+
+    if (!challenge?.isGroup && currentUserId) {
+      return rows.sort((a, b) => {
+        if (a.userId === currentUserId) return -1;
+        if (b.userId === currentUserId) return 1;
+        return b.accruedMinutes - a.accruedMinutes;
+      });
+    }
+
+    return rows;
+  }, [progress, splitBarByUser, challenge?.isGroup, currentUserId]);
+
   if (loading) {
     return (
       <div className="app-page">
@@ -76,8 +116,6 @@ export default function ChallengeDetail() {
     ? accepted.find((p) => p.userId === challenge.winnerId)
     : null;
 
-  const sortedProgress = [...progress].sort((a, b) => b.accruedMinutes - a.accruedMinutes);
-
   return (
     <div className="app-page">
       <Link to="/challenges" className="app-back-link">← Challenges</Link>
@@ -101,7 +139,12 @@ export default function ChallengeDetail() {
         {winner && (
           <p className="challenge-winner">
             Winner:{' '}
-            <UserLink userId={winner.userId} username={winner.username} avatarUrl={winner.avatarUrl} />
+            <UserLink
+              userId={winner.userId}
+              username={winner.username}
+              avatarUrl={winner.avatarUrl}
+              userRoles={winner.userRoles}
+            />
           </p>
         )}
       </header>
@@ -115,6 +158,9 @@ export default function ChallengeDetail() {
               userId={p.userId}
               username={p.username}
               avatarUrl={p.avatarUrl}
+              userRoles={p.userRoles}
+              showAvatar
+              avatarSize="sm"
               className={`challenge-participant${p.role === 'creator' ? ' challenge-participant--creator' : ''}`}
             />
           ))}
@@ -124,39 +170,43 @@ export default function ChallengeDetail() {
               userId={p.userId}
               username={p.username}
               avatarUrl={p.avatarUrl}
+              userRoles={p.userRoles}
+              showAvatar
+              avatarSize="sm"
               className="challenge-participant challenge-participant--pending"
             />
           ))}
         </div>
       </section>
 
-      {sortedProgress.length > 0 && (
+      {rankedProgress.length > 0 && (
         <section className="app-section">
           <h2>Progress</h2>
           <div className="challenge-progress-list">
-            {sortedProgress.map((row, index) => {
-              const pct = row.goalMinutes > 0
-                ? Math.min(100, Math.round((row.accruedMinutes / row.goalMinutes) * 100))
-                : 0;
+            {rankedProgress.map((row) => {
+              const split = splitBarByUser.find((s) => s.userId === row.userId);
+              const isMe = row.userId === currentUserId;
               return (
-                <div key={row.userId} className="challenge-progress-row">
-                  <div className="challenge-progress-top">
-                    <span className="challenge-progress-rank">#{index + 1}</span>
-                    <UserLink
-                      userId={row.userId}
-                      username={row.username}
-                      avatarUrl={row.avatarUrl}
-                      className="challenge-progress-name"
-                    />
-                    <span className="challenge-progress-stats">
-                      {formatMins(row.accruedMinutes)} · {row.nightsLogged} night{row.nightsLogged === 1 ? '' : 's'}
-                    </span>
-                  </div>
-                  <div className="challenge-progress-bar">
-                    <div className="challenge-progress-fill" style={{ width: `${pct}%` }} />
-                  </div>
-                  <span className="challenge-progress-pct">{pct}% of {goalHours(row.goalMinutes)}</span>
-                </div>
+                <ChallengeProgressRow
+                  key={row.userId}
+                  userId={row.userId}
+                  username={row.username}
+                  avatarUrl={row.avatarUrl}
+                  userRoles={userRolesById.get(row.userId)}
+                  displayMinutes={split?.accruedMinutes ?? row.accruedMinutes}
+                  displayNights={split?.nightsLogged ?? row.nightsLogged}
+                  goalMinutes={row.goalMinutes}
+                  totalPct={split?.totalPct ?? (
+                    row.goalMinutes > 0
+                      ? Math.round((Math.min(row.accruedMinutes, row.goalMinutes) / row.goalMinutes) * 100)
+                      : 0
+                  )}
+                  segments={split?.segments ?? []}
+                  isMe={isMe}
+                  place={challenge.isGroup ? row.place : null}
+                  placeTied={challenge.isGroup ? row.tied : false}
+                  showPlace={challenge.isGroup}
+                />
               );
             })}
           </div>
@@ -165,33 +215,15 @@ export default function ChallengeDetail() {
 
       {contributions.length > 0 && (
         <section className="app-section">
-          <h2>Logged nights</h2>
-          <ul className="challenge-contributions">
-            {contributions.map((row) => (
-              <li key={row.postId} className="challenge-contribution">
-                <div className="challenge-contribution-main">
-                  <UserLink
-                    userId={row.userId}
-                    username={row.username}
-                    avatarUrl={row.avatarUrl}
-                    className="challenge-contribution-user"
-                  />
-                  <span className="challenge-contribution-date">{formatSleepDate(row.sleepDate)}</span>
-                </div>
-                <div className="challenge-contribution-sub">
-                  <Link to={`/post/${row.postId}`} className="challenge-contribution-title">
-                    {row.title}
-                  </Link>
-                  <span>{formatMins(row.asleepMinutes)}</span>
-                  {row.isPrivate && <span className="post-badge">Private</span>}
-                </div>
-              </li>
-            ))}
-          </ul>
+          <ChallengeContributionsByDay
+            contributions={contributions}
+            currentUserId={currentUserId}
+            userRolesById={userRolesById}
+          />
         </section>
       )}
 
-      {sortedProgress.length === 0 && contributions.length === 0 && challenge.status === 'pending' && (
+      {rankedProgress.length === 0 && contributions.length === 0 && challenge.status === 'pending' && (
         <p className="app-muted">Waiting for participants to accept.</p>
       )}
     </div>

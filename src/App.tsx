@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import AppShell from './components/AppShell';
 import Layout from './components/Layout';
 import RequireAuth from './components/RequireAuth';
@@ -9,7 +9,14 @@ import Challenges from './pages/app/Challenges';
 import Feed from './pages/app/Feed';
 import PostDetail from './pages/app/PostDetail';
 import Profile from './pages/app/Profile';
-import Admin from './pages/Admin';
+import AdminLayout from './pages/admin/AdminLayout';
+import AdminHomePage from './pages/admin/AdminHomePage';
+import AdminAnalyticsPage from './pages/admin/AdminAnalyticsPage';
+import AdminNotifyPage from './pages/admin/AdminNotifyPage';
+import AdminReportsPage from './pages/admin/AdminReportsPage';
+import AdminRolesPage from './pages/admin/AdminRolesPage';
+import AdminTagsPage from './pages/admin/AdminTagsPage';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
 import Home from './pages/Home';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
@@ -26,7 +33,18 @@ export default function App() {
   return (
     <Routes>
       <Route element={<SiteLayout />}>
-        <Route path="admin" element={<Admin />} />
+        <Route path="admin" element={<AdminLayout />}>
+          <Route index element={<AdminHomePage />} />
+          <Route path="analytics" element={<AdminAnalyticsPage />} />
+          <Route path="reports" element={<AdminReportsPage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="notify" element={<AdminNotifyPage />} />
+          <Route path="configure">
+            <Route index element={<Navigate to="tags" replace />} />
+            <Route path="tags" element={<AdminTagsPage />} />
+            <Route path="roles" element={<AdminRolesPage />} />
+          </Route>
+        </Route>
         <Route index element={<AppEntry />} />
         <Route element={<ProtectedAppShell />}>
           <Route path="feed" element={<Feed />} />

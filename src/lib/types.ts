@@ -21,6 +21,7 @@ export type SleepPost = {
   userId: string;
   username: string;
   avatarUrl?: string;
+  userRoles?: string[];
   title: string;
   sleepDate: string;
   bedtime: string;
@@ -52,6 +53,7 @@ export type WebProfile = {
   id: string;
   username: string;
   avatarUrl?: string;
+  userRoles?: string[];
   friendsCount: number;
   postsCount: number;
   streak: number;
@@ -74,6 +76,7 @@ export type ChallengeParticipant = {
   userId: string;
   username: string;
   avatarUrl?: string;
+  userRoles?: string[];
   inviteStatus: 'pending' | 'accepted' | 'declined' | 'left';
   role: 'creator' | 'participant';
 };
@@ -84,6 +87,7 @@ export type Comment = {
   userId: string;
   username: string;
   avatarUrl?: string;
+  userRoles?: string[];
   text: string;
   createdAt: string;
 };
@@ -92,6 +96,7 @@ export type KudosUser = {
   id: string;
   username: string;
   avatarUrl?: string;
+  userRoles?: string[];
   createdAt: string;
 };
 

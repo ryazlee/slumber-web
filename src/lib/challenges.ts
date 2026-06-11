@@ -37,7 +37,7 @@ function challengeContributionEndDate(challenge: Challenge): string {
 
 const PARTICIPANT_SELECT = `
   challenge_id, user_id, role, invite_status, joined_at,
-  profiles ( username, avatar_url )
+  profiles ( username, avatar_url, user_roles )
 `;
 
 function mapParticipantRow(row: {
@@ -45,12 +45,13 @@ function mapParticipantRow(row: {
   user_id: string;
   role: 'creator' | 'participant';
   invite_status: ChallengeParticipant['inviteStatus'];
-  profiles?: { username: string; avatar_url: string | null } | null;
+  profiles?: { username: string; avatar_url: string | null; user_roles?: string[] | null } | null;
 }): ChallengeParticipant {
   return {
     userId: row.user_id,
     username: row.profiles?.username ?? 'unknown',
     avatarUrl: row.profiles?.avatar_url ?? undefined,
+    userRoles: row.profiles?.user_roles ?? undefined,
     inviteStatus: row.invite_status,
     role: row.role,
   };

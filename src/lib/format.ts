@@ -74,3 +74,18 @@ export function formatChallengeStartDate(
     year: 'numeric',
   });
 }
+
+export function toLocalDateISO(d: Date): string {
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, '0'),
+    String(d.getDate()).padStart(2, '0'),
+  ].join('-');
+}
+
+/** True when sleep_date is yesterday (local) — shows the "Latest" chip in the app. */
+export function isLatestSleepPost(sleepDateISO: string): boolean {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return sleepDateISO === toLocalDateISO(yesterday);
+}

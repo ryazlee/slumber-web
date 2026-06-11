@@ -23,7 +23,7 @@ export default function AdminNotify({ refreshToken }: Props) {
     setSearching(true);
     setSearchError(null);
     try {
-      setUsers(await searchAdminUsers(q, 50));
+      setUsers(await searchAdminUsers({ query: q, limit: 50 }));
     } catch (e: unknown) {
       setSearchError(e instanceof Error ? e.message : 'Could not load users.');
     } finally {

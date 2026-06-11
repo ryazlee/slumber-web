@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { formatAuthError } from '../lib/authErrors';
 import { supabase } from '../lib/supabase';
 
 type AuthStep = 'email' | 'otp';
@@ -27,14 +28,16 @@ export default function LoginForm({
     setAuthError(null);
     setAuthLoading(true);
     try {
+      const normalizedEmail = email.trim().toLowerCase();
       const { error } = await supabase.auth.signInWithOtp({
-        email: email.trim(),
+        email: normalizedEmail,
         options: { shouldCreateUser: false },
       });
       if (error) throw error;
+      setEmail(normalizedEmail);
       setAuthStep('otp');
     } catch (err: unknown) {
-      setAuthError(err instanceof Error ? err.message : 'Could not send code.');
+      setAuthError(formatAuthError(err));
     } finally {
       setAuthLoading(false);
     }
@@ -46,14 +49,14 @@ export default function LoginForm({
     setAuthLoading(true);
     try {
       const { error } = await supabase.auth.verifyOtp({
-        email: email.trim(),
+        email: email.trim().toLowerCase(),
         token: otp.trim(),
         type: 'email',
       });
       if (error) throw error;
       onSuccess?.();
     } catch (err: unknown) {
-      setAuthError(err instanceof Error ? err.message : 'Invalid code.');
+      setAuthError(formatAuthError(err));
     } finally {
       setAuthLoading(false);
     }

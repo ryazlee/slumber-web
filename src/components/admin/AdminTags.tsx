@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { type GridColDef } from '@mui/x-data-grid';
 import type { AdminTagRow, TagDraft } from '../../lib/admin';
 import { deleteAdminTag, upsertAdminTag } from '../../lib/admin';
+import AdminDataGrid from './AdminDataGrid';
 
 type Props = {
   tags: AdminTagRow[];
@@ -60,6 +62,67 @@ export default function AdminTags({ tags, loading, error, onChanged }: Props) {
       setSaving(false);
     }
   };
+
+  const columns: GridColDef<AdminTagRow>[] = [
+    {
+      field: 'label',
+      headerName: 'Tag',
+      flex: 1.2,
+      minWidth: 140,
+      valueGetter: (_value, row) => `${row.emoji} ${row.label}`,
+    },
+    {
+      field: 'value',
+      headerName: 'Value',
+      flex: 1,
+      minWidth: 140,
+      renderCell: ({ value }) => <code className="admin-code">{value}</code>,
+    },
+    {
+      field: 'sort_order',
+      headerName: 'Order',
+      type: 'number',
+      width: 90,
+    },
+    {
+      field: 'usage_count',
+      headerName: 'Used',
+      type: 'number',
+      width: 90,
+    },
+    {
+      field: 'actions',
+      headerName: '',
+      sortable: false,
+      filterable: false,
+      disableColumnMenu: true,
+      width: 140,
+      renderCell: ({ row }) => (
+        <div className="admin-grid-actions">
+          <button
+            type="button"
+            className="admin-link-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEdit(row);
+            }}
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            className="admin-link-btn admin-link-danger"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(row);
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="admin-tags">
@@ -132,38 +195,25 @@ export default function AdminTags({ tags, loading, error, onChanged }: Props) {
         </form>
       </div>
 
+      <p className="admin-muted admin-filter-summary">
+        {tags.length} tag{tags.length === 1 ? '' : 's'} — sort and filter in the table toolbar
+      </p>
+
       {error && <p className="admin-error admin-error-banner">{error}</p>}
-      {loading && <p className="admin-muted">Loading tags…</p>}
 
       {!loading && (
-        <div className="admin-table-wrap">
-          <table className="admin-table admin-table--cards">
-            <thead>
-              <tr>
-                <th>Tag</th>
-                <th>Value</th>
-                <th>Order</th>
-                <th>Used</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {tags.map((tag) => (
-                <tr key={tag.value}>
-                  <td data-label="Tag">{tag.emoji} {tag.label}</td>
-                  <td data-label="Value"><code className="admin-code">{tag.value}</code></td>
-                  <td data-label="Order">{tag.sort_order}</td>
-                  <td data-label="Used">{tag.usage_count}</td>
-                  <td className="admin-tag-actions admin-td-actions">
-                    <button type="button" className="admin-link-btn" onClick={() => handleEdit(tag)}>Edit</button>
-                    <button type="button" className="admin-link-btn admin-link-danger" onClick={() => handleDelete(tag)}>Delete</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <AdminDataGrid
+          rows={tags}
+          columns={columns}
+          getRowId={(row) => row.value}
+          loading={loading}
+          label="Tags"
+          initialState={{
+            sorting: { sortModel: [{ field: 'sort_order', sort: 'asc' }] },
+          }}
+        />
       )}
+      {loading && <p className="admin-muted">Loading tags…</p>}
     </div>
   );
 }

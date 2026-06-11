@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import CachedAvatar from '../../components/CachedAvatar';
+import Avatar from '../../components/Avatar';
 import PostList from '../../components/PostList';
 import { useAuth } from '../../context/AuthContext';
 import { usePaginatedPosts } from '../../hooks/usePaginatedPosts';
 import { fetchUserPosts } from '../../lib/feed';
-import { avatarColorFromName, formatChallengeRecord, formatMins } from '../../lib/format';
+import { formatChallengeRecord, formatMins } from '../../lib/format';
+import { formatRoleList } from '../../lib/userRoles';
 import { fetchProfileSummary } from '../../lib/profile';
 import type { WebProfile } from '../../lib/types';
 
@@ -101,14 +102,18 @@ export default function Profile() {
       )}
 
       <header className="profile-hero">
-        <CachedAvatar
-          url={profile.avatarUrl}
+        <Avatar
+          userId={profile.id}
           username={profile.username}
-          className="profile-avatar"
-          style={{ background: avatarColorFromName(profile.username) }}
+          avatarUrl={profile.avatarUrl}
+          userRoles={profile.userRoles}
+          size="lg"
         />
         <div>
           <h1>{pageTitle}</h1>
+          {profile.userRoles?.length ? (
+            <p className="profile-role-label">{formatRoleList(profile.userRoles)}</p>
+          ) : null}
           <p className="app-muted">
             {profile.friendsCount} friends · {profile.postsCount} posts
           </p>

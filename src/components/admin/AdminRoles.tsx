@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { type GridColDef } from '@mui/x-data-grid';
 import type { AdminRoleDefinitionRow, RoleDefinitionDraft } from '../../lib/admin';
 import { deleteAdminRoleDefinition, upsertAdminRoleDefinition } from '../../lib/admin';
 import { clearRoleDefinitionCache } from '../../lib/userRoles';
+import AdminDataGrid from './AdminDataGrid';
 
 type Props = {
   roles: AdminRoleDefinitionRow[];
@@ -101,6 +103,100 @@ export default function AdminRoles({ roles, loading, error, onChanged }: Props) 
       setSaving(false);
     }
   };
+
+  const columns: GridColDef<AdminRoleDefinitionRow>[] = [
+    {
+      field: 'label',
+      headerName: 'Role',
+      flex: 1,
+      minWidth: 140,
+      valueGetter: (_value, row) => `${row.badge} ${row.label}`,
+    },
+    {
+      field: 'key',
+      headerName: 'Key',
+      flex: 1,
+      minWidth: 120,
+      renderCell: ({ value }) => <code className="admin-code">{value}</code>,
+    },
+    {
+      field: 'ring_color',
+      headerName: 'Colors',
+      flex: 1.2,
+      minWidth: 180,
+      sortable: false,
+      valueGetter: (_value, row) => `${row.ring_color} ${row.badge_color ?? ''}`,
+      renderCell: ({ row }) => (
+        <div className="admin-td-stack">
+          <span className="admin-color-row">
+            <RoleSwatch color={row.ring_color} /> Ring {row.ring_color}
+          </span>
+          {row.badge_color ? (
+            <span className="admin-color-row">
+              <RoleSwatch color={row.badge_color} /> Badge {row.badge_color}
+            </span>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      field: 'is_admin',
+      headerName: 'Flags',
+      flex: 1,
+      minWidth: 120,
+      valueGetter: (_value, row) => `${row.is_admin ? 'Admin' : ''} ${row.assignable ? 'Assignable' : 'Hidden'}`,
+      renderCell: ({ row }) => (
+        <span>
+          {row.is_admin ? 'Admin' : '—'}
+          {row.assignable ? ' · Assignable' : ' · Hidden'}
+        </span>
+      ),
+    },
+    {
+      field: 'sort_order',
+      headerName: 'Order',
+      type: 'number',
+      width: 90,
+    },
+    {
+      field: 'usage_count',
+      headerName: 'Users',
+      type: 'number',
+      width: 90,
+    },
+    {
+      field: 'actions',
+      headerName: '',
+      sortable: false,
+      filterable: false,
+      disableColumnMenu: true,
+      width: 140,
+      renderCell: ({ row }) => (
+        <div className="admin-grid-actions">
+          <button
+            type="button"
+            className="admin-link-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEdit(row);
+            }}
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            className="admin-link-btn admin-link-danger"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(row);
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="admin-tags">
@@ -209,54 +305,25 @@ export default function AdminRoles({ roles, loading, error, onChanged }: Props) 
         </form>
       </div>
 
+      <p className="admin-muted admin-filter-summary">
+        {roles.length} role{roles.length === 1 ? '' : 's'} — sort and filter in the table toolbar
+      </p>
+
       {error && <p className="admin-error admin-error-banner">{error}</p>}
-      {loading && <p className="admin-muted">Loading roles…</p>}
 
       {!loading && (
-        <div className="admin-table-wrap">
-          <table className="admin-table admin-table--cards">
-            <thead>
-              <tr>
-                <th>Role</th>
-                <th>Key</th>
-                <th>Colors</th>
-                <th>Flags</th>
-                <th>Order</th>
-                <th>Users</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {roles.map((role) => (
-                <tr key={role.key}>
-                  <td data-label="Role">{role.badge} {role.label}</td>
-                  <td data-label="Key"><code className="admin-code">{role.key}</code></td>
-                  <td data-label="Colors" className="admin-td-stack">
-                    <span className="admin-color-row">
-                      <RoleSwatch color={role.ring_color} /> Ring {role.ring_color}
-                    </span>
-                    {role.badge_color && (
-                      <span className="admin-color-row">
-                        <RoleSwatch color={role.badge_color} /> Badge {role.badge_color}
-                      </span>
-                    )}
-                  </td>
-                  <td data-label="Flags" className="admin-td-stack">
-                    {role.is_admin ? 'Admin' : '—'}
-                    {role.assignable ? ' · Assignable' : ' · Hidden'}
-                  </td>
-                  <td data-label="Order">{role.sort_order}</td>
-                  <td data-label="Users">{role.usage_count}</td>
-                  <td className="admin-tag-actions admin-td-actions">
-                    <button type="button" className="admin-link-btn" onClick={() => handleEdit(role)}>Edit</button>
-                    <button type="button" className="admin-link-btn admin-link-danger" onClick={() => handleDelete(role)}>Delete</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <AdminDataGrid
+          rows={roles}
+          columns={columns}
+          getRowId={(row) => row.key}
+          loading={loading}
+          label="Roles"
+          initialState={{
+            sorting: { sortModel: [{ field: 'sort_order', sort: 'asc' }] },
+          }}
+        />
       )}
+      {loading && <p className="admin-muted">Loading roles…</p>}
     </div>
   );
 }

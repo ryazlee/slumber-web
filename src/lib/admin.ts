@@ -1,11 +1,39 @@
+import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase } from './supabase';
+
+export function formatAdminRpcError(label: string, err: unknown): string {
+  if (err && typeof err === 'object' && 'message' in err) {
+    const pg = err as PostgrestError;
+    const parts = [`${label}: ${pg.message}`];
+    if (pg.code) parts.push(`(${pg.code})`);
+    if (pg.details) parts.push(pg.details);
+    if (pg.hint) parts.push(pg.hint);
+    return parts.join(' ');
+  }
+  if (err instanceof Error) return `${label}: ${err.message}`;
+  return `${label}: Could not load data.`;
+}
+
+function isMissingTagsRpc(err: PostgrestError): boolean {
+  const msg = err.message ?? '';
+  return err.code === 'PGRST202'
+    || err.code === '42883'
+    || /admin_list_tags/i.test(msg);
+}
 
 export type PostReportRow = {
   id: string;
   created_at: string;
   reason: string;
   reporter: string;
+  reporter_id?: string;
   author: string;
+  author_id?: string;
+  author_joined?: string;
+  author_posts_count?: number;
+  author_roles?: string[] | null;
+  author_is_premium?: boolean;
+  author_report_count?: number;
   title: string;
   post_id: string;
 };
@@ -28,26 +56,81 @@ export type DashboardMetrics = {
   total_posts: number;
   posts_7d: number;
   posts_30d: number;
+  wearable_posts: number;
+  manual_posts: number;
+  posts_with_dreams: number;
   active_users_7d: number;
   active_users_30d: number;
   total_comments: number;
   comments_7d: number;
+  comments_30d: number;
   total_kudos: number;
   kudos_7d: number;
   friendships: number;
+  pending_friend_requests: number;
   active_challenges: number;
+  pending_challenges: number;
   pending_post_reports: number;
   pending_comment_reports: number;
   premium_users: number;
 };
 
+export type DailyActivityRow = {
+  day: string;
+  signups: number;
+  posts: number;
+  comments: number;
+  active_users: number;
+};
+
+export type UserSearchFilters = {
+  query?: string;
+  limit?: number;
+  role?: string | null;
+  premiumOnly?: boolean;
+  minPosts?: number | null;
+  joinedWithinDays?: number | null;
+};
+
 export type RecentUserRow = {
   id: string;
   username: string;
+  email?: string | null;
   created_at: string;
   user_roles: string[] | null;
   is_premium: boolean;
   posts_count: number;
+  last_app_version?: string | null;
+};
+
+export type AppVersionRow = {
+  version: string;
+  user_count: number;
+  last_seen: string | null;
+};
+
+export type AnalyticsMetrics = {
+  start_date: string;
+  end_date: string;
+  app_version: string | null;
+  signups: number;
+  active_users: number;
+  posts: number;
+  wearable_posts: number;
+  manual_posts: number;
+  posts_with_dreams: number;
+  comments: number;
+  kudos: number;
+  friendships_accepted: number;
+  version_user_count: number | null;
+  users_with_version_reported: number;
+};
+
+export type AnalyticsFilters = {
+  start?: string;
+  end?: string;
+  appVersion?: string | null;
+  signupLimit?: number;
 };
 
 export type AdminTagRow = {
@@ -100,10 +183,41 @@ export async function fetchDashboardMetrics(): Promise<DashboardMetrics> {
   return data as DashboardMetrics;
 }
 
-export async function fetchRecentUsers(limit = 25): Promise<RecentUserRow[]> {
-  const { data, error } = await supabase.rpc('admin_get_recent_users', { p_limit: limit });
+export async function fetchRecentUsers(filters: AnalyticsFilters = {}): Promise<RecentUserRow[]> {
+  const { data, error } = await supabase.rpc('admin_get_recent_users', {
+    p_limit: filters.signupLimit ?? 25,
+    p_start: filters.start || null,
+    p_end: filters.end || null,
+    p_app_version: filters.appVersion || null,
+  });
   if (error) throw error;
   return (data as RecentUserRow[] | null) ?? [];
+}
+
+export async function fetchDailyActivity(filters: AnalyticsFilters): Promise<DailyActivityRow[]> {
+  const { data, error } = await supabase.rpc('admin_get_daily_activity', {
+    p_start: filters.start,
+    p_end: filters.end,
+    p_app_version: filters.appVersion || null,
+  });
+  if (error) throw error;
+  return (data as DailyActivityRow[] | null) ?? [];
+}
+
+export async function fetchAnalyticsMetrics(filters: AnalyticsFilters): Promise<AnalyticsMetrics> {
+  const { data, error } = await supabase.rpc('admin_get_analytics_metrics', {
+    p_start: filters.start,
+    p_end: filters.end,
+    p_app_version: filters.appVersion || null,
+  });
+  if (error) throw error;
+  return data as AnalyticsMetrics;
+}
+
+export async function fetchAppVersions(): Promise<AppVersionRow[]> {
+  const { data, error } = await supabase.rpc('admin_list_app_versions');
+  if (error) throw error;
+  return (data as AppVersionRow[] | null) ?? [];
 }
 
 export async function fetchPostReports(): Promise<PostReportRow[]> {
@@ -118,10 +232,18 @@ export async function fetchCommentReports(): Promise<CommentReportRow[]> {
   return (data as CommentReportRow[] | null) ?? [];
 }
 
-export async function fetchAdminTags(): Promise<AdminTagRow[]> {
-  const { data, error } = await supabase.rpc('admin_list_tags');
-  if (error) throw error;
-  return (data as AdminTagRow[] | null) ?? [];
+export async function fetchAdminTags(filters?: AnalyticsFilters): Promise<AdminTagRow[]> {
+  const rangedArgs = {
+    p_start: filters?.start || null,
+    p_end: filters?.end || null,
+    p_app_version: filters?.appVersion || null,
+  };
+  let result = await supabase.rpc('admin_list_tags', rangedArgs);
+  if (result.error && isMissingTagsRpc(result.error)) {
+    result = await supabase.rpc('admin_list_tags');
+  }
+  if (result.error) throw result.error;
+  return (result.data as AdminTagRow[] | null) ?? [];
 }
 
 export async function upsertAdminTag(tag: TagDraft): Promise<void> {
@@ -139,10 +261,14 @@ export async function deleteAdminTag(value: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function searchAdminUsers(query = '', limit = 50): Promise<RecentUserRow[]> {
+export async function searchAdminUsers(filters: UserSearchFilters = {}): Promise<RecentUserRow[]> {
   const { data, error } = await supabase.rpc('admin_search_users', {
-    p_query: query || null,
-    p_limit: limit,
+    p_query: filters.query?.trim() || null,
+    p_limit: filters.limit ?? 50,
+    p_role: filters.role || null,
+    p_premium_only: filters.premiumOnly ?? false,
+    p_min_posts: filters.minPosts ?? null,
+    p_joined_within_days: filters.joinedWithinDays ?? null,
   });
   if (error) throw error;
   return (data as RecentUserRow[] | null) ?? [];
