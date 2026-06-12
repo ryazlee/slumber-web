@@ -22,90 +22,178 @@ function authorRolesLabel(roles: string[] | null | undefined, isPremium?: boolea
   return parts.length ? parts.join(', ') : '—';
 }
 
-const postColumns: GridColDef<PostReportRow>[] = [
-  dateColumn('created_at', 'When'),
-  { field: 'reason', headerName: 'Reason', flex: 1, minWidth: 120 },
-  {
-    field: 'reporter',
-    headerName: 'Reporter',
-    flex: 0.8,
-    minWidth: 110,
-    valueFormatter: (value) => `@${value}`,
-  },
-  {
-    field: 'author',
-    headerName: 'Author',
-    flex: 0.8,
-    minWidth: 110,
-    valueFormatter: (value) => `@${value}`,
-  },
+function idCell(value: unknown) {
+  return value ? <code className="admin-code">{String(value)}</code> : '—';
+}
+
+function sleepDateCell(value: unknown) {
+  if (!value) return '—';
+  const d = new Date(`${value}T12:00:00`);
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+const authorContextColumns = <T extends {
+  author_joined: string;
+  author_posts_count: number;
+  author_report_count: number;
+  author_roles: string[] | null;
+  author_is_premium: boolean;
+}>() => [
   {
     field: 'author_joined',
     headerName: 'Author joined',
     flex: 0.9,
     minWidth: 130,
-    valueFormatter: (value) => (value ? formatWhen(String(value)) : '—'),
-    sortComparator: (v1, v2) => new Date(String(v1)).getTime() - new Date(String(v2)).getTime(),
+    valueFormatter: (value: unknown) => (value ? formatWhen(String(value)) : '—'),
+    sortComparator: (v1: unknown, v2: unknown) => (
+      new Date(String(v1)).getTime() - new Date(String(v2)).getTime()
+    ),
   },
   {
     field: 'author_posts_count',
-    headerName: 'Posts',
-    type: 'number',
-    width: 80,
-    valueFormatter: (value) => (value == null ? '—' : String(value)),
+    headerName: 'Author posts',
+    type: 'number' as const,
+    width: 100,
   },
   {
     field: 'author_report_count',
-    headerName: 'Prior reports',
-    type: 'number',
-    width: 110,
-    valueFormatter: (value) => (value == null ? '—' : String(value)),
+    headerName: 'Author prior reports',
+    type: 'number' as const,
+    width: 140,
   },
   {
     field: 'author_roles',
-    headerName: 'Roles',
+    headerName: 'Author roles',
     flex: 1,
     minWidth: 120,
-    valueGetter: (_value, row) => authorRolesLabel(row.author_roles, row.author_is_premium),
+    valueGetter: (_value: unknown, row: T) => authorRolesLabel(row.author_roles, row.author_is_premium),
   },
   {
     field: 'author_is_premium',
     headerName: 'Premium',
-    type: 'boolean',
+    type: 'boolean' as const,
     width: 90,
-  },
-  {
-    field: 'author_id',
-    headerName: 'Author ID',
-    flex: 1,
-    minWidth: 200,
-    renderCell: ({ value }) => (value ? <code className="admin-code">{value}</code> : '—'),
-  },
-  {
-    field: 'title',
-    headerName: 'Post',
-    flex: 1.5,
-    minWidth: 160,
-    valueFormatter: (value) => (value ? String(value) : '—'),
   },
 ];
 
-const commentColumns: GridColDef<CommentReportRow>[] = [
-  dateColumn('created_at', 'When'),
+const postColumns: GridColDef<PostReportRow>[] = [
+  {
+    field: 'id',
+    headerName: 'Report ID',
+    flex: 1.1,
+    minWidth: 200,
+    renderCell: ({ value }) => idCell(value),
+  },
+  dateColumn('created_at', 'Reported'),
   { field: 'reason', headerName: 'Reason', flex: 1, minWidth: 120 },
   {
     field: 'reporter',
     headerName: 'Reporter',
-    flex: 1,
-    minWidth: 120,
+    flex: 0.8,
+    minWidth: 110,
     valueFormatter: (value) => `@${value}`,
+  },
+  {
+    field: 'reporter_id',
+    headerName: 'Reporter ID',
+    flex: 1.1,
+    minWidth: 200,
+    renderCell: ({ value }) => idCell(value),
+  },
+  {
+    field: 'post_id',
+    headerName: 'Post ID',
+    flex: 1.1,
+    minWidth: 200,
+    renderCell: ({ value }) => idCell(value),
+  },
+  {
+    field: 'title',
+    headerName: 'Post title',
+    flex: 1.5,
+    minWidth: 160,
+    valueFormatter: (value) => (value ? String(value) : '—'),
+  },
+  {
+    field: 'post_sleep_date',
+    headerName: 'Sleep date',
+    width: 120,
+    renderCell: ({ value }) => sleepDateCell(value),
+  },
+  dateColumn('post_created_at', 'Post logged'),
+  {
+    field: 'post_deleted',
+    headerName: 'Deleted',
+    type: 'boolean',
+    width: 90,
+  },
+  {
+    field: 'post_report_count',
+    headerName: 'Reports on post',
+    type: 'number',
+    width: 120,
   },
   {
     field: 'author',
     headerName: 'Author',
-    flex: 1,
-    minWidth: 120,
+    flex: 0.8,
+    minWidth: 110,
     valueFormatter: (value) => `@${value}`,
+  },
+  {
+    field: 'author_id',
+    headerName: 'Author ID',
+    flex: 1.1,
+    minWidth: 200,
+    renderCell: ({ value }) => idCell(value),
+  },
+  ...authorContextColumns<PostReportRow>(),
+];
+
+const commentColumns: GridColDef<CommentReportRow>[] = [
+  {
+    field: 'id',
+    headerName: 'Report ID',
+    flex: 1.1,
+    minWidth: 200,
+    renderCell: ({ value }) => idCell(value),
+  },
+  dateColumn('created_at', 'Reported'),
+  { field: 'reason', headerName: 'Reason', flex: 1, minWidth: 120 },
+  {
+    field: 'reporter',
+    headerName: 'Reporter',
+    flex: 0.8,
+    minWidth: 110,
+    valueFormatter: (value) => `@${value}`,
+  },
+  {
+    field: 'reporter_id',
+    headerName: 'Reporter ID',
+    flex: 1.1,
+    minWidth: 200,
+    renderCell: ({ value }) => idCell(value),
+  },
+  {
+    field: 'comment_id',
+    headerName: 'Comment ID',
+    flex: 1.1,
+    minWidth: 200,
+    renderCell: ({ value }) => idCell(value),
+  },
+  {
+    field: 'post_id',
+    headerName: 'Post ID',
+    flex: 1.1,
+    minWidth: 200,
+    renderCell: ({ value }) => idCell(value),
+  },
+  {
+    field: 'post_title',
+    headerName: 'Post title',
+    flex: 1.2,
+    minWidth: 140,
+    valueFormatter: (value) => (value ? String(value) : '—'),
   },
   {
     field: 'comment_text',
@@ -113,6 +201,28 @@ const commentColumns: GridColDef<CommentReportRow>[] = [
     flex: 2,
     minWidth: 200,
   },
+  dateColumn('comment_created_at', 'Comment posted'),
+  {
+    field: 'comment_report_count',
+    headerName: 'Reports on comment',
+    type: 'number',
+    width: 140,
+  },
+  {
+    field: 'author',
+    headerName: 'Author',
+    flex: 0.8,
+    minWidth: 110,
+    valueFormatter: (value) => `@${value}`,
+  },
+  {
+    field: 'author_id',
+    headerName: 'Author ID',
+    flex: 1.1,
+    minWidth: 200,
+    renderCell: ({ value }) => idCell(value),
+  },
+  ...authorContextColumns<CommentReportRow>(),
 ];
 
 export default function AdminReports({
@@ -170,11 +280,21 @@ export default function AdminReports({
           getRowId={(row) => row.id}
           loading={loading}
           label={`${tab} reports`}
-          initialState={
-            tab === 'posts'
-              ? { columns: { columnVisibilityModel: { author_id: false } } }
-              : undefined
-          }
+          initialState={{
+            columns: {
+              columnVisibilityModel: {
+                author_joined: false,
+                author_posts_count: false,
+                author_report_count: false,
+                author_roles: false,
+                author_is_premium: false,
+                post_sleep_date: false,
+                post_created_at: false,
+                post_deleted: false,
+                comment_created_at: false,
+              },
+            },
+          }}
         />
       ) : null}
     </>

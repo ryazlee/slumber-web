@@ -525,8 +525,26 @@ function TagsPanel({
   );
 }
 
+function idCell(value: unknown) {
+  return value ? <code className="admin-code">{String(value)}</code> : '—';
+}
+
 function RecentPostsGrid({ posts }: { posts: RecentPostRow[] }) {
   const columns = useMemo<GridColDef<RecentPostRow>[]>(() => [
+    {
+      field: 'id',
+      headerName: 'Post ID',
+      flex: 1.2,
+      minWidth: 200,
+      renderCell: ({ value }) => idCell(value),
+    },
+    {
+      field: 'user_id',
+      headerName: 'User ID',
+      flex: 1.2,
+      minWidth: 200,
+      renderCell: ({ value }) => idCell(value),
+    },
     {
       field: 'username',
       headerName: 'User',
@@ -602,6 +620,13 @@ function RecentPostsGrid({ posts }: { posts: RecentPostRow[] }) {
 function RecentSignupsGrid({ users, showVersion }: { users: RecentUserRow[]; showVersion: boolean }) {
   const columns = useMemo<GridColDef<RecentUserRow>[]>(() => {
     const cols: GridColDef<RecentUserRow>[] = [
+      {
+        field: 'id',
+        headerName: 'User ID',
+        flex: 1.2,
+        minWidth: 200,
+        renderCell: ({ value }) => idCell(value),
+      },
       {
         field: 'username',
         headerName: 'Username',

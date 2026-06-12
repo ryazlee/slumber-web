@@ -26,16 +26,20 @@ export type PostReportRow = {
   created_at: string;
   reason: string;
   reporter: string;
-  reporter_id?: string;
+  reporter_id: string;
   author: string;
-  author_id?: string;
-  author_joined?: string;
-  author_posts_count?: number;
-  author_roles?: string[] | null;
-  author_is_premium?: boolean;
-  author_report_count?: number;
+  author_id: string;
+  author_joined: string;
+  author_posts_count: number;
+  author_roles: string[] | null;
+  author_is_premium: boolean;
+  author_report_count: number;
   title: string;
   post_id: string;
+  post_sleep_date: string;
+  post_created_at: string;
+  post_deleted: boolean;
+  post_report_count: number;
 };
 
 export type CommentReportRow = {
@@ -43,10 +47,20 @@ export type CommentReportRow = {
   created_at: string;
   reason: string;
   reporter: string;
+  reporter_id: string;
   author: string;
+  author_id: string;
+  author_joined: string;
+  author_posts_count: number;
+  author_roles: string[] | null;
+  author_is_premium: boolean;
+  author_report_count: number;
   comment_text: string;
   comment_id: string;
+  comment_created_at: string;
   post_id: string;
+  post_title: string;
+  comment_report_count: number;
 };
 
 export type DashboardMetrics = {
@@ -128,6 +142,7 @@ export type AnalyticsMetrics = {
 
 export type RecentPostRow = {
   id: string;
+  user_id: string;
   username: string;
   sleep_date: string;
   title: string;
