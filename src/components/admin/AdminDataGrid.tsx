@@ -13,6 +13,7 @@ export default function AdminDataGrid({
         disableRowSelectionOnClick
         autoHeight
         showToolbar
+        sx={{ width: '100%', maxWidth: '100%', minWidth: 0 }}
         pageSizeOptions={pageSizeOptions}
         initialState={{
           pagination: {

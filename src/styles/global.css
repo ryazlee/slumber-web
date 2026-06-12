@@ -595,11 +595,12 @@ h1 {
 }
 
 .admin-page {
-  max-width: var(--wide-width);
+  width: 100%;
+  max-width: min(var(--wide-width), 100%);
   margin: 0 auto;
   padding: 48px max(20px, env(safe-area-inset-right)) 64px max(20px, env(safe-area-inset-left));
-  width: 100%;
   box-sizing: border-box;
+  overflow-x: clip;
 }
 
 .admin-page--centered {
@@ -768,15 +769,46 @@ h1 {
 
 .admin-data-grid-wrap {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   margin-top: 8px;
+  overflow: hidden;
 }
 
 .admin-data-grid-wrap .MuiDataGrid-root {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   border: 1px solid var(--border);
   border-radius: 12px;
   background-color: var(--surface);
   --DataGrid-containerBackground: var(--surface);
   --DataGrid-rowBorderColor: var(--border);
+}
+
+.admin-data-grid-wrap .MuiDataGrid-main {
+  overflow: hidden;
+}
+
+.admin-data-grid-wrap .MuiDataGrid-virtualScroller {
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-data-grid-wrap .MuiDataGrid-cell,
+.admin-data-grid-wrap .MuiDataGrid-columnHeaderTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-data-grid-wrap .MuiDataGrid-cell .admin-code {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: normal;
+  max-width: 100%;
 }
 
 .admin-data-grid-wrap .MuiDataGrid-columnHeaders {
@@ -877,6 +909,8 @@ h1 {
 .admin-overview {
   display: grid;
   gap: 32px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .admin-metric-grid {
@@ -918,6 +952,8 @@ h1 {
 
 .admin-section {
   margin-top: 8px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .admin-section-title {
@@ -1103,6 +1139,8 @@ h1 {
 .admin-analytics-panel {
   display: grid;
   gap: 20px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .admin-panel-lead {
