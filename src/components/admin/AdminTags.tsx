@@ -4,6 +4,8 @@ import { type GridColDef } from '@mui/x-data-grid';
 import type { AdminTagRow, TagDraft } from '../../lib/admin';
 import { useDeleteAdminTag, useUpsertAdminTag } from '../../hooks/useAdmin';
 import AdminDataGrid from './AdminDataGrid';
+import AdminSection, { AdminTableSummary } from './AdminSection';
+import AdminTagForm from './AdminTagForm';
 
 type Props = {
   tags: AdminTagRow[];
@@ -15,6 +17,7 @@ const EMPTY_DRAFT: TagDraft = { value: '', emoji: '', label: '', sort_order: 0 }
 
 export default function AdminTags({ tags, loading, error }: Props) {
   const [draft, setDraft] = useState<TagDraft>(EMPTY_DRAFT);
+  const [editingValue, setEditingValue] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const upsertMutation = useUpsertAdminTag();
   const deleteMutation = useDeleteAdminTag();
@@ -26,18 +29,26 @@ export default function AdminTags({ tags, loading, error }: Props) {
     try {
       await upsertMutation.mutateAsync(draft);
       setDraft(EMPTY_DRAFT);
+      setEditingValue(null);
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : 'Could not save tag.');
     }
   };
 
   const handleEdit = (tag: AdminTagRow) => {
+    setEditingValue(tag.value);
     setDraft({
       value: tag.value,
       emoji: tag.emoji,
       label: tag.label,
       sort_order: tag.sort_order,
     });
+    setFormError(null);
+  };
+
+  const handleCancel = () => {
+    setDraft(EMPTY_DRAFT);
+    setEditingValue(null);
     setFormError(null);
   };
 
@@ -50,7 +61,7 @@ export default function AdminTags({ tags, loading, error }: Props) {
     setFormError(null);
     try {
       await deleteMutation.mutateAsync(tag.value);
-      if (draft.value === tag.value) setDraft(EMPTY_DRAFT);
+      if (editingValue === tag.value) handleCancel();
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : 'Could not delete tag.');
     }
@@ -94,13 +105,17 @@ export default function AdminTags({ tags, loading, error }: Props) {
         <div className="admin-grid-actions">
           <button
             type="button"
-            className="admin-link-btn"
+            className={editingValue === row.value ? 'admin-link-btn admin-link-btn--active' : 'admin-link-btn'}
             onClick={(e) => {
               e.stopPropagation();
-              handleEdit(row);
+              if (editingValue === row.value) {
+                handleCancel();
+              } else {
+                handleEdit(row);
+              }
             }}
           >
-            Edit
+            {editingValue === row.value ? 'Editing' : 'Edit'}
           </button>
           <button
             type="button"
@@ -118,83 +133,25 @@ export default function AdminTags({ tags, loading, error }: Props) {
   ];
 
   return (
-    <div className="admin-tags">
-      <div className="admin-card">
-        <h2 className="admin-section-title">{draft.value ? 'Edit tag' : 'Add tag'}</h2>
-        <p className="admin-muted admin-tags-hint">
-          Value is stored uppercase (e.g. <code>LATE_CAFFEINE</code>). Shown in the post composer.
-        </p>
-        <form className="admin-form admin-tag-form" onSubmit={handleSubmit}>
-          <div className="admin-tag-form-fields">
-            <div className="admin-tag-form-row admin-tag-form-span-2">
-              <label className="admin-label" htmlFor="tag-value">Value</label>
-              <input
-                id="tag-value"
-                className="admin-input"
-                value={draft.value}
-                onChange={(e) => setDraft({ ...draft, value: e.target.value.toUpperCase() })}
-                placeholder="LATE_CAFFEINE"
-                required
-              />
-            </div>
-            <div className="admin-tag-form-row">
-              <label className="admin-label" htmlFor="tag-emoji">Emoji</label>
-              <input
-                id="tag-emoji"
-                className="admin-input admin-input-emoji"
-                value={draft.emoji}
-                onChange={(e) => setDraft({ ...draft, emoji: e.target.value })}
-                placeholder="☕"
-                required
-              />
-            </div>
-            <div className="admin-tag-form-row">
-              <label className="admin-label" htmlFor="tag-sort">Sort order</label>
-              <input
-                id="tag-sort"
-                className="admin-input"
-                type="number"
-                value={draft.sort_order}
-                onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) || 0 })}
-              />
-            </div>
-            <div className="admin-tag-form-row admin-tag-form-span-2">
-              <label className="admin-label" htmlFor="tag-label">Label</label>
-              <input
-                id="tag-label"
-                className="admin-input"
-                value={draft.label}
-                onChange={(e) => setDraft({ ...draft, label: e.target.value })}
-                placeholder="Late Caffeine"
-                required
-              />
-            </div>
-          </div>
-          {formError && <p className="admin-error">{formError}</p>}
-          <div className="admin-tag-form-actions">
-            <button className="admin-button" type="submit" disabled={saving}>
-              {saving ? 'Saving…' : draft.value && tags.some((t) => t.value === draft.value) ? 'Update tag' : 'Add tag'}
-            </button>
-            {draft.value ? (
-              <button
-                className="admin-button admin-button-ghost"
-                type="button"
-                onClick={() => { setDraft(EMPTY_DRAFT); setFormError(null); }}
-              >
-                Cancel edit
-              </button>
-            ) : null}
-          </div>
-        </form>
-      </div>
-
-      <p className="admin-muted admin-filter-summary">
-        {tags.length} tag{tags.length === 1 ? '' : 's'} — sort and filter in the table toolbar
-      </p>
-
-      {error && <p className="admin-error admin-error-banner">{error}</p>}
+    <AdminSection
+      className="admin-tags"
+      error={error}
+    >
+      <AdminTagForm
+        draft={draft}
+        tags={tags}
+        saving={saving}
+        formError={formError}
+        onChange={setDraft}
+        onSubmit={handleSubmit}
+        onCancel={handleCancel}
+      />
 
       {!loading && (
+        <>
+        <AdminTableSummary>
+          {tags.length} tag{tags.length === 1 ? '' : 's'} — click Edit in the table to load a tag into the form above
+        </AdminTableSummary>
         <AdminDataGrid
           persistKey="admin-tags"
           rows={tags}
@@ -202,12 +159,14 @@ export default function AdminTags({ tags, loading, error }: Props) {
           getRowId={(row) => row.value}
           loading={loading}
           label="Tags"
+          getRowClassName={(params) => (params.id === editingValue ? 'admin-grid-row-editing' : '')}
           initialState={{
             sorting: { sortModel: [{ field: 'sort_order', sort: 'asc' }] },
           }}
         />
+        </>
       )}
       {loading && <p className="admin-muted">Loading tags…</p>}
-    </div>
+    </AdminSection>
   );
 }

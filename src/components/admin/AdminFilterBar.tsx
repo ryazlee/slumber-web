@@ -4,17 +4,21 @@ type AdminFilterBarProps = {
   children: ReactNode;
   onReset?: () => void;
   showReset?: boolean;
+  actions?: ReactNode;
 };
 
-export default function AdminFilterBar({ children, onReset, showReset }: AdminFilterBarProps) {
+export default function AdminFilterBar({ children, onReset, showReset, actions }: AdminFilterBarProps) {
   return (
     <div className="admin-filter-bar">
       <div className="admin-filter-fields">{children}</div>
-      {showReset && onReset ? (
-        <button type="button" className="admin-button admin-button-ghost admin-filter-reset" onClick={onReset}>
-          Reset filters
-        </button>
-      ) : null}
+      <div className="admin-filter-bar-actions">
+        {actions}
+        {showReset && onReset ? (
+          <button type="button" className="admin-button admin-button-ghost admin-filter-reset" onClick={onReset}>
+            Reset
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }

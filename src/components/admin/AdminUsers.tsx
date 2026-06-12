@@ -10,6 +10,7 @@ import {
 } from '../../lib/userRoles';
 import AdminDataGrid from './AdminDataGrid';
 import AdminFilterBar, { AdminFilterField } from './AdminFilterBar';
+import AdminSection, { AdminTableSummary } from './AdminSection';
 import AdminUserRoleEditor from './AdminUserRoleEditor';
 import { dateColumn } from './dateColumn';
 
@@ -161,9 +162,21 @@ export default function AdminUsers() {
   ], [startEdit, editingId]);
 
   return (
-    <div className="admin-users">
+    <AdminSection
+      className="admin-users"
+      lead={<>Click <strong>Roles</strong> on a user to assign badges and set their avatar ring. Admin access requires <code>is_admin</code> in Configure → Roles.</>}
+      error={error}
+    >
       <form onSubmit={handleSearch}>
-        <AdminFilterBar showReset={hasFilters} onReset={resetFilters}>
+        <AdminFilterBar
+          showReset={hasFilters}
+          onReset={resetFilters}
+          actions={(
+            <button className="admin-button" type="submit" disabled={searching}>
+              {searching ? 'Searching…' : 'Apply'}
+            </button>
+          )}
+        >
           <AdminFilterField label="Search" htmlFor="user-search" className="admin-filter-field--wide">
             <input
               id="user-search"
@@ -223,19 +236,7 @@ export default function AdminUsers() {
             </label>
           </AdminFilterField>
         </AdminFilterBar>
-        <div className="admin-filter-actions">
-          <button className="admin-button" type="submit" disabled={searching}>
-            {searching ? 'Searching…' : 'Apply filters'}
-          </button>
-        </div>
       </form>
-
-      <p className="admin-muted admin-users-hint">
-        Click <strong>Roles</strong> on a user to assign badges and set their avatar ring.
-        Admin dashboard access requires a role with <code>is_admin</code> in Configure → Roles.
-      </p>
-
-      {error && <p className="admin-error admin-error-banner">{error}</p>}
 
       {editingUser && editingId && (
         <AdminUserRoleEditor
@@ -250,6 +251,10 @@ export default function AdminUsers() {
         />
       )}
 
+      <AdminTableSummary>
+        {users.length} user{users.length === 1 ? '' : 's'} — sort and filter in the table toolbar
+      </AdminTableSummary>
+
       <AdminDataGrid
         persistKey="admin-users"
         rows={users}
@@ -262,6 +267,6 @@ export default function AdminUsers() {
           sorting: { sortModel: [{ field: 'created_at', sort: 'desc' }] },
         }}
       />
-    </div>
+    </AdminSection>
   );
 }

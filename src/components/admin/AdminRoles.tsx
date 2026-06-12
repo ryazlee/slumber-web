@@ -5,6 +5,7 @@ import type { AdminRoleDefinitionRow, RoleDefinitionDraft } from '../../lib/admi
 import { useDeleteAdminRole, useUpsertAdminRole } from '../../hooks/useAdmin';
 import AdminDataGrid from './AdminDataGrid';
 import AdminRoleDefinitionForm from './AdminRoleDefinitionForm';
+import AdminSection, { AdminTableSummary } from './AdminSection';
 
 type Props = {
   roles: AdminRoleDefinitionRow[];
@@ -192,7 +193,10 @@ export default function AdminRoles({ roles, loading, error }: Props) {
   ];
 
   return (
-    <div className="admin-tags">
+    <AdminSection
+      className="admin-tags"
+      error={error}
+    >
       <AdminRoleDefinitionForm
         draft={draft}
         editingKey={editingKey}
@@ -203,13 +207,11 @@ export default function AdminRoles({ roles, loading, error }: Props) {
         onCancel={handleCancel}
       />
 
-      <p className="admin-muted admin-filter-summary">
-        {roles.length} role{roles.length === 1 ? '' : 's'} — click <strong>Edit</strong> in the table to load a role into the form above
-      </p>
-
-      {error && <p className="admin-error admin-error-banner">{error}</p>}
-
       {!loading && (
+        <>
+        <AdminTableSummary>
+          {roles.length} role{roles.length === 1 ? '' : 's'} — click Edit in the table to load a role into the form above
+        </AdminTableSummary>
         <AdminDataGrid
           persistKey="admin-roles"
           rows={roles}
@@ -222,8 +224,9 @@ export default function AdminRoles({ roles, loading, error }: Props) {
             sorting: { sortModel: [{ field: 'sort_order', sort: 'asc' }] },
           }}
         />
+        </>
       )}
       {loading && <p className="admin-muted">Loading roles…</p>}
-    </div>
+    </AdminSection>
   );
 }

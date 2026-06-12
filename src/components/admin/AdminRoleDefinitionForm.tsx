@@ -1,5 +1,6 @@
 import type { FormEvent } from 'react';
 import type { RoleDefinitionDraft } from '../../lib/admin';
+import AdminPanel from './AdminPanel';
 
 type Props = {
   draft: RoleDefinitionDraft;
@@ -56,21 +57,16 @@ export default function AdminRoleDefinitionForm({
   const isEditing = editingKey !== null;
 
   return (
-    <div className="admin-card admin-role-form-card">
-      <div className="admin-role-form-header">
-        <div>
-          <h2 className="admin-section-title">{isEditing ? `Edit “${editingKey}”` : 'Add role'}</h2>
-          <p className="admin-muted admin-tags-hint">
-            Roles control avatar rings, badges, and admin access. Users&apos; <strong>first</strong> role sets their ring in the app.
-          </p>
-        </div>
-        {isEditing ? (
-          <button className="admin-button admin-button-ghost" type="button" onClick={onCancel} disabled={saving}>
-            Cancel edit
-          </button>
-        ) : null}
-      </div>
-
+    <AdminPanel
+      title={isEditing ? `Edit “${editingKey}”` : 'Add role'}
+      description={<>Roles control avatar rings, badges, and admin access. Users&apos; <strong>first</strong> role sets their ring in the app.</>}
+      headerAction={isEditing ? (
+        <button className="admin-button admin-button-ghost" type="button" onClick={onCancel} disabled={saving}>
+          Cancel edit
+        </button>
+      ) : null}
+      highlighted={isEditing}
+    >
       <form className="admin-role-form-layout" onSubmit={onSubmit}>
         <div className="admin-role-form-fields">
           <fieldset className="admin-form-section">
@@ -187,7 +183,7 @@ export default function AdminRoleDefinitionForm({
 
           {formError ? <p className="admin-error">{formError}</p> : null}
 
-          <div className="admin-tag-form-actions">
+          <div className="admin-form-actions">
             <button className="admin-button" type="submit" disabled={saving}>
               {saving ? 'Saving…' : isEditing ? 'Save changes' : 'Create role'}
             </button>
@@ -196,6 +192,6 @@ export default function AdminRoleDefinitionForm({
 
         <RoleDefinitionPreview draft={draft} />
       </form>
-    </div>
+    </AdminPanel>
   );
 }

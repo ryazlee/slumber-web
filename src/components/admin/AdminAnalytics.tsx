@@ -17,6 +17,8 @@ import { useAdminAnalyticsBundle, useAppVersions } from '../../hooks/useAdmin';
 import AdminActivityChart from './AdminActivityChart';
 import AdminAnalyticsFilters from './AdminAnalyticsFilters';
 import AdminDataGrid from './AdminDataGrid';
+import AdminSection from './AdminSection';
+import AdminTabs from './AdminTabs';
 import { dateColumn } from './dateColumn';
 import { formatNumber } from './format';
 
@@ -117,7 +119,7 @@ export default function AdminAnalytics({
   const showVersion = versions.length > 0;
 
   return (
-    <div className="admin-overview">
+    <AdminSection className="admin-overview">
       <AdminAnalyticsFilters
         range={range}
         preset={preset}
@@ -130,22 +132,14 @@ export default function AdminAnalytics({
         onAppVersionChange={onAppVersionChange}
       />
 
-      <div className="admin-tabs" role="tablist" aria-label="Analytics sections">
-        {TABS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === item.id}
-            className={tab === item.id ? 'admin-tab active' : 'admin-tab'}
-            onClick={() => setTab(item.id)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+      <AdminTabs
+        ariaLabel="Analytics sections"
+        active={tab}
+        onChange={setTab}
+        tabs={TABS}
+      />
 
-      {error && <p className="admin-error admin-error-banner">{error}</p>}
+      {error ? <p className="admin-error admin-error-banner">{error}</p> : null}
 
       {!loading && metrics && (
         <>
@@ -197,7 +191,7 @@ export default function AdminAnalytics({
           )}
         </>
       )}
-    </div>
+    </AdminSection>
   );
 }
 

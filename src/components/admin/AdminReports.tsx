@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { type GridColDef } from '@mui/x-data-grid';
 import type { CommentReportRow, PostReportRow } from '../../lib/admin';
 import AdminDataGrid from './AdminDataGrid';
+import AdminSection, { AdminTableSummary } from './AdminSection';
+import AdminTabs from './AdminTabs';
 import { dateColumn } from './dateColumn';
 import { formatWhen } from './format';
 
@@ -241,34 +243,27 @@ export default function AdminReports({
   const gridKey = useMemo(() => `${tab}-${rows.length}`, [tab, rows.length]);
 
   return (
-    <>
-      <div className="admin-tabs admin-tabs-sub" role="tablist" aria-label="Report type">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'posts'}
-          className={tab === 'posts' ? 'admin-tab active' : 'admin-tab'}
-          onClick={() => setTab('posts')}
-        >
-          Post reports ({reportCounts.posts})
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'comments'}
-          className={tab === 'comments' ? 'admin-tab active' : 'admin-tab'}
-          onClick={() => setTab('comments')}
-        >
-          Comment reports ({reportCounts.comments})
-        </button>
-      </div>
+    <AdminSection
+      lead="Review reported posts and comments. Use the table toolbar to sort, filter, and show extra columns."
+      error={error}
+    >
+      <AdminTabs
+        ariaLabel="Report type"
+        active={tab}
+        onChange={setTab}
+        tabs={[
+          { id: 'posts', label: `Post reports (${reportCounts.posts})` },
+          { id: 'comments', label: `Comment reports (${reportCounts.comments})` },
+        ]}
+      />
 
-      <p className="admin-muted admin-filter-summary">
-        {total} {tab} report{total === 1 ? '' : 's'} — sort and filter in the table toolbar
-      </p>
-
-      {error && <p className="admin-error admin-error-banner">{error}</p>}
       {loading && <p className="admin-muted">Loading reports…</p>}
+
+      {!loading && rows.length > 0 ? (
+        <AdminTableSummary>
+          {total} {tab} report{total === 1 ? '' : 's'} — sort and filter in the table toolbar
+        </AdminTableSummary>
+      ) : null}
 
       {!loading && rows.length === 0 ? (
         <p className="admin-muted admin-empty">No {tab} reports yet.</p>
@@ -298,6 +293,6 @@ export default function AdminReports({
           }}
         />
       ) : null}
-    </>
+    </AdminSection>
   );
 }
