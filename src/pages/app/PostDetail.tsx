@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import SleepPostCard from '../../components/SleepPostCard';
+import StageBreakdown from '../../components/StageBreakdown';
 import type { PostSocialPatch } from '../../components/PostSocial';
 import { fetchPost } from '../../lib/feed';
 import { formatMins } from '../../lib/format';
+import { isManualSleepPost } from '../../lib/sleepPostCustom';
 import type { SleepPost } from '../../lib/types';
 
 export default function PostDetail() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const [post, setPost] = useState<SleepPost | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,11 +59,11 @@ export default function PostDetail() {
     );
   }
 
+  const isManual = isManualSleepPost(post);
+
   return (
     <div className="app-page post-detail-page">
-      <button type="button" className="app-back-link" onClick={() => navigate(-1)}>
-        ← Back
-      </button>
+      <Link to="/feed" className="app-back-link">← Feed</Link>
 
       <SleepPostCard
         post={post}
@@ -72,14 +73,17 @@ export default function PostDetail() {
         onSocialPatch={handleSocialPatch}
       />
 
+      {!isManual && (
+        <section className="post-detail-section">
+          <h2 className="post-detail-section-title">Stages</h2>
+          <StageBreakdown post={post} />
+        </section>
+      )}
+
       <dl className="post-detail-stats">
         <div>
           <dt>In bed</dt>
           <dd>{formatMins(post.inBedMinutes)}</dd>
-        </div>
-        <div>
-          <dt>Efficiency</dt>
-          <dd>{post.efficiency > 0 ? `${Math.round(post.efficiency)}%` : '—'}</dd>
         </div>
         {post.awakeMinutes > 0 && (
           <div>
