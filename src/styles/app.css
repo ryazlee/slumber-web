@@ -400,7 +400,6 @@
 .sleep-timeline-scrub-host {
   position: relative;
   overflow: visible;
-  touch-action: none;
 }
 
 .sleep-timeline-scrub-host--active {

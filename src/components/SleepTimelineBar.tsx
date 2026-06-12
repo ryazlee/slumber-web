@@ -30,7 +30,6 @@ export default function SleepTimelineBar({
   const hostRef = useRef<HTMLDivElement>(null);
   const [scrubX, setScrubX] = useState<number | null>(null);
   const [graphWidth, setGraphWidth] = useState(0);
-  const scrubbingRef = useRef(false);
 
   const height = variant === 'detail' ? DETAIL_HEIGHT : CARD_HEIGHT;
   const tooltipOffset = variant === 'detail' ? DETAIL_TOOLTIP_OFFSET : CARD_TOOLTIP_OFFSET;
@@ -52,33 +51,18 @@ export default function SleepTimelineBar({
     setScrubX(Math.max(0, Math.min(x, width)));
   }, []);
 
-  const endScrub = useCallback(() => {
-    scrubbingRef.current = false;
+  const clearScrub = useCallback(() => {
     setScrubX(null);
   }, []);
 
-  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!scrubEnabled) return;
-    e.preventDefault();
-    e.stopPropagation();
-    scrubbingRef.current = true;
-    hostRef.current?.setPointerCapture(e.pointerId);
-    updateScrub(e.clientX);
-  };
-
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!scrubbingRef.current) return;
+    if (!scrubEnabled || e.pointerType === 'touch') return;
     e.stopPropagation();
     updateScrub(e.clientX);
   };
 
-  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!scrubbingRef.current) return;
-    e.stopPropagation();
-    if (hostRef.current?.hasPointerCapture(e.pointerId)) {
-      hostRef.current.releasePointerCapture(e.pointerId);
-    }
-    endScrub();
+  const onPointerLeave = () => {
+    clearScrub();
   };
 
   const scrubTime = scrubX !== null && graphWidth > 0 && scrubEnabled
@@ -114,10 +98,8 @@ export default function SleepTimelineBar({
         ref={hostRef}
         className={`sleep-timeline-scrub-host${scrubEnabled ? ' sleep-timeline-scrub-host--active' : ''}`}
         style={{ height, borderRadius: 6 }}
-        onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
+        onPointerLeave={onPointerLeave}
         onClick={(e) => e.stopPropagation()}
         role="presentation"
       >
