@@ -4,6 +4,7 @@ import { type GridColDef } from '@mui/x-data-grid';
 import type { AdminRoleDefinitionRow, RoleDefinitionDraft } from '../../lib/admin';
 import { useDeleteAdminRole, useUpsertAdminRole } from '../../hooks/useAdmin';
 import AdminDataGrid from './AdminDataGrid';
+import AdminRoleDefinitionForm from './AdminRoleDefinitionForm';
 
 type Props = {
   roles: AdminRoleDefinitionRow[];
@@ -39,8 +40,6 @@ export default function AdminRoles({ roles, loading, error }: Props) {
   const upsertMutation = useUpsertAdminRole();
   const deleteMutation = useDeleteAdminRole();
   const saving = upsertMutation.isPending || deleteMutation.isPending;
-
-  const isEditing = editingKey !== null;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -165,13 +164,17 @@ export default function AdminRoles({ roles, loading, error }: Props) {
         <div className="admin-grid-actions">
           <button
             type="button"
-            className="admin-link-btn"
+            className={editingKey === row.key ? 'admin-link-btn admin-link-btn--active' : 'admin-link-btn'}
             onClick={(e) => {
               e.stopPropagation();
-              handleEdit(row);
+              if (editingKey === row.key) {
+                handleCancel();
+              } else {
+                handleEdit(row);
+              }
             }}
           >
-            Edit
+            {editingKey === row.key ? 'Editing' : 'Edit'}
           </button>
           <button
             type="button"
@@ -190,113 +193,18 @@ export default function AdminRoles({ roles, loading, error }: Props) {
 
   return (
     <div className="admin-tags">
-      <div className="admin-card">
-        <h2 className="admin-section-title">{isEditing ? `Edit ${editingKey}` : 'Add role'}</h2>
-        <p className="admin-muted admin-tags-hint">
-          Defines avatar ring colors, badges, and labels. Keys go in <code>profiles.user_roles</code>; first key = ring in the app.
-          <code>is_admin</code> grants access to this dashboard.
-        </p>
-        <form className="admin-form admin-tag-form" onSubmit={handleSubmit}>
-          <div className="admin-tag-form-fields">
-            <div className="admin-tag-form-row admin-tag-form-span-2">
-              <label className="admin-label" htmlFor="role-key">Key</label>
-              <input
-                id="role-key"
-                className="admin-input"
-                value={draft.key}
-                onChange={(e) => setDraft({ ...draft, key: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
-                placeholder="early_bird"
-                required
-                disabled={isEditing}
-              />
-            </div>
-            <div className="admin-tag-form-row admin-tag-form-span-2">
-              <label className="admin-label" htmlFor="role-label">Label</label>
-              <input
-                id="role-label"
-                className="admin-input"
-                value={draft.label}
-                onChange={(e) => setDraft({ ...draft, label: e.target.value })}
-                placeholder="Early bird"
-                required
-              />
-            </div>
-            <div className="admin-tag-form-row">
-              <label className="admin-label" htmlFor="role-badge">Badge</label>
-              <input
-                id="role-badge"
-                className="admin-input admin-input-emoji"
-                value={draft.badge}
-                onChange={(e) => setDraft({ ...draft, badge: e.target.value })}
-                placeholder="🌅"
-                required
-              />
-            </div>
-            <div className="admin-tag-form-row">
-              <label className="admin-label" htmlFor="role-sort">Sort order</label>
-              <input
-                id="role-sort"
-                className="admin-input"
-                type="number"
-                value={draft.sort_order}
-                onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) || 0 })}
-              />
-            </div>
-            <div className="admin-tag-form-row">
-              <label className="admin-label" htmlFor="role-ring">Ring color</label>
-              <input
-                id="role-ring"
-                className="admin-input admin-input-color"
-                type="color"
-                value={draft.ring_color}
-                onChange={(e) => setDraft({ ...draft, ring_color: e.target.value })}
-              />
-            </div>
-            <div className="admin-tag-form-row">
-              <label className="admin-label" htmlFor="role-badge-color">Badge color (optional)</label>
-              <input
-                id="role-badge-color"
-                className="admin-input admin-input-color"
-                type="color"
-                value={draft.badge_color || '#000000'}
-                onChange={(e) => setDraft({ ...draft, badge_color: e.target.value })}
-              />
-            </div>
-            <div className="admin-tag-form-row admin-role-checks admin-tag-form-span-2">
-              <label className="admin-check">
-                <input
-                  type="checkbox"
-                  checked={draft.is_admin}
-                  onChange={(e) => setDraft({ ...draft, is_admin: e.target.checked })}
-                />
-                Admin access (dashboard)
-              </label>
-              <label className="admin-check">
-                <input
-                  type="checkbox"
-                  checked={draft.assignable}
-                  onChange={(e) => setDraft({ ...draft, assignable: e.target.checked })}
-                />
-                Assignable to users
-              </label>
-            </div>
-          </div>
-          {formError && <p className="admin-error">{formError}</p>}
-          <div className="admin-tag-form-actions">
-            <button className="admin-button" type="submit" disabled={saving}>
-              {saving ? 'Saving…' : isEditing ? 'Update role' : 'Add role'}
-            </button>
-            {isEditing && (
-              <button className="admin-button admin-button-ghost" type="button" onClick={handleCancel} disabled={saving}>
-                Cancel
-              </button>
-            )}
-          </div>
-        </form>
-      </div>
+      <AdminRoleDefinitionForm
+        draft={draft}
+        editingKey={editingKey}
+        saving={saving}
+        formError={formError}
+        onChange={setDraft}
+        onSubmit={handleSubmit}
+        onCancel={handleCancel}
+      />
 
       <p className="admin-muted admin-filter-summary">
-        {roles.length} role{roles.length === 1 ? '' : 's'} — sort and filter in the table toolbar
+        {roles.length} role{roles.length === 1 ? '' : 's'} — click <strong>Edit</strong> in the table to load a role into the form above
       </p>
 
       {error && <p className="admin-error admin-error-banner">{error}</p>}
@@ -309,6 +217,7 @@ export default function AdminRoles({ roles, loading, error }: Props) {
           getRowId={(row) => row.key}
           loading={loading}
           label="Roles"
+          getRowClassName={(params) => (params.id === editingKey ? 'admin-grid-row-editing' : '')}
           initialState={{
             sorting: { sortModel: [{ field: 'sort_order', sort: 'asc' }] },
           }}

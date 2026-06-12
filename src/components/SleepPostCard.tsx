@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import type { SleepPost } from '../lib/types';
@@ -32,6 +33,11 @@ export default function SleepPostCard({
   const isOwnPost = user?.id === post.userId;
   const canReadDream = Boolean(post.dreamLog) && (!post.blurDream || isOwnPost);
   const isLatest = isLatestSleepPost(post.sleepDate);
+
+  const handleSocialPatch = useCallback(
+    (patch: PostSocialPatch) => { onSocialPatch?.(post.id, patch); },
+    [onSocialPatch, post.id],
+  );
 
   return (
     <article className={`post-card${clickable ? ' post-card--clickable' : ''}${isLatest ? ' post-card--latest' : ''}`}>
@@ -122,7 +128,7 @@ export default function SleepPostCard({
           commentCount={post.commentCount}
           sourceDevice={isManual ? 'Manual log' : post.sourceDevice}
           defaultCommentsOpen={defaultCommentsOpen}
-          onPatch={(patch) => onSocialPatch?.(post.id, patch)}
+          onPatch={handleSocialPatch}
         />
       </div>
     </article>

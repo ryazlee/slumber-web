@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
   useAddComment,
@@ -56,6 +56,8 @@ export default function PostSocial({
     onPatch?.(patch);
   }, [onPatch]);
 
+  const syncedCommentCount = useRef<number | null>(null);
+
   useEffect(() => {
     setKudosCount(initialKudosCount);
     setHasKudoed(initialHasKudoed);
@@ -67,14 +69,17 @@ export default function PostSocial({
     setCommentsOpen(defaultCommentsOpen);
     setSendError(null);
     setCommentText('');
+    syncedCommentCount.current = null;
   }, [postId, defaultCommentsOpen]);
 
   useEffect(() => {
-    if (commentsQuery.data) {
-      setCommentCount(commentsQuery.data.length);
-      patchParent({ commentCount: commentsQuery.data.length });
-    }
-  }, [commentsQuery.data, patchParent]);
+    if (!commentsOpen || !commentsQuery.isSuccess) return;
+    const count = commentsQuery.data.length;
+    if (syncedCommentCount.current === count) return;
+    syncedCommentCount.current = count;
+    setCommentCount(count);
+    patchParent({ commentCount: count });
+  }, [commentsOpen, commentsQuery.isSuccess, commentsQuery.data, patchParent]);
 
   const handleKudos = async () => {
     if (!user || toggleKudosMutation.isPending) return;

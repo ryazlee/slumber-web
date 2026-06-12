@@ -25,16 +25,25 @@ export function useUserPosts(userId: string | null) {
     if (!userId) return;
     qc.setQueryData(queryKeys.userPosts(userId), (old: typeof query.data) => {
       if (!old) return old;
-      return {
-        ...old,
-        pages: old.pages.map((page) =>
-          page.map((p) => (p.id === postId ? { ...p, ...patch } : p)),
-        ),
-      };
+      let changed = false;
+      const pages = old.pages.map((page) =>
+        page.map((p) => {
+          if (p.id !== postId) return p;
+          changed = changed || Object.entries(patch).some(
+            ([key, value]) => p[key as keyof SleepPost] !== value,
+          );
+          return { ...p, ...patch };
+        }),
+      );
+      return changed ? { ...old, pages } : old;
     });
-    qc.setQueryData(queryKeys.post(postId), (old: SleepPost | null | undefined) =>
-      old ? { ...old, ...patch } : old,
-    );
+    qc.setQueryData(queryKeys.post(postId), (old: SleepPost | null | undefined) => {
+      if (!old) return old;
+      const changed = Object.entries(patch).some(
+        ([key, value]) => old[key as keyof SleepPost] !== value,
+      );
+      return changed ? { ...old, ...patch } : old;
+    });
   }, [qc, userId]);
 
   return {

@@ -5,12 +5,12 @@ import type { RecentUserRow, UserSearchFilters } from '../../lib/admin';
 import { useAdminUserSearch, useUpdateUserRoles } from '../../hooks/useAdmin';
 import { useAssignableRoles } from '../../hooks/useCatalog';
 import {
-  formatRoleLabel,
   formatRoleList,
   getCachedRoleOptions,
 } from '../../lib/userRoles';
 import AdminDataGrid from './AdminDataGrid';
 import AdminFilterBar, { AdminFilterField } from './AdminFilterBar';
+import AdminUserRoleEditor from './AdminUserRoleEditor';
 import { dateColumn } from './dateColumn';
 
 const DEFAULT_FILTERS: UserSearchFilters = { limit: 100 };
@@ -79,23 +79,6 @@ export default function AdminUsers() {
     setFormError(null);
   };
 
-  const addRole = (key: string) => {
-    if (draftRoles.includes(key)) return;
-    setDraftRoles([...draftRoles, key]);
-  };
-
-  const removeRole = (key: string) => {
-    setDraftRoles(draftRoles.filter((r) => r !== key));
-  };
-
-  const moveRole = (index: number, direction: -1 | 1) => {
-    const next = index + direction;
-    if (next < 0 || next >= draftRoles.length) return;
-    const copy = [...draftRoles];
-    [copy[index], copy[next]] = [copy[next], copy[index]];
-    setDraftRoles(copy);
-  };
-
   const saveRoles = async () => {
     if (!editingId) return;
     setFormError(null);
@@ -108,8 +91,6 @@ export default function AdminUsers() {
   };
 
   const saving = updateRolesMutation.isPending;
-
-  const availableToAdd = roleOptions.filter((opt) => !draftRoles.includes(opt.key));
 
   const columns = useMemo<GridColDef<RecentUserRow>[]>(() => [
     {
@@ -163,17 +144,21 @@ export default function AdminUsers() {
       renderCell: ({ row }) => (
         <button
           type="button"
-          className="admin-link-btn"
+          className={editingId === row.id ? 'admin-link-btn admin-link-btn--active' : 'admin-link-btn'}
           onClick={(e) => {
             e.stopPropagation();
-            startEdit(row);
+            if (editingId === row.id) {
+              cancelEdit();
+            } else {
+              startEdit(row);
+            }
           }}
         >
-          Edit roles
+          {editingId === row.id ? 'Editing' : 'Roles'}
         </button>
       ),
     },
-  ], [startEdit]);
+  ], [startEdit, editingId]);
 
   return (
     <div className="admin-users">
@@ -246,11 +231,24 @@ export default function AdminUsers() {
       </form>
 
       <p className="admin-muted admin-users-hint">
-        First role in the list drives the avatar ring in the app. Admin access uses roles marked <code>is_admin</code> in <code>role_definitions</code>.
-        Server filters above; sort and search loaded results in the table toolbar.
+        Click <strong>Roles</strong> on a user to assign badges and set their avatar ring.
+        Admin dashboard access requires a role with <code>is_admin</code> in Configure → Roles.
       </p>
 
       {error && <p className="admin-error admin-error-banner">{error}</p>}
+
+      {editingUser && editingId && (
+        <AdminUserRoleEditor
+          user={editingUser}
+          roleOptions={roleOptions}
+          draftRoles={draftRoles}
+          saving={saving}
+          error={formError}
+          onChange={setDraftRoles}
+          onSave={saveRoles}
+          onCancel={cancelEdit}
+        />
+      )}
 
       <AdminDataGrid
         persistKey="admin-users"
@@ -264,57 +262,6 @@ export default function AdminUsers() {
           sorting: { sortModel: [{ field: 'created_at', sort: 'desc' }] },
         }}
       />
-
-      {editingUser && editingId && (
-        <div className="admin-user-editor-panel">
-          <p className="admin-user-name">Editing @{editingUser.username}</p>
-          <div className="admin-role-editor">
-            <p className="admin-label">Role order (top = avatar ring)</p>
-            {draftRoles.length === 0 ? (
-              <p className="admin-muted">No roles assigned.</p>
-            ) : (
-              <ul className="admin-role-order-list">
-                {draftRoles.map((role, index) => (
-                  <li key={role} className="admin-role-order-item">
-                    <span className="admin-role-order-label">
-                      {index === 0 ? <span className="admin-role-primary">Ring</span> : null}
-                      {formatRoleLabel(role)}
-                    </span>
-                    <span className="admin-role-order-actions">
-                      <button type="button" className="admin-icon-btn" onClick={() => moveRole(index, -1)} disabled={index === 0} aria-label="Move up">↑</button>
-                      <button type="button" className="admin-icon-btn" onClick={() => moveRole(index, 1)} disabled={index === draftRoles.length - 1} aria-label="Move down">↓</button>
-                      <button type="button" className="admin-link-btn admin-link-danger" onClick={() => removeRole(role)}>Remove</button>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {availableToAdd.length > 0 && (
-              <div className="admin-role-add">
-                <p className="admin-label">Add role</p>
-                <div className="admin-role-chips">
-                  {availableToAdd.map((opt) => (
-                    <button key={opt.key} type="button" className="admin-role-chip" onClick={() => addRole(opt.key)}>
-                      {opt.badge} {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {formError && <p className="admin-error">{formError}</p>}
-            <div className="admin-tag-form-actions">
-              <button className="admin-button" type="button" onClick={saveRoles} disabled={saving}>
-                {saving ? 'Saving…' : 'Save roles'}
-              </button>
-              <button className="admin-button admin-button-ghost" type="button" onClick={cancelEdit} disabled={saving}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
