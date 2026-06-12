@@ -2,15 +2,13 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { type GridColDef } from '@mui/x-data-grid';
 import type { AdminRoleDefinitionRow, RoleDefinitionDraft } from '../../lib/admin';
-import { deleteAdminRoleDefinition, upsertAdminRoleDefinition } from '../../lib/admin';
-import { clearRoleDefinitionCache } from '../../lib/userRoles';
+import { useDeleteAdminRole, useUpsertAdminRole } from '../../hooks/useAdmin';
 import AdminDataGrid from './AdminDataGrid';
 
 type Props = {
   roles: AdminRoleDefinitionRow[];
   loading: boolean;
   error: string | null;
-  onChanged: () => void;
 };
 
 const EMPTY_DRAFT: RoleDefinitionDraft = {
@@ -34,28 +32,25 @@ function RoleSwatch({ color }: { color: string }) {
   );
 }
 
-export default function AdminRoles({ roles, loading, error, onChanged }: Props) {
+export default function AdminRoles({ roles, loading, error }: Props) {
   const [draft, setDraft] = useState<RoleDefinitionDraft>(EMPTY_DRAFT);
   const [editingKey, setEditingKey] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const upsertMutation = useUpsertAdminRole();
+  const deleteMutation = useDeleteAdminRole();
+  const saving = upsertMutation.isPending || deleteMutation.isPending;
 
   const isEditing = editingKey !== null;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setFormError(null);
-    setSaving(true);
     try {
-      await upsertAdminRoleDefinition(draft);
-      clearRoleDefinitionCache();
+      await upsertMutation.mutateAsync(draft);
       setDraft(EMPTY_DRAFT);
       setEditingKey(null);
-      onChanged();
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : 'Could not save role.');
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -88,19 +83,14 @@ export default function AdminRoles({ roles, loading, error, onChanged }: Props) 
     if (!window.confirm(`Delete role "${role.label}"?`)) return;
 
     setFormError(null);
-    setSaving(true);
     try {
-      await deleteAdminRoleDefinition(role.key);
-      clearRoleDefinitionCache();
+      await deleteMutation.mutateAsync(role.key);
       if (editingKey === role.key) handleCancel();
-      onChanged();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Could not delete role.';
       setFormError(message.includes('role_in_use')
         ? 'This role is still assigned to users. Remove it from users first.'
         : message);
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -313,6 +303,7 @@ export default function AdminRoles({ roles, loading, error, onChanged }: Props) 
 
       {!loading && (
         <AdminDataGrid
+          persistKey="admin-roles"
           rows={roles}
           columns={columns}
           getRowId={(row) => row.key}

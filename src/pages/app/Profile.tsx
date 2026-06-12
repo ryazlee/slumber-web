@@ -1,14 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Avatar from '../../components/Avatar';
 import PostList from '../../components/PostList';
 import { useAuth } from '../../context/AuthContext';
-import { usePaginatedPosts } from '../../hooks/usePaginatedPosts';
-import { fetchUserPosts } from '../../lib/feed';
+import { useProfile } from '../../hooks/useProfile';
+import { useUserPosts } from '../../hooks/useUserPosts';
 import { formatChallengeRecord, formatMins } from '../../lib/format';
 import { formatRoleList } from '../../lib/userRoles';
-import { fetchProfileSummary } from '../../lib/profile';
-import type { WebProfile } from '../../lib/types';
 
 export default function Profile() {
   const { userId: routeUserId } = useParams<{ userId?: string }>();
@@ -16,18 +14,7 @@ export default function Profile() {
   const profileUserId = routeUserId ?? authUser?.id ?? null;
   const isOwnProfile = Boolean(authUser?.id && profileUserId === authUser.id);
 
-  const [profile, setProfile] = useState<WebProfile | null>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
-  const [profileError, setProfileError] = useState<string | null>(null);
-
-  const fetchPage = useCallback(
-    (cursor?: string) => {
-      if (!profileUserId) return Promise.resolve([]);
-      return fetchUserPosts(profileUserId, cursor);
-    },
-    [profileUserId],
-  );
-
+  const profileQuery = useProfile(profileUserId);
   const {
     posts,
     loading: postsLoading,
@@ -36,39 +23,13 @@ export default function Profile() {
     hasMore,
     loadMore,
     patchPost,
-  } = usePaginatedPosts(fetchPage, profileUserId ?? undefined);
-
-  useEffect(() => {
-    if (!profileUserId) {
-      setProfile(null);
-      setProfileLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setProfileLoading(true);
-    setProfileError(null);
-    fetchProfileSummary(profileUserId)
-      .then((data) => {
-        if (!cancelled) setProfile(data);
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) {
-          setProfileError(e instanceof Error ? e.message : 'Could not load profile.');
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setProfileLoading(false);
-      });
-
-    return () => { cancelled = true; };
-  }, [profileUserId]);
+  } = useUserPosts(profileUserId);
 
   const pageTitle = useMemo(() => {
-    if (profile) return `@${profile.username}`;
+    if (profileQuery.data) return `@${profileQuery.data.username}`;
     if (isOwnProfile) return 'Your profile';
     return 'Profile';
-  }, [profile, isOwnProfile]);
+  }, [profileQuery.data, isOwnProfile]);
 
   if (!profileUserId) {
     return (
@@ -78,7 +39,7 @@ export default function Profile() {
     );
   }
 
-  if (profileLoading) {
+  if (profileQuery.isLoading) {
     return (
       <div className="app-page">
         <p className="app-muted">Loading profile…</p>
@@ -86,7 +47,13 @@ export default function Profile() {
     );
   }
 
-  if (profileError || !profile) {
+  const profileError = profileQuery.error instanceof Error
+    ? profileQuery.error.message
+    : profileQuery.error
+      ? 'Could not load profile.'
+      : null;
+
+  if (profileError || !profileQuery.data) {
     return (
       <div className="app-page">
         <p className="admin-error">{profileError ?? 'Profile not found.'}</p>
@@ -94,6 +61,8 @@ export default function Profile() {
       </div>
     );
   }
+
+  const profile = profileQuery.data;
 
   return (
     <div className="app-page">

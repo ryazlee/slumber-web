@@ -1075,37 +1075,26 @@ h1 {
   margin-bottom: 12px;
 }
 
-.admin-analytics-filters {
-  display: grid;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.admin-analytics-filters--compact {
-  gap: 0;
-  margin-bottom: 12px;
-}
-
-.admin-analytics-toolbar {
+.admin-analytics-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px 10px;
+  margin-bottom: 12px;
+  min-width: 0;
 }
 
-.admin-analytics-toolbar .admin-tabs-sub {
+.admin-analytics-bar .admin-tabs-sub {
   margin-bottom: 0;
-  flex: 1 1 auto;
-}
-
-.admin-analytics-version {
-  width: auto;
-  min-width: 140px;
-  max-width: 220px;
   flex: 0 1 auto;
 }
 
-.admin-analytics-custom-dates {
+.admin-analytics-bar--loading {
+  opacity: 0.72;
+  transition: opacity 0.15s ease;
+}
+
+.admin-analytics-dates {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1115,24 +1104,22 @@ h1 {
 .admin-analytics-date {
   width: auto;
   min-width: 0;
+  padding: 8px 10px;
+  font-size: 13px;
 }
 
 .admin-analytics-date-sep {
-  color: var(--text-muted);
-  font-size: 13px;
+  color: var(--text-dim);
+  font-size: 12px;
 }
 
-.admin-analytics-loading {
+.admin-analytics-version {
+  width: auto;
+  min-width: 0;
+  max-width: 200px;
+  padding: 8px 10px;
   font-size: 13px;
-  white-space: nowrap;
-}
-
-.admin-analytics-filter-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  margin-left: auto;
 }
 
 .admin-filter-note {

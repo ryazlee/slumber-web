@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import AdminMuiProvider from '../../components/admin/AdminMuiProvider';
 import LoginForm from '../../components/LoginForm';
 import { AdminProvider, useAdmin } from '../../context/AdminContext';
 import { useAuth } from '../../context/AuthContext';
-import { checkIsModerator } from '../../lib/admin';
+import { useIsModerator } from '../../hooks/useAdmin';
 
 const PAGE_TITLES: Record<string, string> = {
   '/admin': 'Admin',
@@ -61,26 +60,9 @@ function AdminShell() {
 function AdminGate() {
   const { user, loading: authLoading, signOut } = useAuth();
   const sessionEmail = user?.email ?? null;
-  const [isModerator, setIsModerator] = useState(false);
-  const [moderatorChecked, setModeratorChecked] = useState(false);
-
-  useEffect(() => {
-    if (authLoading) return;
-    if (!sessionEmail) {
-      setIsModerator(false);
-      setModeratorChecked(true);
-      return;
-    }
-    setModeratorChecked(false);
-    let cancelled = false;
-    checkIsModerator().then((ok) => {
-      if (!cancelled) {
-        setIsModerator(ok);
-        setModeratorChecked(true);
-      }
-    });
-    return () => { cancelled = true; };
-  }, [sessionEmail, authLoading]);
+  const moderatorQuery = useIsModerator(Boolean(sessionEmail) && !authLoading);
+  const isModerator = moderatorQuery.data === true;
+  const moderatorChecked = !sessionEmail || moderatorQuery.isFetched;
 
   if (authLoading || (sessionEmail && !moderatorChecked)) {
     return (

@@ -275,6 +275,7 @@ export default function AdminReports({
       ) : !loading ? (
         <AdminDataGrid
           key={gridKey}
+          persistKey={`admin-reports-${tab}`}
           rows={rows}
           columns={columns}
           getRowId={(row) => row.id}

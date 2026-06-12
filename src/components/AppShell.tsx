@@ -1,15 +1,10 @@
-import { useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { loadAvatarRoleStyles } from '../lib/avatarRoles';
-import { loadTags } from '../lib/tags';
-import { loadRoleDefinitions } from '../lib/userRoles';
+import { useAssignableRoles, useAvatarRoleStyles, useTags } from '../hooks/useCatalog';
 
 export default function AppShell() {
-  useEffect(() => {
-    void loadAvatarRoleStyles();
-    void loadRoleDefinitions();
-    void loadTags();
-  }, []);
+  useTags();
+  useAssignableRoles();
+  useAvatarRoleStyles();
 
   return (
     <div className="app-shell">

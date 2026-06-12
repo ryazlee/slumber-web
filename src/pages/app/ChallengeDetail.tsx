@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import ChallengeContributionsByDay from '../../components/ChallengeContributionsByDay';
 import ChallengeProgressRow from '../../components/ChallengeProgressRow';
 import UserLink from '../../components/UserLink';
 import { useAuth } from '../../context/AuthContext';
 import {
-  fetchChallenge,
-  fetchChallengeContributions,
-  fetchChallengeProgress,
-} from '../../lib/challenges';
+  useChallenge,
+  useChallengeContributions,
+  useChallengeProgress,
+} from '../../hooks/useChallenges';
 import { buildSplitBarsByUser } from '../../lib/challengeProgressBar';
 import { rankBySleepProgress } from '../../lib/challengeRank';
 import {
@@ -16,45 +16,36 @@ import {
   formatChallengeStartDate,
   formatChallengeStatus,
 } from '../../lib/format';
-import type { Challenge, ChallengeContributionPost, ChallengeProgress } from '../../lib/types';
+
+const PROGRESS_STATUSES = new Set(['active', 'pending_completion', 'completed']);
 
 export default function ChallengeDetail() {
   const { user } = useAuth();
   const currentUserId = user?.id ?? null;
   const { id } = useParams<{ id: string }>();
-  const [challenge, setChallenge] = useState<Challenge | null>(null);
-  const [progress, setProgress] = useState<ChallengeProgress[]>([]);
-  const [contributions, setContributions] = useState<ChallengeContributionPost[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const c = await fetchChallenge(id);
-      setChallenge(c);
-      const [progressRows, contributionRows] = await Promise.all([
-        ['active', 'pending_completion', 'completed'].includes(c.status)
-          ? fetchChallengeProgress(id)
-          : Promise.resolve([]),
-        ['active', 'pending_completion', 'completed'].includes(c.status)
-          ? fetchChallengeContributions(id)
-          : Promise.resolve([]),
-      ]);
-      setProgress(progressRows);
-      setContributions(contributionRows);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Could not load challenge.');
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
+  const challengeQuery = useChallenge(id);
+  const challenge = challengeQuery.data;
+  const showProgress = challenge ? PROGRESS_STATUSES.has(challenge.status) : false;
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const progressQuery = useChallengeProgress(id, showProgress);
+  const contributionsQuery = useChallengeContributions(id, showProgress);
+
+  const progress = progressQuery.data ?? [];
+  const contributions = contributionsQuery.data ?? [];
+
+  const loading = challengeQuery.isLoading
+    || (showProgress && (progressQuery.isLoading || contributionsQuery.isLoading));
+
+  const error = challengeQuery.error
+    ?? progressQuery.error
+    ?? contributionsQuery.error;
+
+  const errorMessage = error instanceof Error
+    ? error.message
+    : error
+      ? 'Could not load challenge.'
+      : null;
 
   const splitBarByUser = useMemo(
     () => buildSplitBarsByUser(contributions, progress),
@@ -100,10 +91,10 @@ export default function ChallengeDetail() {
     );
   }
 
-  if (error || !challenge) {
+  if (errorMessage || !challenge) {
     return (
       <div className="app-page">
-        <p className="admin-error">{error ?? 'Challenge not found.'}</p>
+        <p className="admin-error">{errorMessage ?? 'Challenge not found.'}</p>
         <Link to="/challenges" className="app-back-link">← Back to challenges</Link>
       </div>
     );

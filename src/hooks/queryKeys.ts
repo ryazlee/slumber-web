@@ -1,0 +1,34 @@
+import type { AnalyticsFilters } from '../lib/admin';
+import type { UserSearchFilters } from '../lib/admin';
+
+export const queryKeys = {
+  feed: ['feed'] as const,
+  post: (id: string) => ['post', id] as const,
+  profile: (userId: string) => ['profile', userId] as const,
+  userPosts: (userId: string) => ['user-posts', userId] as const,
+  challenges: (statusKey: string) => ['challenges', statusKey] as const,
+  challenge: (id: string) => ['challenge', id] as const,
+  challengeProgress: (id: string) => ['challenge-progress', id] as const,
+  challengeContributions: (id: string) => ['challenge-contributions', id] as const,
+  postKudos: (postId: string) => ['post-kudos', postId] as const,
+  postComments: (postId: string) => ['post-comments', postId] as const,
+  tags: ['tags'] as const,
+  avatarRoleStyles: ['avatar-role-styles'] as const,
+  assignableRoles: ['assignable-roles'] as const,
+  isModerator: ['is-moderator'] as const,
+  admin: {
+    all: ['admin'] as const,
+    dashboard: ['admin', 'dashboard'] as const,
+    postReports: ['admin', 'post-reports'] as const,
+    commentReports: ['admin', 'comment-reports'] as const,
+    tags: ['admin', 'tags'] as const,
+    roleDefinitions: ['admin', 'role-definitions'] as const,
+    appVersions: ['admin', 'app-versions'] as const,
+    analyticsMetrics: (filters: AnalyticsFilters) => ['admin', 'analytics', 'metrics', filters] as const,
+    analyticsActivity: (filters: AnalyticsFilters) => ['admin', 'analytics', 'activity', filters] as const,
+    analyticsUsers: (filters: AnalyticsFilters) => ['admin', 'analytics', 'users', filters] as const,
+    analyticsPosts: (filters: AnalyticsFilters) => ['admin', 'analytics', 'posts', filters] as const,
+    analyticsTags: (filters: AnalyticsFilters) => ['admin', 'analytics', 'tags', filters] as const,
+    userSearch: (filters: UserSearchFilters) => ['admin', 'user-search', filters] as const,
+  },
+};

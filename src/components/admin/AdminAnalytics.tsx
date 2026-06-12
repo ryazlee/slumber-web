@@ -1,16 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { type GridColDef } from '@mui/x-data-grid';
 import {
-  fetchAdminTags,
-  fetchAnalyticsMetrics,
-  fetchAppVersions,
-  fetchDailyActivity,
-  fetchRecentPosts,
-  fetchRecentUsers,
-  formatAdminRpcError,
   type AdminTagRow,
   type AnalyticsMetrics,
-  type AppVersionRow,
   type DailyActivityRow,
   type RecentPostRow,
   type RecentUserRow,
@@ -21,6 +13,7 @@ import {
   type RangePreset,
 } from '../../lib/analyticsRange';
 import { useAdmin } from '../../context/AdminContext';
+import { useAdminAnalyticsBundle, useAppVersions } from '../../hooks/useAdmin';
 import AdminActivityChart from './AdminActivityChart';
 import AdminAnalyticsFilters from './AdminAnalyticsFilters';
 import AdminDataGrid from './AdminDataGrid';
@@ -91,102 +84,30 @@ export default function AdminAnalytics({
   onAppVersionChange,
   listLimit,
 }: Props) {
-  const { refreshKey, refreshing } = useAdmin();
+  const { refreshing } = useAdmin();
   const [tab, setTab] = useState<AnalyticsTab>('overview');
-  const [metrics, setMetrics] = useState<AnalyticsMetrics | null>(null);
-  const [activity, setActivity] = useState<DailyActivityRow[]>([]);
-  const [users, setUsers] = useState<RecentUserRow[]>([]);
-  const [posts, setPosts] = useState<RecentPostRow[]>([]);
-  const [tags, setTags] = useState<AdminTagRow[]>([]);
-  const [versions, setVersions] = useState<AppVersionRow[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [versionsLoading, setVersionsLoading] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
-    setVersionsLoading(true);
-    fetchAppVersions()
-      .then((rows) => {
-        if (!cancelled) setVersions(rows);
-      })
-      .catch(() => {
-        if (!cancelled) setVersions([]);
-      })
-      .finally(() => {
-        if (!cancelled) setVersionsLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [refreshKey]);
+  const filters = useMemo(() => ({
+    start: range.start,
+    end: range.end,
+    appVersion: appVersion || null,
+    listLimit,
+  }), [range.start, range.end, appVersion, listLimit]);
 
-  const loadAnalytics = useCallback(async (nextRange: DateRange, version: string) => {
-    setLoading(true);
-    setError(null);
-    const filters = {
-      start: nextRange.start,
-      end: nextRange.end,
-      appVersion: version || null,
-      listLimit,
-    };
-    const [metricsR, activityR, usersR, postsR, tagsR] = await Promise.allSettled([
-      fetchAnalyticsMetrics(filters),
-      fetchDailyActivity(filters),
-      fetchRecentUsers(filters),
-      fetchRecentPosts(filters),
-      fetchAdminTags(filters),
-    ]);
+  const versionsQuery = useAppVersions();
+  const versions = versionsQuery.data ?? [];
+  const versionsLoading = versionsQuery.isLoading;
 
-    const warnings: string[] = [];
-
-    if (metricsR.status === 'fulfilled') {
-      setMetrics(metricsR.value);
-    } else {
-      console.error('Admin analytics metrics failed:', metricsR.reason);
-      setError(formatAdminRpcError('Metrics', metricsR.reason));
-      setLoading(false);
-      return;
-    }
-
-    if (activityR.status === 'fulfilled') {
-      setActivity(activityR.value);
-    } else {
-      console.error('Admin analytics activity failed:', activityR.reason);
-      setError(formatAdminRpcError('Daily activity', activityR.reason));
-      setLoading(false);
-      return;
-    }
-
-    if (usersR.status === 'fulfilled') {
-      setUsers(usersR.value);
-    } else {
-      console.error('Admin analytics users failed:', usersR.reason);
-      warnings.push(formatAdminRpcError('Users', usersR.reason));
-      setUsers([]);
-    }
-
-    if (postsR.status === 'fulfilled') {
-      setPosts(postsR.value);
-    } else {
-      console.error('Admin analytics posts failed:', postsR.reason);
-      warnings.push(formatAdminRpcError('Posts', postsR.reason));
-      setPosts([]);
-    }
-
-    if (tagsR.status === 'fulfilled') {
-      setTags([...tagsR.value].sort((a, b) => b.usage_count - a.usage_count));
-    } else {
-      console.error('Admin analytics tags failed:', tagsR.reason);
-      warnings.push(formatAdminRpcError('Tags', tagsR.reason));
-      setTags([]);
-    }
-
-    setError(warnings.length > 0 ? warnings.join(' · ') : null);
-    setLoading(false);
-  }, [listLimit]);
-
-  useEffect(() => {
-    loadAnalytics(range, appVersion);
-  }, [range, appVersion, refreshKey, loadAnalytics]);
+  const {
+    metrics,
+    activity,
+    users,
+    posts,
+    tags,
+    loading,
+    fetching,
+    error,
+  } = useAdminAnalyticsBundle(filters);
 
   const rangeLabel = formatRangeLabel(range);
   const versionLabel = appVersion ? `v${appVersion}` : 'all versions';
@@ -203,7 +124,7 @@ export default function AdminAnalytics({
         appVersion={appVersion}
         versions={versions}
         versionsLoading={versionsLoading}
-        loading={loading || refreshing}
+        loading={loading || fetching || refreshing}
         onPresetChange={onPresetChange}
         onRangeChange={onRangeChange}
         onAppVersionChange={onAppVersionChange}
@@ -606,6 +527,7 @@ function RecentPostsGrid({ posts }: { posts: RecentPostRow[] }) {
 
   return (
     <AdminDataGrid
+      persistKey="admin-analytics-posts"
       rows={posts}
       columns={columns}
       getRowId={(row) => row.id}
@@ -674,6 +596,7 @@ function RecentSignupsGrid({ users, showVersion }: { users: RecentUserRow[]; sho
 
   return (
     <AdminDataGrid
+      persistKey="admin-analytics-signups"
       rows={users}
       columns={columns}
       getRowId={(row) => row.id}

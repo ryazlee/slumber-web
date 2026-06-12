@@ -1,11 +1,7 @@
-import { useCallback } from 'react';
 import PostList from '../../components/PostList';
-import { usePaginatedPosts } from '../../hooks/usePaginatedPosts';
-import { fetchFeed } from '../../lib/feed';
+import { useFeed } from '../../hooks/useFeed';
 
 export default function Feed() {
-  const fetchPage = useCallback((cursor?: string) => fetchFeed(cursor), []);
-
   const {
     posts,
     loading,
@@ -14,7 +10,7 @@ export default function Feed() {
     hasMore,
     loadMore,
     patchPost,
-  } = usePaginatedPosts(fetchPage);
+  } = useFeed();
 
   return (
     <div className="app-page">

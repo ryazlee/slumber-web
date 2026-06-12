@@ -1,36 +1,19 @@
-import { useCallback, useEffect, useState } from 'react';
 import AdminRoles from '../../components/admin/AdminRoles';
-import { useAdmin } from '../../context/AdminContext';
-import { fetchAdminRoleDefinitions, type AdminRoleDefinitionRow } from '../../lib/admin';
+import { useAdminRoleDefinitions } from '../../hooks/useAdmin';
 
 export default function AdminRolesPage() {
-  const { refreshKey } = useAdmin();
-  const [roles, setRoles] = useState<AdminRoleDefinitionRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setRoles(await fetchAdminRoleDefinitions());
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Could not load roles.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load, refreshKey]);
+  const rolesQuery = useAdminRoleDefinitions();
+  const errorMessage = rolesQuery.error instanceof Error
+    ? rolesQuery.error.message
+    : rolesQuery.error
+      ? 'Could not load roles.'
+      : null;
 
   return (
     <AdminRoles
-      roles={roles}
-      loading={loading}
-      error={error}
-      onChanged={load}
+      roles={rolesQuery.data ?? []}
+      loading={rolesQuery.isLoading}
+      error={errorMessage}
     />
   );
 }

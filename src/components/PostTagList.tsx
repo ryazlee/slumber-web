@@ -1,16 +1,12 @@
-import { useEffect, useState } from 'react';
-import { formatTagChip, loadTags } from '../lib/tags';
+import { formatTagChip } from '../lib/tags';
+import { useTags } from '../hooks/useCatalog';
 
 type Props = {
   tags: string[];
 };
 
 export default function PostTagList({ tags }: Props) {
-  const [, setReady] = useState(false);
-
-  useEffect(() => {
-    loadTags().then(() => setReady(true)).catch(() => setReady(true));
-  }, []);
+  useTags();
 
   if (!tags.length) return null;
 

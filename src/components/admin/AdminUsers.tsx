@@ -1,71 +1,45 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { type GridColDef } from '@mui/x-data-grid';
-import type { RecentUserRow } from '../../lib/admin';
-import { searchAdminUsers, updateUserRoles } from '../../lib/admin';
+import type { RecentUserRow, UserSearchFilters } from '../../lib/admin';
+import { useAdminUserSearch, useUpdateUserRoles } from '../../hooks/useAdmin';
+import { useAssignableRoles } from '../../hooks/useCatalog';
 import {
   formatRoleLabel,
   formatRoleList,
   getCachedRoleOptions,
-  loadRoleDefinitions,
-  type RoleOption,
 } from '../../lib/userRoles';
 import AdminDataGrid from './AdminDataGrid';
 import AdminFilterBar, { AdminFilterField } from './AdminFilterBar';
 import { dateColumn } from './dateColumn';
 
-type Props = {
-  refreshToken: number;
-  onReload: () => Promise<void>;
-};
+const DEFAULT_FILTERS: UserSearchFilters = { limit: 100 };
 
-export default function AdminUsers({ refreshToken, onReload }: Props) {
+export default function AdminUsers() {
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [premiumOnly, setPremiumOnly] = useState(false);
   const [minPosts, setMinPosts] = useState('');
   const [joinedWithin, setJoinedWithin] = useState('');
+  const [appliedFilters, setAppliedFilters] = useState<UserSearchFilters>(DEFAULT_FILTERS);
 
-  const [users, setUsers] = useState<RecentUserRow[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const rolesQuery = useAssignableRoles();
+  const roleOptions = rolesQuery.data ?? getCachedRoleOptions();
+  const usersQuery = useAdminUserSearch(appliedFilters);
+  const updateRolesMutation = useUpdateUserRoles();
+
+  const users = usersQuery.data ?? [];
+  const searching = usersQuery.isFetching;
+  const error = usersQuery.error instanceof Error
+    ? usersQuery.error.message
+    : usersQuery.error
+      ? 'Could not load users.'
+      : null;
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<RecentUserRow | null>(null);
   const [draftRoles, setDraftRoles] = useState<string[]>([]);
-  const [roleOptions, setRoleOptions] = useState<RoleOption[]>(getCachedRoleOptions());
-  const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadRoleDefinitions().then(setRoleOptions).catch(() => {
-      setRoleOptions(getCachedRoleOptions());
-    });
-  }, [refreshToken]);
-
-  const runSearch = useCallback(async () => {
-    setSearching(true);
-    setError(null);
-    try {
-      const rows = await searchAdminUsers({
-        query: query.trim() || undefined,
-        limit: 100,
-        role: roleFilter || null,
-        premiumOnly,
-        minPosts: minPosts === '' ? null : Number(minPosts),
-        joinedWithinDays: joinedWithin === '' ? null : Number(joinedWithin),
-      });
-      setUsers(rows);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Could not load users.');
-    } finally {
-      setSearching(false);
-    }
-  }, [query, roleFilter, premiumOnly, minPosts, joinedWithin]);
-
-  useEffect(() => {
-    runSearch();
-  }, [refreshToken, runSearch]);
 
   const hasFilters = Boolean(query || roleFilter || premiumOnly || minPosts || joinedWithin);
 
@@ -79,7 +53,14 @@ export default function AdminUsers({ refreshToken, onReload }: Props) {
 
   const handleSearch = (e: FormEvent) => {
     e.preventDefault();
-    runSearch();
+    setAppliedFilters({
+      query: query.trim() || undefined,
+      limit: 100,
+      role: roleFilter || null,
+      premiumOnly,
+      minPosts: minPosts === '' ? null : Number(minPosts),
+      joinedWithinDays: joinedWithin === '' ? null : Number(joinedWithin),
+    });
   };
 
   const startEdit = useCallback((user: RecentUserRow) => {
@@ -117,19 +98,16 @@ export default function AdminUsers({ refreshToken, onReload }: Props) {
 
   const saveRoles = async () => {
     if (!editingId) return;
-    setSaving(true);
     setFormError(null);
     try {
-      await updateUserRoles(editingId, draftRoles);
+      await updateRolesMutation.mutateAsync({ userId: editingId, roles: draftRoles });
       cancelEdit();
-      await runSearch();
-      await onReload();
     } catch (e: unknown) {
       setFormError(e instanceof Error ? e.message : 'Could not save roles.');
-    } finally {
-      setSaving(false);
     }
   };
+
+  const saving = updateRolesMutation.isPending;
 
   const availableToAdd = roleOptions.filter((opt) => !draftRoles.includes(opt.key));
 
@@ -275,6 +253,7 @@ export default function AdminUsers({ refreshToken, onReload }: Props) {
       {error && <p className="admin-error admin-error-banner">{error}</p>}
 
       <AdminDataGrid
+        persistKey="admin-users"
         rows={users}
         columns={columns}
         getRowId={(row) => row.id}

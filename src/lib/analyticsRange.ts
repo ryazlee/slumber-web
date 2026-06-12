@@ -39,3 +39,15 @@ export function dayCount(range: DateRange): number {
   const end = new Date(`${range.end}T12:00:00`);
   return Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
 }
+
+const CHIP_PRESETS: Exclude<RangePreset, 'custom'>[] = ['today', '7', '14', '30', '90'];
+
+export function presetForRange(range: DateRange, end = todayISO()): RangePreset {
+  for (const preset of CHIP_PRESETS) {
+    const expected = rangeForPreset(preset, end);
+    if (expected.start === range.start && expected.end === range.end) {
+      return preset;
+    }
+  }
+  return 'custom';
+}

@@ -1,34 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
 import ChallengeCard from '../../components/ChallengeCard';
-import { fetchChallenges } from '../../lib/challenges';
-import type { Challenge } from '../../lib/types';
+import { useActiveChallenges, useCompletedChallenges } from '../../hooks/useChallenges';
 
 export default function Challenges() {
-  const [active, setActive] = useState<Challenge[]>([]);
-  const [completed, setCompleted] = useState<Challenge[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const activeQuery = useActiveChallenges();
+  const completedQuery = useCompletedChallenges();
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [activeRows, completedRows] = await Promise.all([
-        fetchChallenges(['active', 'pending', 'pending_completion']),
-        fetchChallenges(['completed']),
-      ]);
-      setActive(activeRows);
-      setCompleted(completedRows);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Could not load challenges.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const loading = activeQuery.isLoading || completedQuery.isLoading;
+  const error = activeQuery.error ?? completedQuery.error;
+  const errorMessage = error instanceof Error ? error.message : error ? 'Could not load challenges.' : null;
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const active = activeQuery.data ?? [];
+  const completed = completedQuery.data ?? [];
 
   return (
     <div className="app-page">
@@ -38,9 +20,9 @@ export default function Challenges() {
       </header>
 
       {loading && <p className="app-muted">Loading challenges…</p>}
-      {error && <p className="admin-error">{error}</p>}
+      {errorMessage && <p className="admin-error">{errorMessage}</p>}
 
-      {!loading && !error && (
+      {!loading && !errorMessage && (
         <>
           <section className="app-section">
             <h2>Active</h2>

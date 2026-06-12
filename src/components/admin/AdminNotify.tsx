@@ -1,43 +1,31 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
-import type { RecentUserRow, SendNotificationResult } from '../../lib/admin';
-import { searchAdminUsers, sendAdminNotification } from '../../lib/admin';
+import type { SendNotificationResult } from '../../lib/admin';
+import { useAdminUserSearch, useSendAdminNotification } from '../../hooks/useAdmin';
 import { formatWhen } from './format';
 
-type Props = {
-  refreshToken: number;
-};
-
-export default function AdminNotify({ refreshToken }: Props) {
+export default function AdminNotify() {
   const [query, setQuery] = useState('');
-  const [users, setUsers] = useState<RecentUserRow[]>([]);
-  const [searching, setSearching] = useState(false);
+  const [appliedQuery, setAppliedQuery] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
-  const [sending, setSending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<SendNotificationResult | null>(null);
-  const [searchError, setSearchError] = useState<string | null>(null);
 
-  const runSearch = useCallback(async (q: string) => {
-    setSearching(true);
-    setSearchError(null);
-    try {
-      setUsers(await searchAdminUsers({ query: q, limit: 50 }));
-    } catch (e: unknown) {
-      setSearchError(e instanceof Error ? e.message : 'Could not load users.');
-    } finally {
-      setSearching(false);
-    }
-  }, []);
+  const usersQuery = useAdminUserSearch({ query: appliedQuery || undefined, limit: 50 });
+  const sendMutation = useSendAdminNotification();
 
-  useEffect(() => {
-    runSearch(query.trim());
-  }, [refreshToken, runSearch]);
+  const users = usersQuery.data ?? [];
+  const searching = usersQuery.isFetching;
+  const searchError = usersQuery.error instanceof Error
+    ? usersQuery.error.message
+    : usersQuery.error
+      ? 'Could not load users.'
+      : null;
 
   const handleSearch = (e: FormEvent) => {
     e.preventDefault();
-    runSearch(query.trim());
+    setAppliedQuery(query.trim());
   };
 
   const selectedUser = users.find((u) => u.id === selectedUserId) ?? null;
@@ -54,17 +42,14 @@ export default function AdminNotify({ refreshToken }: Props) {
       return;
     }
 
-    setSending(true);
     setFormError(null);
     setLastResult(null);
     try {
-      const result = await sendAdminNotification(selectedUserId, trimmed);
+      const result = await sendMutation.mutateAsync({ userId: selectedUserId, message: trimmed });
       setLastResult(result);
       setMessage('');
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : 'Could not send notification.');
-    } finally {
-      setSending(false);
     }
   };
 
@@ -78,87 +63,74 @@ export default function AdminNotify({ refreshToken }: Props) {
 
         {searchError && <p className="admin-error admin-error-banner">{searchError}</p>}
 
-        <form className="admin-users-search" onSubmit={handleSearch}>
-          <input
-            className="admin-input"
-            type="search"
-            placeholder="Search by username…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            aria-label="Search users"
-          />
-          <button className="admin-button admin-button-ghost" type="submit" disabled={searching}>
-            {searching ? 'Searching…' : 'Search'}
-          </button>
+        <form className="admin-notify-search" onSubmit={handleSearch}>
+          <label className="admin-label" htmlFor="notify-search">Find user</label>
+          <div className="admin-notify-search-row">
+            <input
+              id="notify-search"
+              className="admin-input"
+              type="search"
+              placeholder="Username or email…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            <button className="admin-button" type="submit" disabled={searching}>
+              {searching ? 'Searching…' : 'Search'}
+            </button>
+          </div>
         </form>
 
-        {searching && users.length === 0 ? (
-          <p className="admin-muted">Loading users…</p>
-        ) : users.length === 0 ? (
-          <p className="admin-muted admin-empty">No users found.</p>
-        ) : (
+        {users.length > 0 && (
           <ul className="admin-notify-user-list">
-            {users.map((user) => {
-              const selected = selectedUserId === user.id;
-              return (
-                <li key={user.id}>
-                  <button
-                    type="button"
-                    className={selected ? 'admin-notify-user active' : 'admin-notify-user'}
-                    onClick={() => {
-                      setSelectedUserId(user.id);
-                      setFormError(null);
-                      setLastResult(null);
-                    }}
-                  >
-                    <span className="admin-user-name">@{user.username}</span>
-                    <span className="admin-muted">
-                      Joined {formatWhen(user.created_at)} · {user.posts_count} posts
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
+            {users.map((user) => (
+              <li key={user.id}>
+                <button
+                  type="button"
+                  className={`admin-notify-user${selectedUserId === user.id ? ' admin-notify-user--selected' : ''}`}
+                  onClick={() => setSelectedUserId(user.id)}
+                >
+                  <span className="admin-notify-user-name">@{user.username}</span>
+                  {user.email ? <span className="admin-notify-user-email">{user.email}</span> : null}
+                  <span className="admin-notify-user-meta">
+                    Joined {formatWhen(user.created_at)}
+                  </span>
+                </button>
+              </li>
+            ))}
           </ul>
         )}
 
-        <form className="admin-form admin-notify-form" onSubmit={handleSend}>
-          <label className="admin-label" htmlFor="notify-message">
-            Message
-            {selectedUser ? ` for @${selectedUser.username}` : ''}
-          </label>
+        {appliedQuery && !searching && users.length === 0 && (
+          <p className="admin-muted">No users match that search.</p>
+        )}
+
+        <form className="admin-notify-compose" onSubmit={handleSend}>
+          <label className="admin-label" htmlFor="notify-message">Message</label>
           <textarea
             id="notify-message"
-            className="admin-input admin-textarea"
+            className="admin-input admin-notify-message"
             rows={4}
-            maxLength={500}
-            placeholder="Test push from Slumber admin…"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            disabled={!selectedUserId || sending}
+            placeholder={selectedUser ? `Message for @${selectedUser.username}…` : 'Select a user first…'}
+            disabled={!selectedUserId || sendMutation.isPending}
           />
-          <p className="admin-muted">{message.trim().length}/500</p>
-
           {formError && <p className="admin-error">{formError}</p>}
           {lastResult && (
-            <p className="admin-success">
-              Sent. In-app notification created
+            <p className="admin-muted admin-notify-result">
+              Sent notification {lastResult.notification_id}
               {lastResult.device_tokens > 0
-                ? ` · push queued for ${lastResult.device_tokens} device${lastResult.device_tokens === 1 ? '' : 's'}`
-                : ' · no device tokens registered (in-app only)'}
-              .
+                ? ` · ${lastResult.device_tokens} device token(s)`
+                : ' · no push tokens'}
             </p>
           )}
-
-          <div className="admin-tag-form-actions">
-            <button
-              className="admin-button"
-              type="submit"
-              disabled={sending || !selectedUserId || !message.trim()}
-            >
-              {sending ? 'Sending…' : 'Send notification'}
-            </button>
-          </div>
+          <button
+            className="admin-button"
+            type="submit"
+            disabled={!selectedUserId || !message.trim() || sendMutation.isPending}
+          >
+            {sendMutation.isPending ? 'Sending…' : 'Send notification'}
+          </button>
         </form>
       </div>
     </div>

@@ -1,36 +1,19 @@
-import { useCallback, useEffect, useState } from 'react';
 import AdminTags from '../../components/admin/AdminTags';
-import { useAdmin } from '../../context/AdminContext';
-import { fetchAdminTags, type AdminTagRow } from '../../lib/admin';
+import { useAdminTagsCatalog } from '../../hooks/useAdmin';
 
 export default function AdminTagsPage() {
-  const { refreshKey } = useAdmin();
-  const [tags, setTags] = useState<AdminTagRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setTags(await fetchAdminTags());
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Could not load tags.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load, refreshKey]);
+  const tagsQuery = useAdminTagsCatalog();
+  const errorMessage = tagsQuery.error instanceof Error
+    ? tagsQuery.error.message
+    : tagsQuery.error
+      ? 'Could not load tags.'
+      : null;
 
   return (
     <AdminTags
-      tags={tags}
-      loading={loading}
-      error={error}
-      onChanged={load}
+      tags={tagsQuery.data ?? []}
+      loading={tagsQuery.isLoading}
+      error={errorMessage}
     />
   );
 }

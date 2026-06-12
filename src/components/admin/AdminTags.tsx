@@ -2,35 +2,32 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { type GridColDef } from '@mui/x-data-grid';
 import type { AdminTagRow, TagDraft } from '../../lib/admin';
-import { deleteAdminTag, upsertAdminTag } from '../../lib/admin';
+import { useDeleteAdminTag, useUpsertAdminTag } from '../../hooks/useAdmin';
 import AdminDataGrid from './AdminDataGrid';
 
 type Props = {
   tags: AdminTagRow[];
   loading: boolean;
   error: string | null;
-  onChanged: () => void;
 };
 
 const EMPTY_DRAFT: TagDraft = { value: '', emoji: '', label: '', sort_order: 0 };
 
-export default function AdminTags({ tags, loading, error, onChanged }: Props) {
+export default function AdminTags({ tags, loading, error }: Props) {
   const [draft, setDraft] = useState<TagDraft>(EMPTY_DRAFT);
-  const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const upsertMutation = useUpsertAdminTag();
+  const deleteMutation = useDeleteAdminTag();
+  const saving = upsertMutation.isPending || deleteMutation.isPending;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setFormError(null);
-    setSaving(true);
     try {
-      await upsertAdminTag(draft);
+      await upsertMutation.mutateAsync(draft);
       setDraft(EMPTY_DRAFT);
-      onChanged();
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : 'Could not save tag.');
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -51,15 +48,11 @@ export default function AdminTags({ tags, loading, error, onChanged }: Props) {
     if (!window.confirm(msg)) return;
 
     setFormError(null);
-    setSaving(true);
     try {
-      await deleteAdminTag(tag.value);
+      await deleteMutation.mutateAsync(tag.value);
       if (draft.value === tag.value) setDraft(EMPTY_DRAFT);
-      onChanged();
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : 'Could not delete tag.');
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -203,6 +196,7 @@ export default function AdminTags({ tags, loading, error, onChanged }: Props) {
 
       {!loading && (
         <AdminDataGrid
+          persistKey="admin-tags"
           rows={tags}
           columns={columns}
           getRowId={(row) => row.value}

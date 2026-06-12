@@ -40,6 +40,11 @@ export async function loadTags(): Promise<TagDefinition[]> {
   return _tags;
 }
 
+export function clearTagsCache(): void {
+  _tags = null;
+  _labelMap = null;
+}
+
 export function getCachedTags(): TagDefinition[] {
   return _tags ?? FALLBACK_TAGS;
 }

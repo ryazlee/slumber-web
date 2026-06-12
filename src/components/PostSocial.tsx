@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { timeAgo } from '../lib/format';
 import {
-  addComment,
-  fetchComments,
-  fetchKudosUsers,
-  toggleKudos,
-} from '../lib/posts';
-import type { Comment, KudosUser } from '../lib/types';
+  useAddComment,
+  usePostComments,
+  usePostKudos,
+  useToggleKudos,
+} from '../hooks/usePostSocial';
+import { timeAgo } from '../lib/format';
 import CommentRow from './CommentRow';
 import Popup from './Popup';
 import UserLink from './UserLink';
@@ -45,18 +44,13 @@ export default function PostSocial({
 
   const [kudosOpen, setKudosOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(defaultCommentsOpen);
-  const [kudosLoading, setKudosLoading] = useState(false);
-  const [commentsLoading, setCommentsLoading] = useState(false);
-  const [kudosActionLoading, setKudosActionLoading] = useState(false);
-  const [kudosError, setKudosError] = useState<string | null>(null);
-  const [commentsError, setCommentsError] = useState<string | null>(null);
-  const [sendError, setSendError] = useState<string | null>(null);
-  const [kudos, setKudos] = useState<KudosUser[]>([]);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [kudosLoaded, setKudosLoaded] = useState(false);
-  const [commentsLoaded, setCommentsLoaded] = useState(false);
   const [commentText, setCommentText] = useState('');
-  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+
+  const kudosQuery = usePostKudos(postId, kudosOpen);
+  const commentsQuery = usePostComments(postId, commentsOpen);
+  const toggleKudosMutation = useToggleKudos(postId);
+  const addCommentMutation = useAddComment(postId);
 
   const patchParent = useCallback((patch: PostSocialPatch) => {
     onPatch?.(patch);
@@ -71,66 +65,19 @@ export default function PostSocial({
   useEffect(() => {
     setKudosOpen(false);
     setCommentsOpen(defaultCommentsOpen);
-    setKudos([]);
-    setComments([]);
-    setKudosLoaded(false);
-    setCommentsLoaded(false);
-    setKudosError(null);
-    setCommentsError(null);
     setSendError(null);
     setCommentText('');
   }, [postId, defaultCommentsOpen]);
 
   useEffect(() => {
-    if (!kudosOpen || kudosLoaded) return;
-    let cancelled = false;
-    setKudosLoading(true);
-    setKudosError(null);
-    fetchKudosUsers(postId)
-      .then((rows) => {
-        if (!cancelled) {
-          setKudos(rows);
-          setKudosLoaded(true);
-        }
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) {
-          setKudosError(e instanceof Error ? e.message : 'Could not load kudos.');
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setKudosLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [kudosOpen, kudosLoaded, postId]);
-
-  useEffect(() => {
-    if (!commentsOpen || commentsLoaded) return;
-    let cancelled = false;
-    setCommentsLoading(true);
-    setCommentsError(null);
-    fetchComments(postId)
-      .then((rows) => {
-        if (!cancelled) {
-          setComments(rows);
-          setCommentCount(rows.length);
-          patchParent({ commentCount: rows.length });
-          setCommentsLoaded(true);
-        }
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) {
-          setCommentsError(e instanceof Error ? e.message : 'Could not load comments.');
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setCommentsLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [commentsOpen, commentsLoaded, postId, patchParent]);
+    if (commentsQuery.data) {
+      setCommentCount(commentsQuery.data.length);
+      patchParent({ commentCount: commentsQuery.data.length });
+    }
+  }, [commentsQuery.data, patchParent]);
 
   const handleKudos = async () => {
-    if (!user || kudosActionLoading) return;
+    if (!user || toggleKudosMutation.isPending) return;
 
     const nextHasKudoed = !hasKudoed;
     const optimisticCount = hasKudoed ? Math.max(0, kudosCount - 1) : kudosCount + 1;
@@ -139,11 +86,13 @@ export default function PostSocial({
     setKudosCount(optimisticCount);
     setHasKudoed(nextHasKudoed);
     patchParent({ kudosCount: optimisticCount, hasKudoed: nextHasKudoed });
-    setKudosLoaded(false);
 
-    setKudosActionLoading(true);
     try {
-      const res = await toggleKudos(postId, user.id, prev.kudosCount, prev.hasKudoed);
+      const res = await toggleKudosMutation.mutateAsync({
+        userId: user.id,
+        kudosCount: prev.kudosCount,
+        hasKudoed: prev.hasKudoed,
+      });
       setKudosCount(res.kudosCount);
       setHasKudoed(res.hasKudoed);
       patchParent({ kudosCount: res.kudosCount, hasKudoed: res.hasKudoed });
@@ -151,20 +100,16 @@ export default function PostSocial({
       setKudosCount(prev.kudosCount);
       setHasKudoed(prev.hasKudoed);
       patchParent({ kudosCount: prev.kudosCount, hasKudoed: prev.hasKudoed });
-    } finally {
-      setKudosActionLoading(false);
     }
   };
 
   const handleSendComment = async (e?: FormEvent) => {
     e?.preventDefault();
-    if (!user || !commentText.trim() || sending) return;
+    if (!user || !commentText.trim() || addCommentMutation.isPending) return;
 
-    setSending(true);
     setSendError(null);
     try {
-      const c = await addComment(postId, user.id, commentText);
-      setComments((prev) => [...prev, c]);
+      await addCommentMutation.mutateAsync({ userId: user.id, text: commentText });
       setCommentCount((n) => {
         const next = n + 1;
         patchParent({ commentCount: next });
@@ -173,8 +118,6 @@ export default function PostSocial({
       setCommentText('');
     } catch (err: unknown) {
       setSendError(err instanceof Error ? err.message : 'Could not post comment.');
-    } finally {
-      setSending(false);
     }
   };
 
@@ -184,6 +127,11 @@ export default function PostSocial({
   };
 
   const toggleComments = () => setCommentsOpen((v) => !v);
+
+  const kudos = kudosQuery.data ?? [];
+  const comments = commentsQuery.data ?? [];
+  const kudosError = kudosQuery.error instanceof Error ? kudosQuery.error.message : null;
+  const commentsError = commentsQuery.error instanceof Error ? commentsQuery.error.message : null;
 
   return (
     <div className={`post-social${commentsOpen ? ' post-social--comments-open' : ''}`}>
@@ -196,7 +144,7 @@ export default function PostSocial({
                   type="button"
                   className={`post-social-icon-btn${hasKudoed ? ' post-social-icon-btn--active' : ''}`}
                   onClick={handleKudos}
-                  disabled={kudosActionLoading}
+                  disabled={toggleKudosMutation.isPending}
                   aria-label={hasKudoed ? 'Remove kudos' : 'Give kudos'}
                   aria-pressed={hasKudoed}
                 >
@@ -251,12 +199,12 @@ export default function PostSocial({
 
       {commentsOpen && (
         <section className="post-comments" aria-label="Comments">
-          {commentsLoading && <p className="post-comments-status">Loading comments…</p>}
+          {commentsQuery.isLoading && <p className="post-comments-status">Loading comments…</p>}
           {commentsError && <p className="admin-error">{commentsError}</p>}
-          {commentsLoaded && !commentsError && comments.length === 0 && (
+          {commentsQuery.isSuccess && comments.length === 0 && (
             <p className="post-comments-status">No comments yet.</p>
           )}
-          {commentsLoaded && comments.length > 0 && (
+          {commentsQuery.isSuccess && comments.length > 0 && (
             <ul className="comment-thread">
               {comments.map((comment) => (
                 <CommentRow key={comment.id} comment={comment} />
@@ -273,15 +221,15 @@ export default function PostSocial({
                 onChange={(e) => setCommentText(e.target.value)}
                 maxLength={300}
                 rows={2}
-                disabled={sending}
+                disabled={addCommentMutation.isPending}
               />
               <button
                 type="submit"
                 className="comment-compose-send"
-                disabled={!commentText.trim() || sending}
+                disabled={!commentText.trim() || addCommentMutation.isPending}
                 aria-label="Send comment"
               >
-                {sending ? '…' : '↑'}
+                {addCommentMutation.isPending ? '…' : '↑'}
               </button>
             </form>
           )}
@@ -290,12 +238,12 @@ export default function PostSocial({
       )}
 
       <Popup open={kudosOpen} onClose={() => setKudosOpen(false)} title="Kudos">
-        {kudosLoading && <p className="popup-status">Loading…</p>}
+        {kudosQuery.isLoading && <p className="popup-status">Loading…</p>}
         {kudosError && <p className="admin-error">{kudosError}</p>}
-        {kudosLoaded && !kudosError && kudos.length === 0 && (
+        {kudosQuery.isSuccess && kudos.length === 0 && (
           <p className="popup-status">No kudos yet.</p>
         )}
-        {kudosLoaded && kudos.length > 0 && (
+        {kudosQuery.isSuccess && kudos.length > 0 && (
           <ul className="kudos-list">
             {kudos.map((kudosUser) => (
               <li key={`${kudosUser.id}-${kudosUser.createdAt}`} className="kudos-row">

@@ -1,5 +1,6 @@
 import type { AppVersionRow } from '../../lib/admin';
 import {
+  presetForRange,
   rangeForPreset,
   todayISO,
   type DateRange,
@@ -18,13 +19,12 @@ type Props = {
   onAppVersionChange: (version: string) => void;
 };
 
-const PRESETS: { id: RangePreset; label: string }[] = [
+const CHIP_PRESETS: { id: Exclude<RangePreset, 'custom'>; label: string }[] = [
   { id: 'today', label: 'Today' },
   { id: '7', label: '7d' },
   { id: '14', label: '14d' },
   { id: '30', label: '30d' },
   { id: '90', label: '90d' },
-  { id: 'custom', label: 'Custom' },
 ];
 
 export default function AdminAnalyticsFilters({
@@ -38,29 +38,59 @@ export default function AdminAnalyticsFilters({
   onRangeChange,
   onAppVersionChange,
 }: Props) {
-  const handlePreset = (next: RangePreset) => {
+  const showVersion = versions.length > 0;
+
+  const handlePreset = (next: Exclude<RangePreset, 'custom'>) => {
     onPresetChange(next);
-    if (next !== 'custom') {
-      onRangeChange(rangeForPreset(next, todayISO()));
-    }
+    onRangeChange(rangeForPreset(next, todayISO()));
+  };
+
+  const handleDateChange = (part: 'start' | 'end', value: string) => {
+    const nextRange = { ...range, [part]: value };
+    onRangeChange(nextRange);
+    onPresetChange(presetForRange(nextRange));
   };
 
   return (
-    <div className="admin-analytics-filters admin-analytics-filters--compact">
-      <div className="admin-analytics-toolbar">
-        <div className="admin-tabs admin-tabs-sub" role="group" aria-label="Date range presets">
-          {PRESETS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={preset === item.id ? 'admin-tab active' : 'admin-tab'}
-              onClick={() => handlePreset(item.id)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
+    <div
+      className={`admin-analytics-bar${loading ? ' admin-analytics-bar--loading' : ''}`}
+      aria-busy={loading || undefined}
+    >
+      <div className="admin-tabs admin-tabs-sub" role="group" aria-label="Date range presets">
+        {CHIP_PRESETS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={preset === item.id ? 'admin-tab active' : 'admin-tab'}
+            onClick={() => handlePreset(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
 
+      <div className="admin-analytics-dates">
+        <input
+          className="admin-input admin-analytics-date"
+          type="date"
+          value={range.start}
+          max={range.end}
+          aria-label="Start date"
+          onChange={(e) => handleDateChange('start', e.target.value)}
+        />
+        <span className="admin-analytics-date-sep" aria-hidden>–</span>
+        <input
+          className="admin-input admin-analytics-date"
+          type="date"
+          value={range.end}
+          min={range.start}
+          max={todayISO()}
+          aria-label="End date"
+          onChange={(e) => handleDateChange('end', e.target.value)}
+        />
+      </div>
+
+      {showVersion ? (
         <select
           id="analytics-version"
           className="admin-input admin-input-select admin-analytics-version"
@@ -76,40 +106,7 @@ export default function AdminAnalyticsFilters({
             </option>
           ))}
         </select>
-
-        {preset === 'custom' && (
-          <div className="admin-analytics-custom-dates">
-            <input
-              id="analytics-start"
-              className="admin-input admin-analytics-date"
-              type="date"
-              value={range.start}
-              max={range.end}
-              aria-label="Start date"
-              onChange={(e) => {
-                onPresetChange('custom');
-                onRangeChange({ ...range, start: e.target.value });
-              }}
-            />
-            <span className="admin-analytics-date-sep" aria-hidden>–</span>
-            <input
-              id="analytics-end"
-              className="admin-input admin-analytics-date"
-              type="date"
-              value={range.end}
-              min={range.start}
-              max={todayISO()}
-              aria-label="End date"
-              onChange={(e) => {
-                onPresetChange('custom');
-                onRangeChange({ ...range, end: e.target.value });
-              }}
-            />
-          </div>
-        )}
-
-        {loading ? <span className="admin-muted admin-analytics-loading">Updating…</span> : null}
-      </div>
+      ) : null}
     </div>
   );
 }

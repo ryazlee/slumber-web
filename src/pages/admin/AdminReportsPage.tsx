@@ -1,35 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import AdminReports from '../../components/admin/AdminReports';
-import { useAdmin } from '../../context/AdminContext';
-import { fetchCommentReports, fetchPostReports } from '../../lib/admin';
+import { useCommentReports, usePostReports } from '../../hooks/useAdmin';
 
 export default function AdminReportsPage() {
-  const { refreshKey } = useAdmin();
-  const [postReports, setPostReports] = useState<Awaited<ReturnType<typeof fetchPostReports>>>([]);
-  const [commentReports, setCommentReports] = useState<Awaited<ReturnType<typeof fetchCommentReports>>>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const postReportsQuery = usePostReports();
+  const commentReportsQuery = useCommentReports();
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [posts, comments] = await Promise.all([
-        fetchPostReports(),
-        fetchCommentReports(),
-      ]);
-      setPostReports(posts);
-      setCommentReports(comments);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Could not load reports.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load, refreshKey]);
+  const postReports = postReportsQuery.data ?? [];
+  const commentReports = commentReportsQuery.data ?? [];
+  const loading = postReportsQuery.isLoading || commentReportsQuery.isLoading;
+  const error = postReportsQuery.error ?? commentReportsQuery.error;
+  const errorMessage = error instanceof Error ? error.message : error ? 'Could not load reports.' : null;
 
   const reportCounts = useMemo(() => ({
     posts: postReports.length,
@@ -41,7 +22,7 @@ export default function AdminReportsPage() {
       postReports={postReports}
       commentReports={commentReports}
       loading={loading}
-      error={error}
+      error={errorMessage}
       reportCounts={reportCounts}
     />
   );
