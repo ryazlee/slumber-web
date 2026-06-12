@@ -357,7 +357,14 @@ h1 {
   margin-bottom: 4px;
 }
 
+.admin-page > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .admin-hub {
+  min-width: 0;
+  max-width: 100%;
   margin-top: 8px;
 }
 
@@ -712,6 +719,8 @@ h1 {
   align-items: flex-start;
   gap: 16px;
   margin-bottom: 24px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .admin-title {
@@ -759,7 +768,15 @@ h1 {
   color: var(--text);
 }
 
-.admin-table-wrap {
+.admin-table-wrap,
+.admin-data-grid-wrap {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.admin-table-wrap:not(.admin-data-grid-wrap) {
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -768,11 +785,7 @@ h1 {
 }
 
 .admin-data-grid-wrap {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
   margin-top: 8px;
-  overflow: hidden;
 }
 
 .admin-data-grid-wrap .MuiDataGrid-root {
@@ -866,6 +879,10 @@ h1 {
   text-align: left;
   border-bottom: 1px solid var(--border);
   vertical-align: top;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 280px;
 }
 
 .admin-table th {
@@ -885,16 +902,31 @@ h1 {
   color: var(--text-muted);
 }
 
-.admin-comment-cell {
-  max-width: 280px;
+.admin-comment-cell,
+.admin-table td.admin-td-wrap,
+.admin-table td.admin-td-stack {
+  max-width: none;
+  white-space: normal;
   word-break: break-word;
+  overflow: visible;
+  text-overflow: unset;
+}
+
+.admin-table-wrap .admin-code,
+.admin-data-grid-wrap .admin-code {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: normal;
+  vertical-align: bottom;
 }
 
 .admin-code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px;
   color: var(--text-dim);
-  word-break: break-all;
 }
 
 .admin-id-stack {
