@@ -11,7 +11,7 @@ export async function fetchProfileSummary(userId: string): Promise<WebProfile | 
 
   if (error || !row) return null;
 
-  const [asleepRes, streakRes, prRes, friendsCountRes, postsCountRes, recordRes] = await Promise.all([
+  const [asleepRes, streakRes, friendsCountRes, postsCountRes, recordRes] = await Promise.all([
     supabase
       .from('sleep_posts')
       .select('asleep_minutes, source_device, is_custom')
@@ -20,12 +20,6 @@ export async function fetchProfileSummary(userId: string): Promise<WebProfile | 
       .order('created_at', { ascending: false })
       .limit(100),
     supabase.from('streaks').select('*').eq('user_id', userId).maybeSingle(),
-    supabase
-      .from('personal_records')
-      .select('value')
-      .eq('user_id', userId)
-      .eq('record_type', 'longest_sleep')
-      .maybeSingle(),
     supabase.rpc('get_user_friends_count', { target_user: userId }),
     supabase
       .from('sleep_posts')
@@ -53,7 +47,6 @@ export async function fetchProfileSummary(userId: string): Promise<WebProfile | 
     streak: streakRes.data?.current_streak ?? 0,
     longestStreak: streakRes.data?.longest_streak ?? 0,
     avgAsleepMinutes,
-    bestNightMinutes: prRes.data?.value ?? 0,
     sleepGoalMinutes: row.sleep_goal_minutes ?? 480,
     challengeRecord: {
       wins: Number(recordRow?.wins ?? 0),

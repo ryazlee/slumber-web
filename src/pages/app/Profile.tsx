@@ -130,10 +130,6 @@ export default function Profile() {
           <span className="profile-stat-label">Avg sleep</span>
         </div>
         <div className="profile-stat">
-          <span className="profile-stat-value">{formatMins(profile.bestNightMinutes)}</span>
-          <span className="profile-stat-label">Best night</span>
-        </div>
-        <div className="profile-stat">
           <span className="profile-stat-value">
             {formatChallengeRecord(profile.challengeRecord.wins, profile.challengeRecord.losses, profile.challengeRecord.ties)}
           </span>

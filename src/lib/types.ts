@@ -59,7 +59,6 @@ export type WebProfile = {
   streak: number;
   longestStreak: number;
   avgAsleepMinutes: number;
-  bestNightMinutes: number;
   sleepGoalMinutes: number;
   challengeRecord: { wins: number; losses: number; ties: number };
 };
