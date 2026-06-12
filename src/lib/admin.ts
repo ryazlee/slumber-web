@@ -126,11 +126,26 @@ export type AnalyticsMetrics = {
   users_with_version_reported: number;
 };
 
+export type RecentPostRow = {
+  id: string;
+  username: string;
+  sleep_date: string;
+  title: string;
+  asleep_minutes: number;
+  in_bed_minutes: number;
+  is_custom: boolean;
+  source_device: string | null;
+  has_dream: boolean;
+  created_at: string;
+  kudos_count: number;
+  comments_count: number;
+};
+
 export type AnalyticsFilters = {
   start?: string;
   end?: string;
   appVersion?: string | null;
-  signupLimit?: number;
+  listLimit?: number;
 };
 
 export type AdminTagRow = {
@@ -185,13 +200,24 @@ export async function fetchDashboardMetrics(): Promise<DashboardMetrics> {
 
 export async function fetchRecentUsers(filters: AnalyticsFilters = {}): Promise<RecentUserRow[]> {
   const { data, error } = await supabase.rpc('admin_get_recent_users', {
-    p_limit: filters.signupLimit ?? 25,
+    p_limit: filters.listLimit ?? 50,
     p_start: filters.start || null,
     p_end: filters.end || null,
     p_app_version: filters.appVersion || null,
   });
   if (error) throw error;
   return (data as RecentUserRow[] | null) ?? [];
+}
+
+export async function fetchRecentPosts(filters: AnalyticsFilters = {}): Promise<RecentPostRow[]> {
+  const { data, error } = await supabase.rpc('admin_get_recent_posts', {
+    p_limit: filters.listLimit ?? 50,
+    p_start: filters.start || null,
+    p_end: filters.end || null,
+    p_app_version: filters.appVersion || null,
+  });
+  if (error) throw error;
+  return (data as RecentPostRow[] | null) ?? [];
 }
 
 export async function fetchDailyActivity(filters: AnalyticsFilters): Promise<DailyActivityRow[]> {

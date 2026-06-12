@@ -1013,6 +1013,52 @@ h1 {
   margin-bottom: 8px;
 }
 
+.admin-analytics-filters--compact {
+  gap: 0;
+  margin-bottom: 12px;
+}
+
+.admin-analytics-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-analytics-toolbar .admin-tabs-sub {
+  margin-bottom: 0;
+  flex: 1 1 auto;
+}
+
+.admin-analytics-version {
+  width: auto;
+  min-width: 140px;
+  max-width: 220px;
+  flex: 0 1 auto;
+}
+
+.admin-analytics-custom-dates {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 1 auto;
+}
+
+.admin-analytics-date {
+  width: auto;
+  min-width: 0;
+}
+
+.admin-analytics-date-sep {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.admin-analytics-loading {
+  font-size: 13px;
+  white-space: nowrap;
+}
+
 .admin-analytics-filter-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1023,6 +1069,17 @@ h1 {
 
 .admin-filter-note {
   align-self: center;
+}
+
+.admin-section-meta {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.admin-section-foot {
+  margin: 8px 0 0;
+  font-size: 13px;
 }
 
 .admin-filter-actions {

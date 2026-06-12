@@ -5,18 +5,18 @@ import {
   fetchAnalyticsMetrics,
   fetchAppVersions,
   fetchDailyActivity,
+  fetchRecentPosts,
   fetchRecentUsers,
   formatAdminRpcError,
   type AdminTagRow,
   type AnalyticsMetrics,
   type AppVersionRow,
   type DailyActivityRow,
+  type RecentPostRow,
   type RecentUserRow,
 } from '../../lib/admin';
 import {
   formatRangeLabel,
-  rangeForPreset,
-  todayISO,
   type DateRange,
   type RangePreset,
 } from '../../lib/analyticsRange';
@@ -44,8 +44,15 @@ type Props = {
   onPresetChange: (preset: RangePreset) => void;
   onRangeChange: (range: DateRange) => void;
   onAppVersionChange: (version: string) => void;
-  signupLimit: number;
+  listLimit: number;
 };
+
+function formatSleepMinutes(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m}m`;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
 
 function MetricCard({ label, value, sub }: { label: string; value: number; sub?: string }) {
   return (
@@ -82,15 +89,14 @@ export default function AdminAnalytics({
   onPresetChange,
   onRangeChange,
   onAppVersionChange,
-  signupLimit,
+  listLimit,
 }: Props) {
   const { refreshKey, refreshing } = useAdmin();
   const [tab, setTab] = useState<AnalyticsTab>('overview');
-  const [appliedRange, setAppliedRange] = useState(range);
-  const [appliedVersion, setAppliedVersion] = useState(appVersion);
   const [metrics, setMetrics] = useState<AnalyticsMetrics | null>(null);
   const [activity, setActivity] = useState<DailyActivityRow[]>([]);
   const [users, setUsers] = useState<RecentUserRow[]>([]);
+  const [posts, setPosts] = useState<RecentPostRow[]>([]);
   const [tags, setTags] = useState<AdminTagRow[]>([]);
   const [versions, setVersions] = useState<AppVersionRow[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -120,12 +126,13 @@ export default function AdminAnalytics({
       start: nextRange.start,
       end: nextRange.end,
       appVersion: version || null,
-      signupLimit,
+      listLimit,
     };
-    const [metricsR, activityR, usersR, tagsR] = await Promise.allSettled([
+    const [metricsR, activityR, usersR, postsR, tagsR] = await Promise.allSettled([
       fetchAnalyticsMetrics(filters),
       fetchDailyActivity(filters),
       fetchRecentUsers(filters),
+      fetchRecentPosts(filters),
       fetchAdminTags(filters),
     ]);
 
@@ -157,6 +164,14 @@ export default function AdminAnalytics({
       setUsers([]);
     }
 
+    if (postsR.status === 'fulfilled') {
+      setPosts(postsR.value);
+    } else {
+      console.error('Admin analytics posts failed:', postsR.reason);
+      warnings.push(formatAdminRpcError('Posts', postsR.reason));
+      setPosts([]);
+    }
+
     if (tagsR.status === 'fulfilled') {
       setTags([...tagsR.value].sort((a, b) => b.usage_count - a.usage_count));
     } else {
@@ -167,29 +182,14 @@ export default function AdminAnalytics({
 
     setError(warnings.length > 0 ? warnings.join(' · ') : null);
     setLoading(false);
-  }, [signupLimit]);
+  }, [listLimit]);
 
   useEffect(() => {
-    loadAnalytics(appliedRange, appliedVersion);
-  }, [appliedRange, appliedVersion, refreshKey, loadAnalytics]);
+    loadAnalytics(range, appVersion);
+  }, [range, appVersion, refreshKey, loadAnalytics]);
 
-  const applyFilters = () => {
-    setAppliedRange(range);
-    setAppliedVersion(appVersion);
-  };
-
-  const handlePresetChange = (next: RangePreset) => {
-    onPresetChange(next);
-    if (next !== 'custom') {
-      const nextRange = rangeForPreset(next, todayISO());
-      onRangeChange(nextRange);
-      setAppliedRange(nextRange);
-      setAppliedVersion(appVersion);
-    }
-  };
-
-  const rangeLabel = formatRangeLabel(appliedRange);
-  const versionLabel = appliedVersion ? `v${appliedVersion}` : 'all versions';
+  const rangeLabel = formatRangeLabel(range);
+  const versionLabel = appVersion ? `v${appVersion}` : 'all versions';
   const postsPerActive = metrics && metrics.active_users > 0
     ? (metrics.posts / metrics.active_users).toFixed(1)
     : '—';
@@ -203,11 +203,10 @@ export default function AdminAnalytics({
         appVersion={appVersion}
         versions={versions}
         versionsLoading={versionsLoading}
-        onPresetChange={handlePresetChange}
+        loading={loading || refreshing}
+        onPresetChange={onPresetChange}
         onRangeChange={onRangeChange}
         onAppVersionChange={onAppVersionChange}
-        onApply={applyFilters}
-        applying={loading}
       />
 
       <div className="admin-tabs" role="tablist" aria-label="Analytics sections">
@@ -226,7 +225,6 @@ export default function AdminAnalytics({
       </div>
 
       {error && <p className="admin-error admin-error-banner">{error}</p>}
-      {(loading || refreshing) && <p className="admin-muted">Loading analytics…</p>}
 
       {!loading && metrics && (
         <>
@@ -236,7 +234,7 @@ export default function AdminAnalytics({
               rangeLabel={rangeLabel}
               versionLabel={versionLabel}
               postsPerActive={postsPerActive}
-              appliedVersion={appliedVersion}
+              appliedVersion={appVersion}
             />
           )}
 
@@ -245,6 +243,7 @@ export default function AdminAnalytics({
               metrics={metrics}
               activity={activity}
               users={users}
+              listLimit={listLimit}
               rangeLabel={rangeLabel}
               versionLabel={versionLabel}
               showVersion={showVersion}
@@ -255,6 +254,8 @@ export default function AdminAnalytics({
             <PostsPanel
               metrics={metrics}
               activity={activity}
+              posts={posts}
+              listLimit={listLimit}
               rangeLabel={rangeLabel}
               versionLabel={versionLabel}
               postsPerActive={postsPerActive}
@@ -335,6 +336,7 @@ function UsersPanel({
   metrics,
   activity,
   users,
+  listLimit,
   rangeLabel,
   versionLabel,
   showVersion,
@@ -342,6 +344,7 @@ function UsersPanel({
   metrics: AnalyticsMetrics;
   activity: DailyActivityRow[];
   users: RecentUserRow[];
+  listLimit: number;
   rangeLabel: string;
   versionLabel: string;
   showVersion: boolean;
@@ -362,12 +365,22 @@ function UsersPanel({
       )}
 
       <section className="admin-section">
-        <h2 className="admin-section-title">Signups in range</h2>
+        <h2 className="admin-section-title">
+          Signups in range
+          {metrics.signups > users.length ? (
+            <span className="admin-section-meta"> · showing {users.length} of {metrics.signups}</span>
+          ) : null}
+        </h2>
         {users.length === 0 ? (
           <p className="admin-muted">No signups match your filters.</p>
         ) : (
           <RecentSignupsGrid users={users} showVersion={showVersion} />
         )}
+        {metrics.signups > listLimit ? (
+          <p className="admin-muted admin-section-foot">
+            Limited to the {listLimit} most recent signups.
+          </p>
+        ) : null}
       </section>
     </div>
   );
@@ -376,12 +389,16 @@ function UsersPanel({
 function PostsPanel({
   metrics,
   activity,
+  posts,
+  listLimit,
   rangeLabel,
   versionLabel,
   postsPerActive,
 }: {
   metrics: AnalyticsMetrics;
   activity: DailyActivityRow[];
+  posts: RecentPostRow[];
+  listLimit: number;
   rangeLabel: string;
   versionLabel: string;
   postsPerActive: string;
@@ -413,6 +430,25 @@ function PostsPanel({
           <AdminActivityChart title="Daily posts" rows={activity} series="posts" color="var(--core)" />
         </div>
       )}
+
+      <section className="admin-section">
+        <h2 className="admin-section-title">
+          Posts in range
+          {metrics.posts > posts.length ? (
+            <span className="admin-section-meta"> · showing {posts.length} of {metrics.posts}</span>
+          ) : null}
+        </h2>
+        {posts.length === 0 ? (
+          <p className="admin-muted">No posts match your filters.</p>
+        ) : (
+          <RecentPostsGrid posts={posts} />
+        )}
+        {metrics.posts > listLimit ? (
+          <p className="admin-muted admin-section-foot">
+            Limited to the {listLimit} most recent posts.
+          </p>
+        ) : null}
+      </section>
     </div>
   );
 }
@@ -486,6 +522,80 @@ function TagsPanel({
         </div>
       )}
     </div>
+  );
+}
+
+function RecentPostsGrid({ posts }: { posts: RecentPostRow[] }) {
+  const columns = useMemo<GridColDef<RecentPostRow>[]>(() => [
+    {
+      field: 'username',
+      headerName: 'User',
+      flex: 1,
+      minWidth: 120,
+      valueFormatter: (value) => `@${value}`,
+    },
+    {
+      field: 'sleep_date',
+      headerName: 'Sleep date',
+      width: 120,
+      valueFormatter: (value) => {
+        if (!value) return '—';
+        const d = new Date(`${value}T12:00:00`);
+        return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      },
+    },
+    {
+      field: 'title',
+      headerName: 'Title',
+      flex: 1.5,
+      minWidth: 160,
+    },
+    {
+      field: 'asleep_minutes',
+      headerName: 'Asleep',
+      width: 90,
+      valueFormatter: (value) => formatSleepMinutes(Number(value)),
+    },
+    {
+      field: 'source',
+      headerName: 'Source',
+      width: 110,
+      valueGetter: (_value, row) => {
+        if (row.is_custom) return 'Manual';
+        return row.source_device?.trim() || 'Wearable';
+      },
+    },
+    {
+      field: 'has_dream',
+      headerName: 'Dream',
+      width: 72,
+      valueFormatter: (value) => (value ? 'Yes' : '—'),
+    },
+    {
+      field: 'kudos_count',
+      headerName: 'Kudos',
+      type: 'number',
+      width: 80,
+    },
+    {
+      field: 'comments_count',
+      headerName: 'Comments',
+      type: 'number',
+      width: 100,
+    },
+    dateColumn('created_at', 'Logged'),
+  ], []);
+
+  return (
+    <AdminDataGrid
+      rows={posts}
+      columns={columns}
+      getRowId={(row) => row.id}
+      label="Posts in range"
+      initialState={{
+        sorting: { sortModel: [{ field: 'created_at', sort: 'desc' }] },
+      }}
+    />
   );
 }
 

@@ -15,7 +15,7 @@ export default function AdminAnalyticsPage() {
       onPresetChange={setPreset}
       onRangeChange={setRange}
       onAppVersionChange={setAppVersion}
-      signupLimit={50}
+      listLimit={50}
     />
   );
 }
