@@ -344,37 +344,6 @@
   margin-top: 4px;
 }
 
-.post-detail-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px 32px;
-  margin: 20px 0 0;
-  padding: 16px 20px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-}
-
-.post-detail-stats div {
-  min-width: 80px;
-}
-
-.post-detail-stats dt {
-  margin: 0 0 4px;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-dim);
-}
-
-.post-detail-stats dd {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: var(--text);
-}
-
 .post-hypno-wrap {
   margin: 0;
 }
@@ -1349,33 +1318,50 @@ button.app-back-link {
   text-align: right;
 }
 
-.post-detail-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px 32px;
-  margin: 28px 0 0;
+.post-detail-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 12px;
+  margin: 0;
   padding: 0;
 }
 
-.post-detail-stats > div {
-  display: grid;
-  gap: 4px;
+.post-detail-metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 88px;
+  margin: 0;
+  padding: 16px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  text-align: center;
 }
 
-.post-detail-stats dt {
+.post-detail-metric--awake {
+  border-color: color-mix(in srgb, var(--awake) 35%, var(--border));
+}
+
+.post-detail-metric dt {
   margin: 0;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-dim);
 }
 
-.post-detail-stats dd {
+.post-detail-metric dd {
   margin: 0;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 1.35rem;
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
   color: var(--text);
+  font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 640px) {
@@ -1410,6 +1396,14 @@ button.app-back-link {
   .stage-breakdown-mins {
     min-width: 44px;
     font-size: 11px;
+  }
+
+  .post-detail-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .post-detail-metric dd {
+    font-size: 1.2rem;
   }
 
   .post-card-footer {

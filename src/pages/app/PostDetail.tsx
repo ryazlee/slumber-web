@@ -80,18 +80,31 @@ export default function PostDetail() {
         </section>
       )}
 
-      <dl className="post-detail-stats">
-        <div>
-          <dt>In bed</dt>
-          <dd>{formatMins(post.inBedMinutes)}</dd>
-        </div>
-        {post.awakeMinutes > 0 && (
-          <div>
-            <dt>Awake</dt>
-            <dd>{formatMins(post.awakeMinutes)}</dd>
-          </div>
-        )}
-      </dl>
+      {(post.inBedMinutes > 0 || post.asleepMinutes > 0 || post.awakeMinutes > 0) && (
+        <section className="post-detail-section">
+          <h2 className="post-detail-section-title">Details</h2>
+          <dl className="post-detail-metrics">
+            {post.inBedMinutes > 0 && (
+              <div className="post-detail-metric">
+                <dt>In bed</dt>
+                <dd>{formatMins(post.inBedMinutes)}</dd>
+              </div>
+            )}
+            {!isManual && post.asleepMinutes > 0 && (
+              <div className="post-detail-metric">
+                <dt>Asleep</dt>
+                <dd>{formatMins(post.asleepMinutes)}</dd>
+              </div>
+            )}
+            {post.awakeMinutes > 0 && (
+              <div className="post-detail-metric post-detail-metric--awake">
+                <dt>Awake</dt>
+                <dd>{formatMins(post.awakeMinutes)}</dd>
+              </div>
+            )}
+          </dl>
+        </section>
+      )}
     </div>
   );
 }
