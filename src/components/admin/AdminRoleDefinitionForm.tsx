@@ -62,7 +62,7 @@ export default function AdminRoleDefinitionForm({
       description={<>Roles control avatar rings, badges, and admin access. Users&apos; <strong>first</strong> role sets their ring in the app.</>}
       headerAction={isEditing ? (
         <button className="admin-button admin-button-ghost" type="button" onClick={onCancel} disabled={saving}>
-          Cancel edit
+          Cancel
         </button>
       ) : null}
       highlighted={isEditing}

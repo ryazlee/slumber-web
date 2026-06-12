@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import type { RecentUserRow } from '../../lib/admin';
 import { useAvatarRoleStyles } from '../../hooks/useCatalog';
 import { formatRoleLabel, type RoleOption } from '../../lib/userRoles';
+import AdminFieldGroup from './AdminFieldGroup';
+import AdminPanel from './AdminPanel';
 
 type Props = {
   user: RecentUserRow;
@@ -76,30 +78,27 @@ export default function AdminUserRoleEditor({
     (user.user_roles ?? []).filter((r) => roleByKey.has(r)),
   );
 
+  const metaParts = [
+    user.email,
+    hasChanges ? 'Unsaved changes' : null,
+  ].filter(Boolean);
+
   return (
-    <section className="admin-user-editor-panel" aria-label={`Edit roles for ${user.username}`}>
-      <div className="admin-user-editor-header">
-        <div>
-          <h2 className="admin-user-editor-title">@{user.username}</h2>
-          <p className="admin-muted admin-user-editor-sub">
-            {user.email ? `${user.email} · ` : ''}
-            {hasChanges ? 'Unsaved changes' : 'Edit roles below'}
-          </p>
-        </div>
+    <AdminPanel
+      title={`@${user.username}`}
+      meta={metaParts.length ? metaParts.join(' · ') : undefined}
+      description={<>Tap roles to assign or remove. The <strong>first</strong> role sets the avatar ring in the app.</>}
+      highlighted
+      headerAction={(
         <button type="button" className="admin-button admin-button-ghost" onClick={onCancel} disabled={saving}>
-          Close
+          Cancel
         </button>
-      </div>
-
-      <p className="admin-user-editor-hint">
-        Tap roles to assign or remove. The <strong>first</strong> role sets the avatar ring in the app.
-      </p>
-
+      )}
+    >
       <RolePreview roleKey={primaryKey} roleStyles={roleStyles} />
 
-      {draftRoles.length > 0 && (
-        <div className="admin-role-priority">
-          <p className="admin-label">Priority order</p>
+      {draftRoles.length > 0 ? (
+        <AdminFieldGroup title="Priority order">
           <ol className="admin-role-priority-list">
             {draftRoles.map((key, index) => {
               const opt = roleByKey.get(key);
@@ -114,7 +113,7 @@ export default function AdminUserRoleEditor({
                     {index > 0 ? (
                       <button
                         type="button"
-                        className="admin-link-btn"
+                        className="admin-action-btn admin-action-btn--ghost"
                         onClick={() => setPrimary(key)}
                       >
                         Set as ring
@@ -122,7 +121,7 @@ export default function AdminUserRoleEditor({
                     ) : null}
                     <button
                       type="button"
-                      className="admin-link-btn admin-link-danger"
+                      className="admin-action-btn admin-action-btn--danger"
                       onClick={() => toggleRole(key)}
                     >
                       Remove
@@ -132,11 +131,10 @@ export default function AdminUserRoleEditor({
               );
             })}
           </ol>
-        </div>
-      )}
+        </AdminFieldGroup>
+      ) : null}
 
-      <div className="admin-role-picker">
-        <p className="admin-label">All roles</p>
+      <AdminFieldGroup title="All roles">
         <div className="admin-role-picker-grid" role="group" aria-label="Toggle roles">
           {roleOptions.map((opt) => {
             const active = draftRoles.includes(opt.key);
@@ -155,18 +153,18 @@ export default function AdminUserRoleEditor({
             );
           })}
         </div>
-      </div>
+      </AdminFieldGroup>
 
       {error ? <p className="admin-error">{error}</p> : null}
 
-      <div className="admin-user-editor-actions">
+      <div className="admin-form-actions">
         <button className="admin-button" type="button" onClick={onSave} disabled={saving || !hasChanges}>
-          {saving ? 'Saving…' : 'Save roles'}
+          {saving ? 'Saving…' : 'Save changes'}
         </button>
         <button className="admin-button admin-button-ghost" type="button" onClick={onCancel} disabled={saving}>
           Cancel
         </button>
       </div>
-    </section>
+    </AdminPanel>
   );
 }

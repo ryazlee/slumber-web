@@ -1,58 +1,61 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import AdminMuiProvider from '../../components/admin/AdminMuiProvider';
+import AdminNav, { ADMIN_PAGE_TITLES } from '../../components/admin/AdminNav';
 import LoginForm from '../../components/LoginForm';
 import { AdminProvider, useAdmin } from '../../context/AdminContext';
 import { useAuth } from '../../context/AuthContext';
 import { useIsModerator } from '../../hooks/useAdmin';
 
-const PAGE_TITLES: Record<string, string> = {
-  '/admin': 'Admin',
-  '/admin/analytics': 'Analytics',
-  '/admin/reports': 'Reports',
-  '/admin/users': 'Users',
-  '/admin/notify': 'Notify',
-  '/admin/configure/tags': 'Tags',
-  '/admin/configure/roles': 'Roles',
-};
-
 function AdminShell() {
   const { user, signOut } = useAuth();
   const { triggerRefresh, refreshing } = useAdmin();
   const location = useLocation();
-  const isHub = location.pathname === '/admin' || location.pathname === '/admin/';
-  const pageTitle = PAGE_TITLES[location.pathname] ?? 'Admin';
+  const pageTitle = ADMIN_PAGE_TITLES[location.pathname] ?? 'Admin';
 
   return (
     <AdminMuiProvider>
-    <div className="admin-page">
-      <div className="admin-toolbar">
-        <div>
-          <p className="eyebrow">Slumber Admin</p>
-          <h1 className="admin-title">{pageTitle}</h1>
-          <p className="admin-muted">Signed in as {user?.email}</p>
-        </div>
-        <div className="admin-toolbar-actions">
-          {!isHub && (
-            <NavLink to="/admin" className="admin-button admin-button-ghost">
-              All sections
-            </NavLink>
-          )}
-          <button
-            className="admin-button admin-button-ghost"
-            type="button"
-            onClick={triggerRefresh}
-            disabled={refreshing}
-          >
-            {refreshing ? 'Refreshing…' : 'Refresh'}
-          </button>
-          <button className="admin-button admin-button-ghost" type="button" onClick={() => signOut()}>
-            Sign out
-          </button>
-        </div>
-      </div>
+      <div className="admin-shell">
+        <aside className="admin-sidebar">
+          <div className="admin-sidebar-brand">
+            <p className="admin-sidebar-eyebrow">Slumber</p>
+            <p className="admin-sidebar-title">Admin</p>
+          </div>
 
-      <Outlet />
-    </div>
+          <AdminNav />
+
+          <div className="admin-sidebar-footer">
+            <p className="admin-sidebar-user" title={user?.email ?? undefined}>
+              {user?.email}
+            </p>
+            <div className="admin-sidebar-actions">
+              <button
+                className="admin-button admin-button-ghost admin-button-sm"
+                type="button"
+                onClick={triggerRefresh}
+                disabled={refreshing}
+              >
+                {refreshing ? 'Refreshing…' : 'Refresh'}
+              </button>
+              <button
+                className="admin-button admin-button-ghost admin-button-sm"
+                type="button"
+                onClick={() => signOut()}
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        <main className="admin-main">
+          <header className="admin-main-header">
+            <h1 className="admin-main-title">{pageTitle}</h1>
+          </header>
+          <div className="admin-main-content">
+            <Outlet />
+          </div>
+        </main>
+      </div>
     </AdminMuiProvider>
   );
 }
@@ -66,7 +69,7 @@ function AdminGate() {
 
   if (authLoading || (sessionEmail && !moderatorChecked)) {
     return (
-      <div className="admin-page">
+      <div className="admin-page admin-page--centered">
         <p className="admin-muted">Loading…</p>
       </div>
     );

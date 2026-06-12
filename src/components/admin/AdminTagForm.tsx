@@ -27,9 +27,10 @@ export default function AdminTagForm({
     <AdminPanel
       title={isEditing ? `Edit “${draft.label || draft.value}”` : 'Add tag'}
       description={<>Value is stored uppercase (e.g. <code>LATE_CAFFEINE</code>) and shown in the post composer.</>}
+      highlighted={Boolean(isEditing)}
       headerAction={isEditing ? (
         <button className="admin-button admin-button-ghost" type="button" onClick={onCancel} disabled={saving}>
-          Cancel edit
+          Cancel
         </button>
       ) : null}
     >

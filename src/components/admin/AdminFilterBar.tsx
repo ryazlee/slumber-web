@@ -5,11 +5,12 @@ type AdminFilterBarProps = {
   onReset?: () => void;
   showReset?: boolean;
   actions?: ReactNode;
+  nested?: boolean;
 };
 
-export default function AdminFilterBar({ children, onReset, showReset, actions }: AdminFilterBarProps) {
+export default function AdminFilterBar({ children, onReset, showReset, actions, nested }: AdminFilterBarProps) {
   return (
-    <div className="admin-filter-bar">
+    <div className={`admin-filter-bar${nested ? ' admin-filter-bar--nested' : ''}`}>
       <div className="admin-filter-fields">{children}</div>
       <div className="admin-filter-bar-actions">
         {actions}

@@ -17,7 +17,8 @@ import { useAdminAnalyticsBundle, useAppVersions } from '../../hooks/useAdmin';
 import AdminActivityChart from './AdminActivityChart';
 import AdminAnalyticsFilters from './AdminAnalyticsFilters';
 import AdminDataGrid from './AdminDataGrid';
-import AdminSection from './AdminSection';
+import AdminSection, { AdminTableSummary } from './AdminSection';
+import AdminSubsection from './AdminSubsection';
 import AdminTabs from './AdminTabs';
 import { dateColumn } from './dateColumn';
 import { formatNumber } from './format';
@@ -70,10 +71,10 @@ function FilterSummary({
 }) {
   if (!metrics) return null;
   return (
-    <p className="admin-muted admin-filter-summary">
+    <AdminTableSummary>
       {rangeLabel} · {versionLabel}
       {metrics.version_user_count != null ? ` · ${metrics.version_user_count} users on this version` : ''}
-    </p>
+    </AdminTableSummary>
   );
 }
 
@@ -279,24 +280,17 @@ function UsersPanel({
         </div>
       )}
 
-      <section className="admin-section">
-        <h2 className="admin-section-title">
-          Signups in range
-          {metrics.signups > users.length ? (
-            <span className="admin-section-meta"> · showing {users.length} of {metrics.signups}</span>
-          ) : null}
-        </h2>
+      <AdminSubsection
+        title="Signups in range"
+        meta={metrics.signups > users.length ? `showing ${users.length} of ${metrics.signups}` : undefined}
+        footer={metrics.signups > listLimit ? `Limited to the ${listLimit} most recent signups.` : undefined}
+      >
         {users.length === 0 ? (
           <p className="admin-muted">No signups match your filters.</p>
         ) : (
           <RecentSignupsGrid users={users} showVersion={showVersion} />
         )}
-        {metrics.signups > listLimit ? (
-          <p className="admin-muted admin-section-foot">
-            Limited to the {listLimit} most recent signups.
-          </p>
-        ) : null}
-      </section>
+      </AdminSubsection>
     </div>
   );
 }
@@ -346,24 +340,17 @@ function PostsPanel({
         </div>
       )}
 
-      <section className="admin-section">
-        <h2 className="admin-section-title">
-          Posts in range
-          {metrics.posts > posts.length ? (
-            <span className="admin-section-meta"> · showing {posts.length} of {metrics.posts}</span>
-          ) : null}
-        </h2>
+      <AdminSubsection
+        title="Posts in range"
+        meta={metrics.posts > posts.length ? `showing ${posts.length} of ${metrics.posts}` : undefined}
+        footer={metrics.posts > listLimit ? `Limited to the ${listLimit} most recent posts.` : undefined}
+      >
         {posts.length === 0 ? (
           <p className="admin-muted">No posts match your filters.</p>
         ) : (
           <RecentPostsGrid posts={posts} />
         )}
-        {metrics.posts > listLimit ? (
-          <p className="admin-muted admin-section-foot">
-            Limited to the {listLimit} most recent posts.
-          </p>
-        ) : null}
-      </section>
+      </AdminSubsection>
     </div>
   );
 }

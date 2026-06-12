@@ -4,6 +4,7 @@ import { type GridColDef } from '@mui/x-data-grid';
 import type { AdminTagRow, TagDraft } from '../../lib/admin';
 import { useDeleteAdminTag, useUpsertAdminTag } from '../../hooks/useAdmin';
 import AdminDataGrid from './AdminDataGrid';
+import AdminGridAction from './AdminGridAction';
 import AdminSection, { AdminTableSummary } from './AdminSection';
 import AdminTagForm from './AdminTagForm';
 
@@ -103,9 +104,8 @@ export default function AdminTags({ tags, loading, error }: Props) {
       width: 140,
       renderCell: ({ row }) => (
         <div className="admin-grid-actions">
-          <button
-            type="button"
-            className={editingValue === row.value ? 'admin-link-btn admin-link-btn--active' : 'admin-link-btn'}
+          <AdminGridAction
+            active={editingValue === row.value}
             onClick={(e) => {
               e.stopPropagation();
               if (editingValue === row.value) {
@@ -116,17 +116,16 @@ export default function AdminTags({ tags, loading, error }: Props) {
             }}
           >
             {editingValue === row.value ? 'Editing' : 'Edit'}
-          </button>
-          <button
-            type="button"
-            className="admin-link-btn admin-link-danger"
+          </AdminGridAction>
+          <AdminGridAction
+            danger
             onClick={(e) => {
               e.stopPropagation();
               handleDelete(row);
             }}
           >
             Delete
-          </button>
+          </AdminGridAction>
         </div>
       ),
     },

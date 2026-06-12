@@ -4,6 +4,7 @@ import { type GridColDef } from '@mui/x-data-grid';
 import type { AdminRoleDefinitionRow, RoleDefinitionDraft } from '../../lib/admin';
 import { useDeleteAdminRole, useUpsertAdminRole } from '../../hooks/useAdmin';
 import AdminDataGrid from './AdminDataGrid';
+import AdminGridAction from './AdminGridAction';
 import AdminRoleDefinitionForm from './AdminRoleDefinitionForm';
 import AdminSection, { AdminTableSummary } from './AdminSection';
 
@@ -163,9 +164,8 @@ export default function AdminRoles({ roles, loading, error }: Props) {
       width: 140,
       renderCell: ({ row }) => (
         <div className="admin-grid-actions">
-          <button
-            type="button"
-            className={editingKey === row.key ? 'admin-link-btn admin-link-btn--active' : 'admin-link-btn'}
+          <AdminGridAction
+            active={editingKey === row.key}
             onClick={(e) => {
               e.stopPropagation();
               if (editingKey === row.key) {
@@ -176,17 +176,16 @@ export default function AdminRoles({ roles, loading, error }: Props) {
             }}
           >
             {editingKey === row.key ? 'Editing' : 'Edit'}
-          </button>
-          <button
-            type="button"
-            className="admin-link-btn admin-link-danger"
+          </AdminGridAction>
+          <AdminGridAction
+            danger
             onClick={(e) => {
               e.stopPropagation();
               handleDelete(row);
             }}
           >
             Delete
-          </button>
+          </AdminGridAction>
         </div>
       ),
     },

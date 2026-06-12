@@ -10,6 +10,8 @@ import {
 } from '../../lib/userRoles';
 import AdminDataGrid from './AdminDataGrid';
 import AdminFilterBar, { AdminFilterField } from './AdminFilterBar';
+import AdminGridAction from './AdminGridAction';
+import AdminPanel from './AdminPanel';
 import AdminSection, { AdminTableSummary } from './AdminSection';
 import AdminUserRoleEditor from './AdminUserRoleEditor';
 import { dateColumn } from './dateColumn';
@@ -143,9 +145,8 @@ export default function AdminUsers() {
       disableColumnMenu: true,
       width: 110,
       renderCell: ({ row }) => (
-        <button
-          type="button"
-          className={editingId === row.id ? 'admin-link-btn admin-link-btn--active' : 'admin-link-btn'}
+        <AdminGridAction
+          active={editingId === row.id}
           onClick={(e) => {
             e.stopPropagation();
             if (editingId === row.id) {
@@ -156,7 +157,7 @@ export default function AdminUsers() {
           }}
         >
           {editingId === row.id ? 'Editing' : 'Roles'}
-        </button>
+        </AdminGridAction>
       ),
     },
   ], [startEdit, editingId]);
@@ -164,19 +165,24 @@ export default function AdminUsers() {
   return (
     <AdminSection
       className="admin-users"
-      lead={<>Click <strong>Roles</strong> on a user to assign badges and set their avatar ring. Admin access requires <code>is_admin</code> in Configure → Roles.</>}
+      lead="Search accounts, then use Roles on a row to assign badges and set avatar rings."
       error={error}
     >
-      <form onSubmit={handleSearch}>
-        <AdminFilterBar
-          showReset={hasFilters}
-          onReset={resetFilters}
-          actions={(
-            <button className="admin-button" type="submit" disabled={searching}>
-              {searching ? 'Searching…' : 'Apply'}
-            </button>
-          )}
-        >
+      <AdminPanel
+        title="Search users"
+        description="Filter by username, role, join date, posts, or premium status."
+      >
+        <form onSubmit={handleSearch}>
+          <AdminFilterBar
+            nested
+            showReset={hasFilters}
+            onReset={resetFilters}
+            actions={(
+              <button className="admin-button" type="submit" disabled={searching}>
+                {searching ? 'Searching…' : 'Apply'}
+              </button>
+            )}
+          >
           <AdminFilterField label="Search" htmlFor="user-search" className="admin-filter-field--wide">
             <input
               id="user-search"
@@ -235,8 +241,9 @@ export default function AdminUsers() {
               Premium only
             </label>
           </AdminFilterField>
-        </AdminFilterBar>
-      </form>
+          </AdminFilterBar>
+        </form>
+      </AdminPanel>
 
       {editingUser && editingId && (
         <AdminUserRoleEditor

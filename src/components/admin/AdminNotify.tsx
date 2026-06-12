@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import type { SendNotificationResult } from '../../lib/admin';
 import { useAdminUserSearch, useSendAdminNotification } from '../../hooks/useAdmin';
@@ -16,6 +16,7 @@ export default function AdminNotify() {
   const [message, setMessage] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<SendNotificationResult | null>(null);
+  const messageRef = useRef<HTMLTextAreaElement>(null);
 
   const usersQuery = useAdminUserSearch({ query: appliedQuery || undefined, limit: 50 });
   const sendMutation = useSendAdminNotification();
@@ -38,6 +39,12 @@ export default function AdminNotify() {
   const selectedUser = users.find((u) => u.id === selectedUserId) ?? null;
   const trimmedMessage = message.trim();
   const canSend = Boolean(selectedUserId && trimmedMessage && !sendMutation.isPending);
+
+  useEffect(() => {
+    if (selectedUserId) {
+      messageRef.current?.focus();
+    }
+  }, [selectedUserId]);
 
   const handleSend = async (e: FormEvent) => {
     e.preventDefault();
@@ -75,6 +82,7 @@ export default function AdminNotify() {
         >
           <form onSubmit={handleSearch}>
             <AdminFilterBar
+              nested
               actions={(
                 <button className="admin-button" type="submit" disabled={searching}>
                   {searching ? 'Searching…' : 'Search'}
@@ -164,6 +172,7 @@ export default function AdminNotify() {
           <form className="admin-compose-form" onSubmit={handleSend}>
             <label className="admin-label" htmlFor="notify-message">Message</label>
             <textarea
+              ref={messageRef}
               id="notify-message"
               className="admin-input admin-textarea"
               rows={5}
