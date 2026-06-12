@@ -23,6 +23,7 @@ type Props = {
 };
 
 const PRESETS: { id: RangePreset; label: string }[] = [
+  { id: 'today', label: 'Today' },
   { id: '7', label: '7d' },
   { id: '14', label: '14d' },
   { id: '30', label: '30d' },
