@@ -39,7 +39,7 @@ cp .env.example .env.local
 # VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY — same publishable key as the app
 ```
 
-For GitHub Pages, add repo secrets `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+For GitHub Pages, add repo secrets `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_SITE_URL` (canonical site root for link previews, e.g. `https://ryazlee.github.io/slumber-web`).
 
 ## Admin
 
