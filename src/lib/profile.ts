@@ -2,7 +2,32 @@ import { supabase } from './supabase';
 import { filterWearableSleepRows } from './sleepPostCustom';
 import type { WebProfile } from './types';
 
+function isAcceptedFriendStatus(status: string | null | undefined): boolean {
+  return status === 'accepted' || status === 'friends';
+}
+
+async function resolveFriendStatus(
+  viewerId: string | undefined,
+  profileId: string,
+): Promise<WebProfile['friendStatus']> {
+  if (!viewerId || viewerId === profileId) return 'friends';
+  const { data } = await supabase
+    .from('friends')
+    .select('user_a, user_b, status')
+    .or(`and(user_a.eq.${viewerId},user_b.eq.${profileId}),and(user_a.eq.${profileId},user_b.eq.${viewerId})`)
+    .maybeSingle();
+  if (!data) return 'none';
+  if (isAcceptedFriendStatus(data.status)) return 'friends';
+  if (data.status === 'pending') {
+    return data.user_a === profileId ? 'request_received' : 'request_sent';
+  }
+  return 'none';
+}
+
 export async function fetchProfileSummary(userId: string): Promise<WebProfile | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  const viewerId = user?.id;
+
   const { data: row, error } = await supabase
     .from('profiles')
     .select('*')
@@ -11,7 +36,7 @@ export async function fetchProfileSummary(userId: string): Promise<WebProfile | 
 
   if (error || !row) return null;
 
-  const [asleepRes, streakRes, friendsCountRes, postsCountRes, recordRes] = await Promise.all([
+  const [asleepRes, streakRes, friendsCountRes, postsCountRes, recordRes, friendStatus] = await Promise.all([
     supabase
       .from('sleep_posts')
       .select('asleep_minutes, source_device, is_custom')
@@ -27,6 +52,7 @@ export async function fetchProfileSummary(userId: string): Promise<WebProfile | 
       .eq('user_id', userId)
       .is('deleted_at', null),
     supabase.rpc('get_challenge_record', { p_user_id: userId }),
+    resolveFriendStatus(viewerId, userId),
   ]);
 
   const asleepSamples = filterWearableSleepRows(asleepRes.data ?? [])
@@ -53,6 +79,8 @@ export async function fetchProfileSummary(userId: string): Promise<WebProfile | 
       losses: Number(recordRow?.losses ?? 0),
       ties: Number(recordRow?.ties ?? 0),
     },
+    isOwnProfile: viewerId === userId,
+    friendStatus,
   };
 }
 

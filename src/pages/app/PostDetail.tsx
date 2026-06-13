@@ -81,6 +81,12 @@ export default function PostDetail() {
                 <dd>{formatMins(post.awakeMinutes)}</dd>
               </div>
             )}
+            {post.awakeEvents > 0 && (
+              <div className="post-detail-metric">
+                <dt>Wakes</dt>
+                <dd>{post.awakeEvents}</dd>
+              </div>
+            )}
           </dl>
         </section>
       )}

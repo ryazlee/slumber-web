@@ -39,23 +39,29 @@ export default function AdminHomePage() {
   const pendingReports = (metrics?.pending_post_reports ?? 0) + (metrics?.pending_comment_reports ?? 0);
 
   const quickActions = [
-    { to: '/admin/reports', label: 'Review reports', hint: pendingReports > 0 ? `${pendingReports} pending` : 'All clear' },
     { to: '/admin/users', label: 'Find a user', hint: 'Search & edit roles' },
     { to: '/admin/notify', label: 'Send notification', hint: 'Push + in-app' },
     { to: '/admin/analytics', label: 'View analytics', hint: 'Charts & tables' },
+    { to: '/admin/configure/tags', label: 'Edit tags', hint: 'Composer catalog' },
   ];
 
   return (
-    <AdminSection
-      className="admin-home"
-      lead="Your at-a-glance dashboard. Jump to what needs attention."
-    >
+    <AdminSection className="admin-home">
+      {pendingReports > 0 ? (
+        <Link to="/admin/reports" className="admin-attention-banner">
+          <span className="admin-attention-banner-title">
+            {pendingReports} report{pendingReports === 1 ? '' : 's'} need review
+          </span>
+          <span className="admin-attention-banner-action">Open reports →</span>
+        </Link>
+      ) : null}
+
       {metrics ? (
         <div className="admin-stat-grid">
           <QuickStat
             label="Pending reports"
             value={pendingReports}
-            sub={pendingReports > 0 ? 'Needs review' : 'Nothing queued'}
+            sub={pendingReports > 0 ? 'Tap to review' : 'All clear'}
             to="/admin/reports"
             urgent={pendingReports > 0}
           />
@@ -63,7 +69,7 @@ export default function AdminHomePage() {
             label="New users"
             value={metrics.new_users_7d}
             sub="Last 7 days"
-            to="/admin/analytics"
+            to="/admin/users"
           />
           <QuickStat
             label="Sleep posts"
@@ -83,7 +89,7 @@ export default function AdminHomePage() {
       )}
 
       <div className="admin-quick-actions">
-        <p className="admin-field-group-title">Quick actions</p>
+        <p className="admin-field-group-title">Shortcuts</p>
         <div className="admin-quick-actions-grid">
           {quickActions.map((action) => (
             <Link key={action.to} to={action.to} className="admin-quick-action">

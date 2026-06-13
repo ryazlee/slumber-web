@@ -348,6 +348,38 @@
   margin: 0;
 }
 
+.post-sleep-hero {
+  margin-bottom: 10px;
+}
+
+.post-sleep-duration {
+  display: block;
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  line-height: 1.1;
+}
+
+.post-stage-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.post-stage-metric--core { color: var(--core); }
+.post-stage-metric--deep { color: var(--deep); }
+.post-stage-metric--rem { color: var(--rem); }
+.post-stage-metric--awake,
+.post-stage-metric--muted { color: var(--text-muted); }
+
+.post-detail-page .post-sleep-duration {
+  font-size: clamp(1.5rem, 4vw, 1.75rem);
+}
+
 .sleep-timeline {
   margin: 0;
 }
@@ -1386,6 +1418,14 @@ button.app-back-link {
   .hypno-stats {
     flex-wrap: wrap;
     gap: 10px 16px;
+  }
+
+  .post-stage-metrics {
+    gap: 8px 12px;
+  }
+
+  .post-sleep-duration {
+    font-size: 1.25rem;
   }
 
   .stage-breakdown-row {

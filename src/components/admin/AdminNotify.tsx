@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import type { SendNotificationResult } from '../../lib/admin';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useAdminUserSearch, useSendAdminNotification } from '../../hooks/useAdmin';
 import AdminFilterBar, { AdminFilterField } from './AdminFilterBar';
 import AdminPanel from './AdminPanel';
@@ -11,14 +12,21 @@ const MESSAGE_MAX = 500;
 
 export default function AdminNotify() {
   const [query, setQuery] = useState('');
-  const [appliedQuery, setAppliedQuery] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<SendNotificationResult | null>(null);
   const messageRef = useRef<HTMLTextAreaElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
-  const usersQuery = useAdminUserSearch({ query: appliedQuery || undefined, limit: 50 });
+  const debouncedQuery = useDebouncedValue(query);
+  const searchActive = debouncedQuery.trim().length >= 2;
+
+  const usersQuery = useAdminUserSearch(
+    searchActive
+      ? { query: debouncedQuery.trim(), limit: 50 }
+      : { limit: 25, joinedWithinDays: 30 },
+  );
   const sendMutation = useSendAdminNotification();
 
   const users = usersQuery.data ?? [];
@@ -29,16 +37,13 @@ export default function AdminNotify() {
       ? 'Could not load users.'
       : null;
 
-  const handleSearch = (e: FormEvent) => {
-    e.preventDefault();
-    setAppliedQuery(query.trim());
-    setSelectedUserId(null);
-    setLastResult(null);
-  };
-
   const selectedUser = users.find((u) => u.id === selectedUserId) ?? null;
   const trimmedMessage = message.trim();
   const canSend = Boolean(selectedUserId && trimmedMessage && !sendMutation.isPending);
+
+  useEffect(() => {
+    searchRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     if (selectedUserId) {
@@ -46,8 +51,7 @@ export default function AdminNotify() {
     }
   }, [selectedUserId]);
 
-  const handleSend = async (e: FormEvent) => {
-    e.preventDefault();
+  const sendNotification = async () => {
     if (!selectedUserId) {
       setFormError('Choose a recipient first.');
       return;
@@ -68,82 +72,93 @@ export default function AdminNotify() {
     }
   };
 
+  const handleSend = async (e: FormEvent) => {
+    e.preventDefault();
+    await sendNotification();
+  };
+
+  const onMessageKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && canSend) {
+      e.preventDefault();
+      void sendNotification();
+    }
+  };
+
   return (
-    <AdminSection
-      className="admin-notify"
-      lead="Send an in-app notification and trigger push delivery when the user has a device token."
-      error={searchError}
-    >
+    <AdminSection className="admin-notify" error={searchError}>
       <div className="admin-split">
         <AdminPanel
           step={1}
-          title="Find recipient"
-          description="Search by username or email, then pick one user."
+          title="Pick recipient"
+          description={searchActive
+            ? 'Matching users update as you type.'
+            : 'Recent signups below — or search by username/email.'}
         >
-          <form onSubmit={handleSearch}>
-            <AdminFilterBar
-              nested
-              actions={(
-                <button className="admin-button" type="submit" disabled={searching}>
-                  {searching ? 'Searching…' : 'Search'}
-                </button>
-              )}
-            >
-              <AdminFilterField label="User" htmlFor="notify-search" className="admin-filter-field--wide">
-                <input
-                  id="notify-search"
-                  className="admin-input"
-                  type="search"
-                  placeholder="Username or email…"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  autoComplete="off"
-                />
-              </AdminFilterField>
-            </AdminFilterBar>
-          </form>
+          <AdminFilterBar nested>
+            <AdminFilterField label="Search" htmlFor="notify-search" className="admin-filter-field--wide">
+              <input
+                ref={searchRef}
+                id="notify-search"
+                className="admin-input"
+                type="search"
+                placeholder="Type to search…"
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setSelectedUserId(null);
+                  setLastResult(null);
+                }}
+                autoComplete="off"
+              />
+            </AdminFilterField>
+          </AdminFilterBar>
 
-          {appliedQuery && !searching && users.length === 0 ? (
-            <p className="admin-empty-inline">No users match “{appliedQuery}”.</p>
+          {searching && users.length === 0 ? (
+            <p className="admin-empty-inline">Looking up users…</p>
           ) : null}
 
-          {!appliedQuery ? (
-            <p className="admin-empty-inline">Run a search to see matching users.</p>
+          {!searching && searchActive && users.length === 0 ? (
+            <p className="admin-empty-inline">No users match “{debouncedQuery.trim()}”.</p>
           ) : null}
 
-          {users.length > 0 ? (
-            <ul className="admin-picker-list" aria-label="Search results">
-              {users.map((user) => {
-                const selected = selectedUserId === user.id;
-                return (
-                  <li key={user.id}>
-                    <button
-                      type="button"
-                      className={`admin-picker-item${selected ? ' admin-picker-item--selected' : ''}`}
-                      aria-pressed={selected}
-                      onClick={() => {
-                        setSelectedUserId(user.id);
-                        setFormError(null);
-                        setLastResult(null);
-                      }}
-                    >
-                      <span className="admin-picker-item-main">
-                        <span className="admin-picker-item-title">@{user.username}</span>
-                        {user.email ? <span className="admin-picker-item-sub">{user.email}</span> : null}
-                      </span>
-                      <span className="admin-picker-item-meta">Joined {formatWhen(user.created_at)}</span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+          {!searching && users.length > 0 ? (
+            <>
+              <p className="admin-field-hint">
+                {searchActive ? `${users.length} match${users.length === 1 ? '' : 'es'}` : 'Recent signups (last 30 days)'}
+              </p>
+              <ul className="admin-picker-list" aria-label="Users">
+                {users.map((user) => {
+                  const selected = selectedUserId === user.id;
+                  return (
+                    <li key={user.id}>
+                      <button
+                        type="button"
+                        className={`admin-picker-item${selected ? ' admin-picker-item--selected' : ''}`}
+                        aria-pressed={selected}
+                        onClick={() => {
+                          setSelectedUserId(user.id);
+                          setFormError(null);
+                          setLastResult(null);
+                        }}
+                      >
+                        <span className="admin-picker-item-main">
+                          <span className="admin-picker-item-title">@{user.username}</span>
+                          {user.email ? <span className="admin-picker-item-sub">{user.email}</span> : null}
+                        </span>
+                        <span className="admin-picker-item-meta">Joined {formatWhen(user.created_at)}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
           ) : null}
         </AdminPanel>
 
         <AdminPanel
           step={2}
-          title="Compose message"
-          description="Notification text shown in-app and used for the push body."
+          title="Write message"
+          description="⌘/Ctrl + Enter to send. Push fires if they have a device token."
           highlighted={Boolean(selectedUser)}
           headerAction={selectedUser ? (
             <button
@@ -166,7 +181,7 @@ export default function AdminNotify() {
               {selectedUser.email ? <span className="admin-recipient-email">{selectedUser.email}</span> : null}
             </div>
           ) : (
-            <p className="admin-empty-inline">Select a user from search results.</p>
+            <p className="admin-empty-inline">Pick someone from the list.</p>
           )}
 
           <form className="admin-compose-form" onSubmit={handleSend}>
@@ -179,27 +194,27 @@ export default function AdminNotify() {
               maxLength={MESSAGE_MAX}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder={selectedUser ? `Write a message for @${selectedUser.username}…` : 'Choose a recipient first…'}
+              onKeyDown={onMessageKeyDown}
+              placeholder={selectedUser ? `Message for @${selectedUser.username}…` : 'Pick a recipient first…'}
               disabled={!selectedUserId || sendMutation.isPending}
             />
             <p className="admin-field-hint admin-compose-meta">
-              {trimmedMessage.length}/{MESSAGE_MAX} characters
+              {trimmedMessage.length}/{MESSAGE_MAX} · ⌘/Ctrl + Enter to send
             </p>
 
             {formError ? <p className="admin-error">{formError}</p> : null}
 
             {lastResult ? (
               <p className="admin-success-banner">
-                Sent notification <code className="admin-code">{lastResult.notification_id}</code>
-                {lastResult.device_tokens > 0
-                  ? ` · push queued for ${lastResult.device_tokens} device${lastResult.device_tokens === 1 ? '' : 's'}`
-                  : ' · no push tokens on file'}
+                Sent · {lastResult.device_tokens > 0
+                  ? `push queued (${lastResult.device_tokens} device${lastResult.device_tokens === 1 ? '' : 's'})`
+                  : 'no push tokens'}
               </p>
             ) : null}
 
-            <div className="admin-form-actions">
+            <div className="admin-form-actions admin-form-actions--sticky">
               <button className="admin-button" type="submit" disabled={!canSend}>
-                {sendMutation.isPending ? 'Sending…' : 'Send notification'}
+                {sendMutation.isPending ? 'Sending…' : 'Send'}
               </button>
             </div>
           </form>

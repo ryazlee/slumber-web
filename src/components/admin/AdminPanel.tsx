@@ -7,6 +7,7 @@ type Props = {
   headerAction?: ReactNode;
   children: ReactNode;
   className?: string;
+  id?: string;
   step?: number;
   highlighted?: boolean;
 };
@@ -18,11 +19,13 @@ export default function AdminPanel({
   headerAction,
   children,
   className = '',
+  id,
   step,
   highlighted,
 }: Props) {
   return (
     <div
+      id={id}
       className={[
         'admin-panel',
         highlighted ? 'admin-panel--highlighted' : '',

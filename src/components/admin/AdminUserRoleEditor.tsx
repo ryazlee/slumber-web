@@ -4,6 +4,7 @@ import { useAvatarRoleStyles } from '../../hooks/useCatalog';
 import { formatRoleLabel, type RoleOption } from '../../lib/userRoles';
 import AdminFieldGroup from './AdminFieldGroup';
 import AdminPanel from './AdminPanel';
+import { ADMIN_CATALOG_FORM_ID } from './adminScroll';
 
 type Props = {
   user: RecentUserRow;
@@ -85,6 +86,7 @@ export default function AdminUserRoleEditor({
 
   return (
     <AdminPanel
+      id={ADMIN_CATALOG_FORM_ID}
       title={`@${user.username}`}
       meta={metaParts.length ? metaParts.join(' · ') : undefined}
       description={<>Tap roles to assign or remove. The <strong>first</strong> role sets the avatar ring in the app.</>}

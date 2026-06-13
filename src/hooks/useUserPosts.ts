@@ -4,8 +4,9 @@ import { fetchUserPosts, PAGE_SIZE } from '../lib/feed';
 import type { SleepPost } from '../lib/types';
 import { queryKeys } from './queryKeys';
 
-export function useUserPosts(userId: string | null) {
+export function useUserPosts(userId: string | null, options?: { enabled?: boolean }) {
   const qc = useQueryClient();
+  const enabled = (options?.enabled ?? true) && !!userId;
 
   const query = useInfiniteQuery({
     queryKey: queryKeys.userPosts(userId ?? ''),
@@ -13,7 +14,7 @@ export function useUserPosts(userId: string | null) {
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) =>
       lastPage.length < PAGE_SIZE ? undefined : lastPage[lastPage.length - 1].createdAt,
-    enabled: !!userId,
+    enabled,
   });
 
   const posts = useMemo(

@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import type { SleepPost, SleepSessionData, StageSegment } from './types';
 import { avatarColorFromName } from './format';
+import { countWakes } from './wakes';
 
 const PROFILE_EMBED = 'profiles(username, avatar_url, user_roles)';
 export const PAGE_SIZE = 20;
@@ -19,6 +20,7 @@ type PostRow = {
   deep_minutes: number | null;
   rem_minutes: number | null;
   awake_minutes: number | null;
+  awake_events: number | null;
   raw_samples: StageSegment[] | null;
   session_breakdown: SleepSessionData[] | null;
   tags: string[] | null;
@@ -63,6 +65,7 @@ function mapPostRow(
     deepMinutes: row.deep_minutes ?? 0,
     remMinutes: row.rem_minutes ?? 0,
     awakeMinutes: row.awake_minutes ?? 0,
+    awakeEvents: row.awake_events ?? countWakes(row.raw_samples),
     stageSegments: Array.isArray(row.raw_samples) ? row.raw_samples : [],
     sessionBreakdown: Array.isArray(row.session_breakdown) ? row.session_breakdown : undefined,
     tags: row.tags ?? [],

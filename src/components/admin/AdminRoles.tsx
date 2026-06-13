@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { FormEvent } from 'react';
 import { type GridColDef } from '@mui/x-data-grid';
 import type { AdminRoleDefinitionRow, RoleDefinitionDraft } from '../../lib/admin';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useDeleteAdminRole, useUpsertAdminRole } from '../../hooks/useAdmin';
+import { ADMIN_CATALOG_FORM_ID, scrollAdminPanelIntoView } from './adminScroll';
 import AdminDataGrid from './AdminDataGrid';
 import AdminGridAction from './AdminGridAction';
+import AdminListToolbar from './AdminListToolbar';
 import AdminRoleDefinitionForm from './AdminRoleDefinitionForm';
-import AdminSection, { AdminTableSummary } from './AdminSection';
+import AdminSection from './AdminSection';
 
 type Props = {
   roles: AdminRoleDefinitionRow[];
@@ -38,18 +41,36 @@ function RoleSwatch({ color }: { color: string }) {
 export default function AdminRoles({ roles, loading, error }: Props) {
   const [draft, setDraft] = useState<RoleDefinitionDraft>(EMPTY_DRAFT);
   const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const upsertMutation = useUpsertAdminRole();
   const deleteMutation = useDeleteAdminRole();
   const saving = upsertMutation.isPending || deleteMutation.isPending;
+  const showForm = formOpen || editingKey !== null;
+
+  const closeForm = useCallback(() => {
+    setDraft(EMPTY_DRAFT);
+    setEditingKey(null);
+    setFormOpen(false);
+    setFormError(null);
+  }, []);
+
+  useEscapeKey(showForm, closeForm);
+
+  const openCreate = () => {
+    setDraft(EMPTY_DRAFT);
+    setEditingKey(null);
+    setFormOpen(true);
+    setFormError(null);
+    scrollAdminPanelIntoView(ADMIN_CATALOG_FORM_ID);
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setFormError(null);
     try {
       await upsertMutation.mutateAsync(draft);
-      setDraft(EMPTY_DRAFT);
-      setEditingKey(null);
+      closeForm();
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : 'Could not save role.');
     }
@@ -57,6 +78,7 @@ export default function AdminRoles({ roles, loading, error }: Props) {
 
   const handleEdit = (role: AdminRoleDefinitionRow) => {
     setEditingKey(role.key);
+    setFormOpen(true);
     setDraft({
       key: role.key,
       label: role.label,
@@ -68,12 +90,7 @@ export default function AdminRoles({ roles, loading, error }: Props) {
       sort_order: role.sort_order,
     });
     setFormError(null);
-  };
-
-  const handleCancel = () => {
-    setDraft(EMPTY_DRAFT);
-    setEditingKey(null);
-    setFormError(null);
+    scrollAdminPanelIntoView(ADMIN_CATALOG_FORM_ID);
   };
 
   const handleDelete = async (role: AdminRoleDefinitionRow) => {
@@ -86,7 +103,7 @@ export default function AdminRoles({ roles, loading, error }: Props) {
     setFormError(null);
     try {
       await deleteMutation.mutateAsync(role.key);
-      if (editingKey === role.key) handleCancel();
+      if (editingKey === role.key) closeForm();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Could not delete role.';
       setFormError(message.includes('role_in_use')
@@ -169,7 +186,7 @@ export default function AdminRoles({ roles, loading, error }: Props) {
             onClick={(e) => {
               e.stopPropagation();
               if (editingKey === row.key) {
-                handleCancel();
+                closeForm();
               } else {
                 handleEdit(row);
               }
@@ -192,25 +209,33 @@ export default function AdminRoles({ roles, loading, error }: Props) {
   ];
 
   return (
-    <AdminSection
-      className="admin-tags"
-      error={error}
-    >
-      <AdminRoleDefinitionForm
-        draft={draft}
-        editingKey={editingKey}
-        saving={saving}
-        formError={formError}
-        onChange={setDraft}
-        onSubmit={handleSubmit}
-        onCancel={handleCancel}
-      />
+    <AdminSection className="admin-tags" error={error}>
+      <AdminListToolbar
+        actions={!showForm ? (
+          <button className="admin-button" type="button" onClick={openCreate}>
+            + Add role
+          </button>
+        ) : null}
+      >
+        <p className="admin-muted admin-table-summary">
+          {roles.length} role{roles.length === 1 ? '' : 's'} — click Edit on a row to change it
+        </p>
+      </AdminListToolbar>
+
+      {showForm ? (
+        <AdminRoleDefinitionForm
+          panelId={ADMIN_CATALOG_FORM_ID}
+          draft={draft}
+          editingKey={editingKey}
+          saving={saving}
+          formError={formError}
+          onChange={setDraft}
+          onSubmit={handleSubmit}
+          onCancel={closeForm}
+        />
+      ) : null}
 
       {!loading && (
-        <>
-        <AdminTableSummary>
-          {roles.length} role{roles.length === 1 ? '' : 's'} — click Edit in the table to load a role into the form above
-        </AdminTableSummary>
         <AdminDataGrid
           persistKey="admin-roles"
           rows={roles}
@@ -223,7 +248,6 @@ export default function AdminRoles({ roles, loading, error }: Props) {
             sorting: { sortModel: [{ field: 'sort_order', sort: 'asc' }] },
           }}
         />
-        </>
       )}
       {loading && <p className="admin-muted">Loading roles…</p>}
     </AdminSection>

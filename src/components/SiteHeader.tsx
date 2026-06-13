@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useIsModerator } from '../hooks/useAdmin';
 
 const base = import.meta.env.BASE_URL;
 
@@ -14,9 +15,12 @@ function appTabClass(active: boolean) {
 export default function SiteHeader() {
   const { session, user, signOut } = useAuth();
   const isLoggedIn = Boolean(session);
+  const moderatorQuery = useIsModerator(isLoggedIn);
+  const isModerator = moderatorQuery.data === true;
   const location = useLocation();
   const profilePath = user ? `/profile/${user.id}` : '/profile';
   const profileActive = location.pathname === '/profile' || location.pathname.startsWith('/profile/');
+  const adminActive = location.pathname === '/admin' || location.pathname.startsWith('/admin/');
 
   const brandTarget = isLoggedIn ? '/feed' : '/home';
 
@@ -40,6 +44,11 @@ export default function SiteHeader() {
               <NavLink to="/challenges" className={({ isActive }) => appTabClass(isActive)}>
                 Challenges
               </NavLink>
+              {isModerator ? (
+                <NavLink to="/admin" className={appTabClass(adminActive)}>
+                  Admin
+                </NavLink>
+              ) : null}
             </nav>
           )}
         </div>

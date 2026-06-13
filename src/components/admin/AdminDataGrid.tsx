@@ -5,6 +5,7 @@ import {
   mergeGridInitialState,
   saveAdminGridState,
 } from '../../lib/adminGridState';
+import { ADMIN_SEARCH_DEBOUNCE_MS } from '../../lib/adminSearch';
 
 const DEFAULT_PAGE_SIZE = 25;
 const PERSIST_DEBOUNCE_MS = 300;
@@ -61,6 +62,7 @@ export default function AdminDataGrid({
   initialState,
   pageSizeOptions = [10, 25, 50, 100],
   sx,
+  slotProps,
   ...props
 }: AdminDataGridProps) {
   const apiRef = useGridApiRef();
@@ -94,6 +96,18 @@ export default function AdminDataGrid({
 
   const mergedSx = useMemo(() => ({ ...GRID_CONTAINMENT_SX, ...sx }), [sx]);
 
+  const mergedSlotProps = useMemo(() => ({
+    ...slotProps,
+    toolbar: {
+      ...slotProps?.toolbar,
+      quickFilterProps: {
+        debounceMs: ADMIN_SEARCH_DEBOUNCE_MS,
+        defaultExpanded: true,
+        ...slotProps?.toolbar?.quickFilterProps,
+      },
+    },
+  }), [slotProps]);
+
   return (
     <div className="admin-table-wrap admin-data-grid-wrap">
       <DataGrid
@@ -101,7 +115,9 @@ export default function AdminDataGrid({
         disableRowSelectionOnClick
         autoHeight
         showToolbar
+        filterDebounceMs={ADMIN_SEARCH_DEBOUNCE_MS}
         sx={mergedSx}
+        slotProps={mergedSlotProps}
         pageSizeOptions={pageSizeOptions}
         initialState={restoredInitialState}
         onStateChange={handleStateChange}

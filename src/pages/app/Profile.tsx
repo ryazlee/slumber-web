@@ -15,6 +15,9 @@ export default function Profile() {
   const isOwnProfile = Boolean(authUser?.id && profileUserId === authUser.id);
 
   const profileQuery = useProfile(profileUserId);
+  const canViewPosts = Boolean(
+    profileQuery.data && (profileQuery.data.isOwnProfile || profileQuery.data.friendStatus === 'friends'),
+  );
   const {
     posts,
     loading: postsLoading,
@@ -23,7 +26,7 @@ export default function Profile() {
     hasMore,
     loadMore,
     patchPost,
-  } = useUserPosts(profileUserId);
+  } = useUserPosts(profileUserId, { enabled: canViewPosts });
 
   const pageTitle = useMemo(() => {
     if (profileQuery.data) return `@${profileQuery.data.username}`;
@@ -84,7 +87,8 @@ export default function Profile() {
             <p className="profile-role-label">{formatRoleList(profile.userRoles)}</p>
           ) : null}
           <p className="app-muted">
-            {profile.friendsCount} friends · {profile.postsCount} posts
+            {profile.friendsCount} friends
+            {canViewPosts ? ` · ${profile.postsCount} posts` : ''}
           </p>
         </div>
       </header>
@@ -95,7 +99,9 @@ export default function Profile() {
           <span className="profile-stat-label">Streak</span>
         </div>
         <div className="profile-stat">
-          <span className="profile-stat-value">{formatMins(profile.avgAsleepMinutes)}</span>
+          <span className="profile-stat-value">
+            {canViewPosts ? formatMins(profile.avgAsleepMinutes) : '—'}
+          </span>
           <span className="profile-stat-label">Avg sleep</span>
         </div>
         <div className="profile-stat">
@@ -117,7 +123,11 @@ export default function Profile() {
           hasMore={hasMore}
           onLoadMore={loadMore}
           onPatchPost={patchPost}
-          emptyMessage="No posts yet."
+          emptyMessage={
+            canViewPosts
+              ? 'No posts yet.'
+              : 'Sleep posts are only visible to friends.'
+          }
         />
       </section>
     </div>

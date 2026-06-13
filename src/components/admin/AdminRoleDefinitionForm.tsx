@@ -1,5 +1,7 @@
 import type { FormEvent } from 'react';
 import type { RoleDefinitionDraft } from '../../lib/admin';
+import AdminColorField from './AdminColorField';
+import AdminEmojiPicker from './AdminEmojiPicker';
 import AdminPanel from './AdminPanel';
 
 type Props = {
@@ -7,6 +9,7 @@ type Props = {
   editingKey: string | null;
   saving: boolean;
   formError: string | null;
+  panelId?: string;
   onChange: (draft: RoleDefinitionDraft) => void;
   onSubmit: (e: FormEvent) => void;
   onCancel: () => void;
@@ -20,7 +23,7 @@ function RoleDefinitionPreview({ draft }: { draft: RoleDefinitionDraft }) {
 
   return (
     <div className="admin-role-def-preview">
-      <p className="admin-label">Live preview</p>
+      <p className="admin-field-group-title">Live preview</p>
       <div className="admin-role-def-preview-card">
         <div
           className="admin-role-preview-ring admin-role-preview-ring--lg"
@@ -50,6 +53,7 @@ export default function AdminRoleDefinitionForm({
   editingKey,
   saving,
   formError,
+  panelId,
   onChange,
   onSubmit,
   onCancel,
@@ -58,8 +62,9 @@ export default function AdminRoleDefinitionForm({
 
   return (
     <AdminPanel
+      id={panelId}
       title={isEditing ? `Edit “${editingKey}”` : 'Add role'}
-      description={<>Roles control avatar rings, badges, and admin access. Users&apos; <strong>first</strong> role sets their ring in the app.</>}
+      description="First assigned role sets the user’s avatar ring in the app."
       headerAction={isEditing ? (
         <button className="admin-button admin-button-ghost" type="button" onClick={onCancel} disabled={saving}>
           Cancel
@@ -68,10 +73,34 @@ export default function AdminRoleDefinitionForm({
       highlighted={isEditing}
     >
       <form className="admin-role-form-layout" onSubmit={onSubmit}>
+        <RoleDefinitionPreview draft={draft} />
+
         <div className="admin-role-form-fields">
           <fieldset className="admin-form-section">
-            <legend className="admin-form-section-title">Identity</legend>
-            <div className="admin-form-section-grid">
+            <legend className="admin-form-section-title">Basics</legend>
+            <div className="admin-catalog-form">
+              <div className="admin-field">
+                <label className="admin-label" htmlFor="role-label">Display label</label>
+                <input
+                  id="role-label"
+                  className="admin-input"
+                  value={draft.label}
+                  onChange={(e) => onChange({ ...draft, label: e.target.value })}
+                  placeholder="Early bird"
+                  required
+                  autoComplete="off"
+                  autoFocus={!isEditing}
+                />
+              </div>
+
+              <AdminEmojiPicker
+                id="role-badge"
+                label="Badge emoji"
+                value={draft.badge}
+                onChange={(badge) => onChange({ ...draft, badge })}
+                required
+              />
+
               <div className="admin-field">
                 <label className="admin-label" htmlFor="role-key">Key</label>
                 <input
@@ -82,32 +111,15 @@ export default function AdminRoleDefinitionForm({
                   placeholder="early_bird"
                   required
                   disabled={isEditing}
+                  autoComplete="off"
+                  spellCheck={false}
                 />
-                <p className="admin-field-hint">Stored in <code>profiles.user_roles</code>. Cannot change after create.</p>
+                <p className="admin-field-hint">
+                  {isEditing ? 'Key is fixed after create.' : 'Lowercase snake_case stored in profiles.user_roles.'}
+                </p>
               </div>
-              <div className="admin-field">
-                <label className="admin-label" htmlFor="role-label">Display label</label>
-                <input
-                  id="role-label"
-                  className="admin-input"
-                  value={draft.label}
-                  onChange={(e) => onChange({ ...draft, label: e.target.value })}
-                  placeholder="Early bird"
-                  required
-                />
-              </div>
-              <div className="admin-field">
-                <label className="admin-label" htmlFor="role-badge">Badge emoji</label>
-                <input
-                  id="role-badge"
-                  className="admin-input admin-input-emoji"
-                  value={draft.badge}
-                  onChange={(e) => onChange({ ...draft, badge: e.target.value })}
-                  placeholder="🌅"
-                  required
-                />
-              </div>
-              <div className="admin-field">
+
+              <div className="admin-field admin-field--narrow">
                 <label className="admin-label" htmlFor="role-sort">Sort order</label>
                 <input
                   id="role-sort"
@@ -116,40 +128,26 @@ export default function AdminRoleDefinitionForm({
                   value={draft.sort_order}
                   onChange={(e) => onChange({ ...draft, sort_order: Number(e.target.value) || 0 })}
                 />
-                <p className="admin-field-hint">Lower numbers appear first in pickers.</p>
               </div>
             </div>
           </fieldset>
 
           <fieldset className="admin-form-section">
-            <legend className="admin-form-section-title">Appearance</legend>
-            <div className="admin-form-section-grid">
-              <div className="admin-field">
-                <label className="admin-label" htmlFor="role-ring">Avatar ring color</label>
-                <div className="admin-color-input-row">
-                  <input
-                    id="role-ring"
-                    className="admin-input admin-input-color"
-                    type="color"
-                    value={draft.ring_color}
-                    onChange={(e) => onChange({ ...draft, ring_color: e.target.value })}
-                  />
-                  <code className="admin-code">{draft.ring_color}</code>
-                </div>
-              </div>
-              <div className="admin-field">
-                <label className="admin-label" htmlFor="role-badge-color">Badge background (optional)</label>
-                <div className="admin-color-input-row">
-                  <input
-                    id="role-badge-color"
-                    className="admin-input admin-input-color"
-                    type="color"
-                    value={draft.badge_color || '#000000'}
-                    onChange={(e) => onChange({ ...draft, badge_color: e.target.value })}
-                  />
-                  <code className="admin-code">{draft.badge_color || 'default'}</code>
-                </div>
-              </div>
+            <legend className="admin-form-section-title">Colors</legend>
+            <div className="admin-catalog-form">
+              <AdminColorField
+                id="role-ring"
+                label="Avatar ring"
+                value={draft.ring_color}
+                onChange={(ring_color) => onChange({ ...draft, ring_color })}
+              />
+              <AdminColorField
+                id="role-badge-color"
+                label="Badge background"
+                value={draft.badge_color ?? ''}
+                onChange={(badge_color) => onChange({ ...draft, badge_color })}
+                optional
+              />
             </div>
           </fieldset>
 
@@ -183,14 +181,12 @@ export default function AdminRoleDefinitionForm({
 
           {formError ? <p className="admin-error">{formError}</p> : null}
 
-          <div className="admin-form-actions">
+          <div className="admin-form-actions admin-form-actions--sticky">
             <button className="admin-button" type="submit" disabled={saving}>
               {saving ? 'Saving…' : isEditing ? 'Save changes' : 'Create role'}
             </button>
           </div>
         </div>
-
-        <RoleDefinitionPreview draft={draft} />
       </form>
     </AdminPanel>
   );

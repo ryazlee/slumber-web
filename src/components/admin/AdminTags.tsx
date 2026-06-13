@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { FormEvent } from 'react';
 import { type GridColDef } from '@mui/x-data-grid';
 import type { AdminTagRow, TagDraft } from '../../lib/admin';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useDeleteAdminTag, useUpsertAdminTag } from '../../hooks/useAdmin';
+import { ADMIN_CATALOG_FORM_ID, scrollAdminPanelIntoView } from './adminScroll';
 import AdminDataGrid from './AdminDataGrid';
 import AdminGridAction from './AdminGridAction';
-import AdminSection, { AdminTableSummary } from './AdminSection';
+import AdminListToolbar from './AdminListToolbar';
+import AdminSection from './AdminSection';
 import AdminTagForm from './AdminTagForm';
 
 type Props = {
@@ -19,18 +22,36 @@ const EMPTY_DRAFT: TagDraft = { value: '', emoji: '', label: '', sort_order: 0 }
 export default function AdminTags({ tags, loading, error }: Props) {
   const [draft, setDraft] = useState<TagDraft>(EMPTY_DRAFT);
   const [editingValue, setEditingValue] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const upsertMutation = useUpsertAdminTag();
   const deleteMutation = useDeleteAdminTag();
   const saving = upsertMutation.isPending || deleteMutation.isPending;
+  const showForm = formOpen || editingValue !== null;
+
+  const closeForm = useCallback(() => {
+    setDraft(EMPTY_DRAFT);
+    setEditingValue(null);
+    setFormOpen(false);
+    setFormError(null);
+  }, []);
+
+  useEscapeKey(showForm, closeForm);
+
+  const openCreate = () => {
+    setDraft(EMPTY_DRAFT);
+    setEditingValue(null);
+    setFormOpen(true);
+    setFormError(null);
+    scrollAdminPanelIntoView(ADMIN_CATALOG_FORM_ID);
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setFormError(null);
     try {
       await upsertMutation.mutateAsync(draft);
-      setDraft(EMPTY_DRAFT);
-      setEditingValue(null);
+      closeForm();
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : 'Could not save tag.');
     }
@@ -38,6 +59,7 @@ export default function AdminTags({ tags, loading, error }: Props) {
 
   const handleEdit = (tag: AdminTagRow) => {
     setEditingValue(tag.value);
+    setFormOpen(true);
     setDraft({
       value: tag.value,
       emoji: tag.emoji,
@@ -45,12 +67,7 @@ export default function AdminTags({ tags, loading, error }: Props) {
       sort_order: tag.sort_order,
     });
     setFormError(null);
-  };
-
-  const handleCancel = () => {
-    setDraft(EMPTY_DRAFT);
-    setEditingValue(null);
-    setFormError(null);
+    scrollAdminPanelIntoView(ADMIN_CATALOG_FORM_ID);
   };
 
   const handleDelete = async (tag: AdminTagRow) => {
@@ -62,7 +79,7 @@ export default function AdminTags({ tags, loading, error }: Props) {
     setFormError(null);
     try {
       await deleteMutation.mutateAsync(tag.value);
-      if (editingValue === tag.value) handleCancel();
+      if (editingValue === tag.value) closeForm();
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : 'Could not delete tag.');
     }
@@ -109,7 +126,7 @@ export default function AdminTags({ tags, loading, error }: Props) {
             onClick={(e) => {
               e.stopPropagation();
               if (editingValue === row.value) {
-                handleCancel();
+                closeForm();
               } else {
                 handleEdit(row);
               }
@@ -132,25 +149,33 @@ export default function AdminTags({ tags, loading, error }: Props) {
   ];
 
   return (
-    <AdminSection
-      className="admin-tags"
-      error={error}
-    >
-      <AdminTagForm
-        draft={draft}
-        tags={tags}
-        saving={saving}
-        formError={formError}
-        onChange={setDraft}
-        onSubmit={handleSubmit}
-        onCancel={handleCancel}
-      />
+    <AdminSection className="admin-tags" error={error}>
+      <AdminListToolbar
+        actions={!showForm ? (
+          <button className="admin-button" type="button" onClick={openCreate}>
+            + Add tag
+          </button>
+        ) : null}
+      >
+        <p className="admin-muted admin-table-summary">
+          {tags.length} tag{tags.length === 1 ? '' : 's'} — click Edit on a row to change it
+        </p>
+      </AdminListToolbar>
+
+      {showForm ? (
+        <AdminTagForm
+          panelId={ADMIN_CATALOG_FORM_ID}
+          draft={draft}
+          tags={tags}
+          saving={saving}
+          formError={formError}
+          onChange={setDraft}
+          onSubmit={handleSubmit}
+          onCancel={closeForm}
+        />
+      ) : null}
 
       {!loading && (
-        <>
-        <AdminTableSummary>
-          {tags.length} tag{tags.length === 1 ? '' : 's'} — click Edit in the table to load a tag into the form above
-        </AdminTableSummary>
         <AdminDataGrid
           persistKey="admin-tags"
           rows={tags}
@@ -163,7 +188,6 @@ export default function AdminTags({ tags, loading, error }: Props) {
             sorting: { sortModel: [{ field: 'sort_order', sort: 'asc' }] },
           }}
         />
-        </>
       )}
       {loading && <p className="admin-muted">Loading tags…</p>}
     </AdminSection>

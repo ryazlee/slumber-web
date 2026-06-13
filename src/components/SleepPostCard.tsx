@@ -79,6 +79,9 @@ export default function SleepPostCard({
         <ManualLogSleepBlock post={post} />
       ) : (
         <div className="post-card-interactive post-hypno-wrap">
+          <div className="post-sleep-hero">
+            <span className="post-sleep-duration">{formatMins(post.asleepMinutes)}</span>
+          </div>
           <SleepTimelineBar
             segments={timelineSegments}
             bedtime={post.bedtime}
@@ -86,11 +89,32 @@ export default function SleepPostCard({
             sessionBreakdown={post.sessionBreakdown}
             variant={timelineVariant}
           />
-          <div className="hypno-stats">
-            <span><strong>{formatMins(post.asleepMinutes)}</strong> asleep</span>
-            {post.coreMinutes > 0 && <span><strong>Core</strong> {formatMins(post.coreMinutes)}</span>}
-            {post.deepMinutes > 0 && <span><strong>Deep</strong> {formatMins(post.deepMinutes)}</span>}
-            {post.remMinutes > 0 && <span><strong>REM</strong> {formatMins(post.remMinutes)}</span>}
+          <div className="post-stage-metrics">
+            {post.coreMinutes > 0 && (
+              <span className="post-stage-metric post-stage-metric--core">
+                {formatMins(post.coreMinutes)} core
+              </span>
+            )}
+            {post.deepMinutes > 0 && (
+              <span className="post-stage-metric post-stage-metric--deep">
+                {formatMins(post.deepMinutes)} deep
+              </span>
+            )}
+            {post.remMinutes > 0 && (
+              <span className="post-stage-metric post-stage-metric--rem">
+                {formatMins(post.remMinutes)} rem
+              </span>
+            )}
+            {post.awakeMinutes > 0 && (
+              <span className="post-stage-metric post-stage-metric--awake">
+                {formatMins(post.awakeMinutes)} awake
+              </span>
+            )}
+            {post.awakeEvents > 0 && (
+              <span className="post-stage-metric post-stage-metric--muted">
+                {post.awakeEvents} {post.awakeEvents === 1 ? 'wake' : 'wakes'}
+              </span>
+            )}
           </div>
         </div>
       )}

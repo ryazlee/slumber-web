@@ -12,6 +12,7 @@ export type SleepSessionData = {
   deepMinutes: number;
   remMinutes: number;
   awakeMinutes: number;
+  awakeEvents: number;
   efficiency: number;
   segments: StageSegment[];
 };
@@ -33,6 +34,7 @@ export type SleepPost = {
   deepMinutes: number;
   remMinutes: number;
   awakeMinutes: number;
+  awakeEvents: number;
   stageSegments: StageSegment[];
   sessionBreakdown?: SleepSessionData[];
   tags: string[];
@@ -61,6 +63,8 @@ export type WebProfile = {
   avgAsleepMinutes: number;
   sleepGoalMinutes: number;
   challengeRecord: { wins: number; losses: number; ties: number };
+  isOwnProfile: boolean;
+  friendStatus: 'none' | 'request_sent' | 'request_received' | 'friends';
 };
 
 export type ChallengeStatus =
