@@ -9,6 +9,7 @@ import Challenges from './pages/app/Challenges';
 import Feed from './pages/app/Feed';
 import PostDetail from './pages/app/PostDetail';
 import Profile from './pages/app/Profile';
+import Social from './pages/app/Social';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminHomePage from './pages/admin/AdminHomePage';
 import AdminAnalyticsPage from './pages/admin/AdminAnalyticsPage';
@@ -48,6 +49,7 @@ export default function App() {
         <Route index element={<AppEntry />} />
         <Route element={<ProtectedAppShell />}>
           <Route path="feed" element={<Feed />} />
+          <Route path="social" element={<Social />} />
           <Route path="post/:id" element={<PostDetail />} />
           <Route path="profile" element={<Profile />} />
           <Route path="profile/:userId" element={<Profile />} />

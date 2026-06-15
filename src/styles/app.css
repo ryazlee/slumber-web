@@ -80,6 +80,273 @@
   margin: 0 0 16px;
 }
 
+.app-subtabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 20px;
+}
+
+.app-subtab {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.app-subtab:hover {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+
+.app-subtab.active {
+  color: var(--text);
+  background: var(--surface);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.social-page .app-section {
+  margin-top: 28px;
+}
+
+.social-section h2 {
+  margin-bottom: 12px;
+}
+
+.social-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.social-list--clubs {
+  margin-top: 8px;
+}
+
+.social-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.social-row:last-child {
+  border-bottom: 0;
+}
+
+.social-row--link {
+  text-decoration: none;
+  transition: background 0.12s ease;
+}
+
+.social-row--link:hover {
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+}
+
+.social-row--club {
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.social-row--club:hover,
+.social-row--selected {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+
+.social-row--request {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.social-row--compact {
+  padding-block: 10px;
+}
+
+.social-row-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.social-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.social-row-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.social-row-title {
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.social-row-meta {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.social-row-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.social-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 0;
+  background: var(--accent);
+  color: var(--text-on-accent, #fff);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.social-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.social-btn--ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.social-btn--ghost:hover:not(:disabled) {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+
+.social-club-emoji,
+.social-club-detail-emoji {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
+}
+
+.social-pill {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface));
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.social-club-detail {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.social-club-detail-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.social-club-detail-emoji {
+  width: 52px;
+  height: 52px;
+  font-size: 26px;
+}
+
+.social-club-detail-titles {
+  flex: 1;
+  min-width: 0;
+}
+
+.social-club-detail-titles h2 {
+  margin: 0 0 4px;
+  font-size: 1.25rem;
+}
+
+.social-club-description {
+  margin: 16px 0 0;
+  color: var(--text-muted);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.social-invite-banner {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+
+.social-invite-banner p {
+  margin: 0 0 12px;
+}
+
+.social-club-members {
+  margin-top: 20px;
+}
+
+.social-club-members h3 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.social-club-members .social-list {
+  border-radius: 10px;
+}
+
+.social-footnote {
+  margin: 16px 0 0;
+  font-size: 13px;
+}
+
+.social-empty {
+  margin-top: 12px;
+}
+
 .app-load-more {
   margin-top: 24px;
 }

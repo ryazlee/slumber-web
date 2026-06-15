@@ -38,6 +38,9 @@ export default function SiteHeader() {
               <NavLink to="/feed" className={({ isActive }) => appTabClass(isActive)}>
                 Feed
               </NavLink>
+              <NavLink to="/social" className={({ isActive }) => appTabClass(isActive)}>
+                Social
+              </NavLink>
               <NavLink to={profilePath} className={appTabClass(profileActive)}>
                 Profile
               </NavLink>

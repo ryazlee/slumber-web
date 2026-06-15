@@ -141,3 +141,40 @@ export type ChallengeContributionPost = {
   createdAt: string;
   isPrivate: boolean;
 };
+
+export type ClubRole = 'owner' | 'admin' | 'member';
+export type ClubInviteStatus = 'pending' | 'accepted' | 'declined' | 'left';
+
+export type WebFriend = {
+  id: string;
+  username: string;
+  avatarUrl?: string;
+  userRoles?: string[];
+  friendsSince: string;
+};
+
+export type WebFriendRequest = {
+  requesterId: string;
+  username: string;
+  avatarUrl?: string;
+  userRoles?: string[];
+  requestedAt: string;
+};
+
+export type WebClub = {
+  id: string;
+  name: string;
+  emoji: string | null;
+  description: string | null;
+  memberCount: number;
+  myRole: ClubRole;
+  myInviteStatus: ClubInviteStatus;
+};
+
+export type WebClubMember = {
+  userId: string;
+  username: string;
+  avatarUrl?: string;
+  role: ClubRole;
+  inviteStatus: ClubInviteStatus;
+};
