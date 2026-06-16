@@ -15,6 +15,7 @@ import {
   fetchRecentUsers,
   searchAdminUsers,
   sendAdminNotification,
+  updateUserPremium,
   updateUserRoles,
   upsertAdminRoleDefinition,
   upsertAdminTag,
@@ -226,6 +227,26 @@ export function useUpdateUserRoles() {
   return useMutation({
     mutationFn: ({ userId, roles }: { userId: string; roles: string[] }) =>
       updateUserRoles(userId, roles),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'user-search'] });
+      void qc.invalidateQueries({ queryKey: ['admin', 'analytics', 'users'] });
+      void qc.invalidateQueries({ queryKey: queryKeys.admin.dashboard });
+    },
+  });
+}
+
+export function useUpdateUserPremium() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      userId,
+      isPremium,
+      premiumUntil,
+    }: {
+      userId: string;
+      isPremium: boolean;
+      premiumUntil: string | null;
+    }) => updateUserPremium(userId, isPremium, premiumUntil),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['admin', 'user-search'] });
       void qc.invalidateQueries({ queryKey: ['admin', 'analytics', 'users'] });

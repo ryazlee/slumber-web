@@ -113,6 +113,7 @@ export type RecentUserRow = {
   created_at: string;
   user_roles: string[] | null;
   is_premium: boolean;
+  premium_until?: string | null;
   posts_count: number;
   last_app_version?: string | null;
 };
@@ -319,6 +320,19 @@ export async function updateUserRoles(userId: string, roles: string[]): Promise<
   const { error } = await supabase.rpc('admin_update_user_roles', {
     p_user_id: userId,
     p_roles: roles,
+  });
+  if (error) throw error;
+}
+
+export async function updateUserPremium(
+  userId: string,
+  isPremium: boolean,
+  premiumUntil: string | null,
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_update_user_premium', {
+    p_user_id: userId,
+    p_is_premium: isPremium,
+    p_premium_until: isPremium ? premiumUntil : null,
   });
   if (error) throw error;
 }
