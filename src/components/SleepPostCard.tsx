@@ -54,21 +54,15 @@ export default function SleepPostCard({
     post.inBedMinutes > 0 ? `${formatMins(post.inBedMinutes)} in bed` : null,
   ].filter(Boolean);
 
+  const postDetailLabel = displayTitle
+    ? `View post: ${displayTitle}`
+    : `View sleep from ${formatSleepDate(post.sleepDate)}`;
+
   return (
     <article className={`post-card${clickable ? ' post-card--clickable' : ''}${isLatest ? ' post-card--latest' : ''}`}>
-      {clickable && (
-        <Link
-          to={`/post/${post.id}`}
-          className="post-card-stretch-link"
-          aria-label={displayTitle
-            ? `View post: ${displayTitle}`
-            : `View sleep from ${formatSleepDate(post.sleepDate)}`}
-        />
-      )}
-
-      <header className={`post-card-header${showAuthor ? ' post-card-interactive' : ''}`}>
+      <header className="post-card-header">
         {showAuthor && (
-          <div className="post-card-author">
+          <div className="post-card-author" data-post-interactive>
             <UserLink
               userId={post.userId}
               username={post.username}
@@ -88,20 +82,18 @@ export default function SleepPostCard({
         </div>
       </header>
 
-      <p className="post-meta-strip post-card-interactive">{metaParts.join(' · ')}</p>
+      <p className="post-meta-strip">{metaParts.join(' · ')}</p>
 
       {displayTitle ? <h2 className="post-title">{displayTitle}</h2> : null}
 
       {post.isPR && !isManual ? (
-        <div className="post-card-interactive">
-          <PersonalRecordBadges post={post} />
-        </div>
+        <PersonalRecordBadges post={post} />
       ) : null}
 
       {isManual ? (
         <ManualLogSleepBlock post={post} />
       ) : showWearableSleep ? (
-        <div className="post-card-interactive post-hypno-wrap">
+        <div className="post-hypno-wrap">
           <div className="post-sleep-hero">
             <div className="post-sleep-hero-main">
               <span className="post-sleep-duration">{formatMins(post.asleepMinutes)}</span>
@@ -134,9 +126,11 @@ export default function SleepPostCard({
         </div>
       ) : null}
 
-      <div className="post-card-interactive">
-        <PostPhotoGallery post={post} variant="feed" />
-      </div>
+      {(post.photoUrls?.length ?? 0) > 0 ? (
+        <div data-post-interactive>
+          <PostPhotoGallery post={post} variant="feed" />
+        </div>
+      ) : null}
 
       <PostTagList tags={post.tags} />
 
@@ -149,7 +143,7 @@ export default function SleepPostCard({
         isOwnPost={isOwnPost}
       />
 
-      <div className="post-card-interactive">
+      <div data-post-interactive>
         <PostSocial
           postId={post.id}
           kudosCount={post.kudosCount}
@@ -160,6 +154,15 @@ export default function SleepPostCard({
           onPatch={handleSocialPatch}
         />
       </div>
+
+      {clickable ? (
+        <Link
+          to={`/post/${post.id}`}
+          className="post-card-stretch-link"
+          aria-label={postDetailLabel}
+          tabIndex={-1}
+        />
+      ) : null}
     </article>
   );
 }

@@ -100,7 +100,7 @@ export default function SleepTimelineBar({
         style={{ height, borderRadius: 6 }}
         onPointerMove={onPointerMove}
         onPointerLeave={onPointerLeave}
-        onClick={(e) => e.stopPropagation()}
+        data-post-interactive={variant === 'card' && scrubEnabled ? true : undefined}
         role="presentation"
       >
         <div className="hypno-bar" style={{ height, borderRadius: 6 }}>

@@ -493,14 +493,20 @@
 .post-card-stretch-link {
   position: absolute;
   inset: 0;
-  z-index: 0;
+  z-index: 1;
   border-radius: inherit;
   text-decoration: none;
 }
 
-.post-card-interactive {
+/* Clicks on the card open post detail; interactive zones opt out via data-post-interactive */
+.post-card--clickable > *:not(.post-card-stretch-link) {
+  pointer-events: none;
+}
+
+.post-card--clickable [data-post-interactive] {
+  pointer-events: auto;
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 .user-link {
