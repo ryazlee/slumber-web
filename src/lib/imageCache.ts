@@ -45,3 +45,13 @@ export async function resolveCachedImageUrl(url: string): Promise<string> {
     return url;
   }
 }
+
+/** Warm the image cache for a list of URLs (e.g. friend avatars on compare). */
+export function prefetchCachedImageUrls(urls: Iterable<string | undefined | null>): void {
+  const seen = new Set<string>();
+  for (const url of urls) {
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    void resolveCachedImageUrl(url);
+  }
+}

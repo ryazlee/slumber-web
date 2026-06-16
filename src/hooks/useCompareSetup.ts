@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { prefetchCachedImageUrls } from '../lib/imageCache';
 import { useProfile } from './useProfile';
 import { useFriends } from './useSocial';
 import {
@@ -60,21 +61,36 @@ export function useCompareSetup() {
       ? {
         id: user.id,
         username: profileQuery.data?.username ?? 'you',
+        avatarUrl: profileQuery.data?.avatarUrl,
+        userRoles: profileQuery.data?.userRoles,
         isSelf: true,
       }
       : null
-  ), [user?.id, profileQuery.data?.username]);
+  ), [user?.id, profileQuery.data?.username, profileQuery.data?.avatarUrl, profileQuery.data?.userRoles]);
 
   const participants = useMemo(() => {
     const list: CompareParticipant[] = [];
     if (me && selectedPeople.includes(me.id)) list.push(me);
     for (const f of friends) {
       if (selectedPeople.includes(f.id)) {
-        list.push({ id: f.id, username: f.username, isSelf: false });
+        list.push({
+          id: f.id,
+          username: f.username,
+          avatarUrl: f.avatarUrl,
+          userRoles: f.userRoles,
+          isSelf: false,
+        });
       }
     }
     return list;
   }, [me, friends, selectedPeople]);
+
+  useEffect(() => {
+    prefetchCachedImageUrls([
+      profileQuery.data?.avatarUrl,
+      ...friends.map((f) => f.avatarUrl),
+    ]);
+  }, [profileQuery.data?.avatarUrl, friends]);
 
   const activeMetrics = useMemo(
     () => getCompareMetrics(selectedMetricIds),

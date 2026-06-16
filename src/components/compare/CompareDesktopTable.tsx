@@ -54,7 +54,13 @@ export default function CompareDesktopTable({
                     to={`/profile/${p.id}`}
                     className={`compare-user-head${p.isSelf ? ' compare-user-head--self' : ''}`}
                   >
-                    <Avatar userId={p.id} username={p.username} size={avatarSize} />
+                    <Avatar
+                      userId={p.id}
+                      username={p.username}
+                      avatarUrl={p.avatarUrl}
+                      userRoles={p.userRoles}
+                      size={avatarSize}
+                    />
                     <span className="compare-user-name" title={p.isSelf ? 'You' : `@${p.username}`}>
                       {participantLabel(p, density)}
                     </span>

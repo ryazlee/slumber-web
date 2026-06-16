@@ -59,9 +59,13 @@ export default function CompareMobileCards({
                           isLeader ? 'compare-metric-card-person--leader' : '',
                         ].filter(Boolean).join(' ')}
                       >
-                        {density !== 'cozy' ? (
-                          <Avatar userId={p.id} username={p.username} size={avatarSize} />
-                        ) : null}
+                        <Avatar
+                          userId={p.id}
+                          username={p.username}
+                          avatarUrl={p.avatarUrl}
+                          userRoles={p.userRoles}
+                          size={avatarSize}
+                        />
                         <span
                           className="compare-metric-card-person-name"
                           title={p.isSelf ? 'You' : `@${p.username}`}

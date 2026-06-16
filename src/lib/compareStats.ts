@@ -3,8 +3,15 @@ import {
   filterWearableSleepRows,
   isManualSleepRow,
 } from './sleepPostCustom';
+import {
+  averageBedtimeMinutes,
+  averageWakeTimeMinutes,
+  extractBedtimeMinutes,
+  extractWakeTimeMinutes,
+  formatSleepClockMinutes,
+} from './sleepTimeStats';
 import { supabase } from './supabase';
-import { parseClockToMinutes, formatClockMinutes } from './timeline';
+import type { SleepSessionData } from './types';
 
 export type PeriodStats = {
   asleep: number | null;
@@ -45,26 +52,12 @@ type SleepRow = {
   bedtime: string | null;
   wake_time: string | null;
   dream_log: string | null;
+  session_breakdown?: SleepSessionData[] | null;
   is_custom?: boolean | null;
   source_device?: string | null;
 };
 
-function parseTimeToMinutes(s: string | null | undefined): number | null {
-  if (!s || s === '—') return null;
-  return parseClockToMinutes(s);
-}
-
-function minutesToTimeStr(total: number): string {
-  return formatClockMinutes(total);
-}
-
-function avgTimeMinutes(values: number[], isBedtime: boolean): number | null {
-  if (values.length === 0) return null;
-  const adjusted = isBedtime ? values.map((v) => (v < 720 ? v + 1440 : v)) : values;
-  return Math.round(adjusted.reduce((a, b) => a + b, 0) / adjusted.length);
-}
-
-const POST_COLS = 'sleep_date, asleep_minutes, deep_minutes, rem_minutes, core_minutes, awake_minutes, awake_events, in_bed_minutes, bedtime, wake_time, dream_log, is_custom, source_device';
+const POST_COLS = 'sleep_date, asleep_minutes, deep_minutes, rem_minutes, core_minutes, awake_minutes, awake_events, in_bed_minutes, bedtime, wake_time, dream_log, session_breakdown, is_custom, source_device';
 
 export async function fetchComparePeriods(userId: string): Promise<ComparePeriods> {
   const todayLocal = getLocalDateISO();
@@ -125,10 +118,14 @@ export async function fetchComparePeriods(userId: string): Promise<ComparePeriod
 
   const build = (subset: SleepRow[]): PeriodStats => {
     if (subset.length === 0) return null;
-    const bedtimeMins = subset.map((r) => parseTimeToMinutes(r.bedtime)).filter((v): v is number => v !== null);
-    const wakeTimeMins = subset.map((r) => parseTimeToMinutes(r.wake_time)).filter((v): v is number => v !== null);
-    const btAvg = avgTimeMinutes(bedtimeMins, true);
-    const wtAvg = avgTimeMinutes(wakeTimeMins, false);
+    const bedtimeMins = subset
+      .map((r) => extractBedtimeMinutes(r.bedtime, r.session_breakdown))
+      .filter((v): v is number => v !== null);
+    const wakeTimeMins = subset
+      .map((r) => extractWakeTimeMinutes(r.wake_time, r.session_breakdown))
+      .filter((v): v is number => v !== null);
+    const btAvg = averageBedtimeMinutes(bedtimeMins);
+    const wtAvg = averageWakeTimeMinutes(wakeTimeMins);
     return {
       asleep: col(subset, 'asleep_minutes'),
       deep: col(subset, 'deep_minutes'),
@@ -137,8 +134,8 @@ export async function fetchComparePeriods(userId: string): Promise<ComparePeriod
       awake: col(subset, 'awake_minutes'),
       awakeEvents: avgWakes(subset),
       inBed: col(subset, 'in_bed_minutes'),
-      avgBedtime: btAvg != null ? minutesToTimeStr(btAvg) : null,
-      avgWakeTime: wtAvg != null ? minutesToTimeStr(wtAvg) : null,
+      avgBedtime: btAvg != null ? formatSleepClockMinutes(btAvg) : null,
+      avgWakeTime: wtAvg != null ? formatSleepClockMinutes(wtAvg) : null,
       postsCount: subset.length,
       dreamsCount: countDreams(subset),
       dreamRate: dreamRatePct(subset),
@@ -155,6 +152,13 @@ export async function fetchComparePeriods(userId: string): Promise<ComparePeriod
   const tRaw = todayRes.data as SleepRow | null;
   const t = tRaw && !isManualSleepRow(tRaw) ? tRaw : null;
 
+  const todayBedtime = t
+    ? extractBedtimeMinutes(t.bedtime, t.session_breakdown)
+    : null;
+  const todayWake = t
+    ? extractWakeTimeMinutes(t.wake_time, t.session_breakdown)
+    : null;
+
   return {
     today: t ? {
       asleep: t.asleep_minutes,
@@ -164,8 +168,8 @@ export async function fetchComparePeriods(userId: string): Promise<ComparePeriod
       awake: t.awake_minutes,
       awakeEvents: t.awake_events ?? 0,
       inBed: t.in_bed_minutes,
-      avgBedtime: t.bedtime ?? null,
-      avgWakeTime: t.wake_time ?? null,
+      avgBedtime: todayBedtime != null ? formatSleepClockMinutes(todayBedtime) : null,
+      avgWakeTime: todayWake != null ? formatSleepClockMinutes(todayWake) : null,
       postsCount: 1,
       dreamsCount: hasDream(t) ? 1 : 0,
       dreamRate: hasDream(t) ? 100 : 0,

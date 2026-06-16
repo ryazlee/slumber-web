@@ -5,8 +5,15 @@ import {
   type ManualSleepRowFlags,
 } from './sleepPostCustom';
 import { supabase } from './supabase';
-import { parseClockToMinutes, formatClockMinutes } from './timeline';
+import {
+  averageBedtimeMinutes,
+  averageWakeTimeMinutes,
+  extractBedtimeMinutes,
+  extractWakeTimeMinutes,
+  formatSleepClockMinutes,
+} from './sleepTimeStats';
 import type { LifetimeStats, MonthBest, TopNight, UserStats } from './statsTypes';
+import type { SleepSessionData } from './types';
 
 type SleepPostRow = ManualSleepRowFlags & {
   id: string;
@@ -17,6 +24,7 @@ type SleepPostRow = ManualSleepRowFlags & {
   core_minutes: number | null;
   bedtime?: string | null;
   wake_time?: string | null;
+  session_breakdown?: SleepSessionData[] | null;
 };
 
 type PRRow = {
@@ -29,21 +37,6 @@ type PRRow = {
 
 function avg(arr: number[]): number {
   return arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
-}
-
-function parseTimeToMinutes(s: string | null | undefined): number | null {
-  if (!s || s === '—') return null;
-  return parseClockToMinutes(s);
-}
-
-function minutesToTimeStr(total: number): string {
-  return formatClockMinutes(total);
-}
-
-function avgTimeMinutes(values: number[], isBedtime: boolean): number | null {
-  if (values.length === 0) return null;
-  const adjusted = isBedtime ? values.map((v) => (v < 720 ? v + 1440 : v)) : values;
-  return Math.round(adjusted.reduce((a, b) => a + b, 0) / adjusted.length);
 }
 
 function buildTopNight(r: SleepPostRow): TopNight {
@@ -103,11 +96,11 @@ async function fetchLifetimeData(userId: string) {
     baseFilter().gt('deep_minutes', 0).order('deep_minutes', { ascending: false }).limit(3),
     baseFilter().gt('rem_minutes', 0).order('rem_minutes', { ascending: false }).limit(3),
     baseFilter().gt('core_minutes', 0).order('core_minutes', { ascending: false }).limit(3),
-    supabase.from('sleep_posts').select('asleep_minutes, bedtime, wake_time, is_custom, source_device')
+    supabase.from('sleep_posts').select('asleep_minutes, bedtime, wake_time, session_breakdown, is_custom, source_device')
       .eq('user_id', userId)
       .is('deleted_at', null)
       .not('asleep_minutes', 'is', null),
-    supabase.from('sleep_posts').select(`${cols}, bedtime, wake_time`)
+    supabase.from('sleep_posts').select(`${cols}, bedtime, wake_time, session_breakdown`)
       .eq('user_id', userId)
       .is('deleted_at', null)
       .not('asleep_minutes', 'is', null)
@@ -126,7 +119,7 @@ async function fetchLifetimeData(userId: string) {
 }
 
 function computeAggregateMetrics(
-  rows: Pick<SleepPostRow, 'asleep_minutes' | 'bedtime' | 'wake_time'>[],
+  rows: Pick<SleepPostRow, 'asleep_minutes' | 'bedtime' | 'wake_time' | 'session_breakdown'>[],
 ) {
   const totalNights = rows.length;
   if (totalNights === 0) {
@@ -134,16 +127,20 @@ function computeAggregateMetrics(
   }
 
   const avgAsleepMinutes = Math.round(rows.reduce((s, r) => s + (r.asleep_minutes ?? 0), 0) / totalNights);
-  const bedtimeMins = rows.map((r) => parseTimeToMinutes(r.bedtime)).filter((v): v is number => v !== null);
-  const wakeTimeMins = rows.map((r) => parseTimeToMinutes(r.wake_time)).filter((v): v is number => v !== null);
-  const avgBedtimeMin = avgTimeMinutes(bedtimeMins, true);
-  const avgWakeTimeMin = avgTimeMinutes(wakeTimeMins, false);
+  const bedtimeMins = rows
+    .map((r) => extractBedtimeMinutes(r.bedtime, r.session_breakdown))
+    .filter((v): v is number => v !== null);
+  const wakeTimeMins = rows
+    .map((r) => extractWakeTimeMinutes(r.wake_time, r.session_breakdown))
+    .filter((v): v is number => v !== null);
+  const avgBedtimeMin = averageBedtimeMinutes(bedtimeMins);
+  const avgWakeTimeMin = averageWakeTimeMinutes(wakeTimeMins);
 
   return {
     totalNights,
     avgAsleepMinutes,
-    avgBedtime: avgBedtimeMin != null ? minutesToTimeStr(avgBedtimeMin) : null,
-    avgWakeTime: avgWakeTimeMin != null ? minutesToTimeStr(avgWakeTimeMin) : null,
+    avgBedtime: avgBedtimeMin != null ? formatSleepClockMinutes(avgBedtimeMin) : null,
+    avgWakeTime: avgWakeTimeMin != null ? formatSleepClockMinutes(avgWakeTimeMin) : null,
   };
 }
 
@@ -154,8 +151,8 @@ function computeMonthlyBests(rows: SleepPostRow[]): MonthBest[] {
   for (const r of rows) {
     const month = r.sleep_date.slice(0, 7);
     const existing = monthMap.get(month);
-    const bt = parseTimeToMinutes(r.bedtime);
-    const wt = parseTimeToMinutes(r.wake_time);
+    const bt = extractBedtimeMinutes(r.bedtime, r.session_breakdown);
+    const wt = extractWakeTimeMinutes(r.wake_time, r.session_breakdown);
 
     if (!existing) {
       monthMap.set(month, {
@@ -186,8 +183,8 @@ function computeMonthlyBests(rows: SleepPostRow[]): MonthBest[] {
   return [...monthMap.entries()]
     .sort(([a], [b]) => b.localeCompare(a))
     .map(([, v]) => {
-      const btAvg = avgTimeMinutes(v.bedtimeSums, true);
-      const wtAvg = avgTimeMinutes(v.wakeTimeSums, false);
+      const btAvg = averageBedtimeMinutes(v.bedtimeSums);
+      const wtAvg = averageWakeTimeMinutes(v.wakeTimeSums);
       return {
         month: v.month,
         label: v.label,
@@ -195,8 +192,8 @@ function computeMonthlyBests(rows: SleepPostRow[]): MonthBest[] {
         deepMinutes: v.deepMinutes,
         remMinutes: v.remMinutes,
         coreMinutes: v.coreMinutes,
-        avgBedtime: btAvg != null ? minutesToTimeStr(btAvg) : null,
-        avgWakeTime: wtAvg != null ? minutesToTimeStr(wtAvg) : null,
+        avgBedtime: btAvg != null ? formatSleepClockMinutes(btAvg) : null,
+        avgWakeTime: wtAvg != null ? formatSleepClockMinutes(wtAvg) : null,
       };
     });
 }

@@ -1,6 +1,6 @@
 import { formatMins } from './format';
 import type { PeriodStats } from './compareStats';
-import { parseClockToMinutes } from './timeline';
+import { compareTimeMetricMinutes } from './sleepTimeStats';
 
 export type CompareMetricCategory =
   | 'activity'
@@ -32,7 +32,7 @@ export const ALL_COMPARE_METRICS: CompareMetricDef[] = [
   { id: 'postsCount', kind: 'count', key: 'postsCount', label: 'Posts', category: 'activity', defaultSelected: true },
   { id: 'dreamsCount', kind: 'count', key: 'dreamsCount', label: 'Dreams', category: 'activity', defaultSelected: true },
   { id: 'dreamRate', kind: 'pct', key: 'dreamRate', label: 'Dream rate', category: 'activity', defaultSelected: false },
-  { id: 'avgBedtime', kind: 'time', key: 'avgBedtime', label: 'Bedtime', category: 'schedule', defaultSelected: true },
+  { id: 'avgBedtime', kind: 'time', key: 'avgBedtime', label: 'Bedtime', category: 'schedule', defaultSelected: true, lessIsBetter: true },
   { id: 'avgWakeTime', kind: 'time', key: 'avgWakeTime', label: 'Wake-up', category: 'schedule', defaultSelected: true },
   { id: 'asleep', kind: 'mins', key: 'asleep', label: 'Sleep', category: 'duration', defaultSelected: true },
   { id: 'inBed', kind: 'mins', key: 'inBed', label: 'In bed', category: 'duration', defaultSelected: true },
@@ -79,10 +79,8 @@ export function formatCompareStat(metric: CompareMetricDef, stats: PeriodStats |
   return formatMins(v as number);
 }
 
-function timeStatToMinutes(value: string): number | null {
-  const trimmed = value.trim();
-  if (!trimmed || trimmed === '—') return null;
-  return parseClockToMinutes(trimmed);
+function timeStatToMinutes(metricId: string, value: string): number | null {
+  return compareTimeMetricMinutes(metricId, value);
 }
 
 export function compareStatNumericValue(
@@ -92,7 +90,7 @@ export function compareStatNumericValue(
   if (!stats) return null;
   const v = stats[metric.key];
   if (v === null || v === undefined) return null;
-  if (metric.kind === 'time') return timeStatToMinutes(v as string);
+  if (metric.kind === 'time') return timeStatToMinutes(metric.id, v as string);
   if (typeof v === 'number' && Number.isFinite(v)) return v;
   return null;
 }

@@ -33,6 +33,8 @@ function Checkbox({ checked }: { checked: boolean }) {
 function PersonRow({
   id,
   username,
+  avatarUrl,
+  userRoles,
   primary,
   secondary,
   selected,
@@ -40,6 +42,8 @@ function PersonRow({
 }: {
   id: string;
   username: string;
+  avatarUrl?: string;
+  userRoles?: string[];
   primary: string;
   secondary?: string;
   selected: boolean;
@@ -47,7 +51,13 @@ function PersonRow({
 }) {
   return (
     <button type="button" className="compare-picker-row" onClick={() => onToggle(id)}>
-      <Avatar userId={id} username={username} size="md" />
+      <Avatar
+        userId={id}
+        username={username}
+        avatarUrl={avatarUrl}
+        userRoles={userRoles}
+        size="md"
+      />
       <span className="compare-picker-row-main">
         <span className="compare-picker-row-title">{primary}</span>
         {secondary ? <span className="compare-picker-row-sub">{secondary}</span> : null}
@@ -93,6 +103,8 @@ function PeopleList({
         <PersonRow
           id={me.id}
           username={me.username}
+          avatarUrl={me.avatarUrl}
+          userRoles={me.userRoles}
           primary="You"
           secondary={`@${me.username}`}
           selected={people.includes(me.id)}
@@ -107,6 +119,8 @@ function PeopleList({
               key={friend.id}
               id={friend.id}
               username={friend.username}
+              avatarUrl={friend.avatarUrl}
+              userRoles={friend.userRoles}
               primary={`@${friend.username}`}
               selected={people.includes(friend.id)}
               onToggle={onTogglePerson}
