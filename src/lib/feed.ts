@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { SleepPost, SleepSessionData, StageSegment } from './types';
+import type { SleepPost, SleepSessionData, StageSegment, Vibe } from './types';
 import { avatarColorFromName } from './format';
 import { countWakes } from './wakes';
 
@@ -15,7 +15,6 @@ type PostRow = {
   wake_time: string | null;
   asleep_minutes: number;
   in_bed_minutes: number;
-  efficiency: number | null;
   core_minutes: number | null;
   deep_minutes: number | null;
   rem_minutes: number | null;
@@ -23,6 +22,10 @@ type PostRow = {
   awake_events: number | null;
   raw_samples: StageSegment[] | null;
   session_breakdown: SleepSessionData[] | null;
+  vibe: Vibe | null;
+  photo_urls: string[] | null;
+  photo_thumb_urls: string[] | null;
+  location_label: string | null;
   tags: string[] | null;
   dream_log: string | null;
   blur_dream: boolean | null;
@@ -45,9 +48,12 @@ function mapPostRow(
   kudosCountMap: Record<string, number>,
   myKudoPostIds: Set<string>,
   commentCountMap: Record<string, number>,
-  prPostIds: Set<string>,
+  prAllTimeMap: Map<string, string[]>,
+  prMonthlyMap: Map<string, string[]>,
 ): SleepPost {
   const username = row.profiles?.username ?? 'unknown';
+  const prTypes = prAllTimeMap.get(row.id);
+  const monthlyPrTypes = prMonthlyMap.get(row.id);
   return {
     id: row.id,
     userId: row.user_id,
@@ -60,7 +66,6 @@ function mapPostRow(
     wakeTime: row.wake_time ?? '—',
     asleepMinutes: row.asleep_minutes,
     inBedMinutes: row.in_bed_minutes,
-    efficiency: row.efficiency ?? 0,
     coreMinutes: row.core_minutes ?? 0,
     deepMinutes: row.deep_minutes ?? 0,
     remMinutes: row.rem_minutes ?? 0,
@@ -68,6 +73,10 @@ function mapPostRow(
     awakeEvents: row.awake_events ?? countWakes(row.raw_samples),
     stageSegments: Array.isArray(row.raw_samples) ? row.raw_samples : [],
     sessionBreakdown: Array.isArray(row.session_breakdown) ? row.session_breakdown : undefined,
+    vibe: row.vibe ?? undefined,
+    photoUrls: row.photo_urls ?? [],
+    photoThumbUrls: row.photo_thumb_urls ?? [],
+    locationLabel: row.location_label ?? undefined,
     tags: row.tags ?? [],
     dreamLog: row.dream_log ?? undefined,
     blurDream: row.blur_dream ?? true,
@@ -76,14 +85,16 @@ function mapPostRow(
     kudosCount: kudosCountMap[row.id] ?? 0,
     hasKudoed: myKudoPostIds.has(row.id),
     commentCount: commentCountMap[row.id] ?? 0,
-    isPR: prPostIds.has(row.id),
+    isPR: prAllTimeMap.has(row.id) || prMonthlyMap.has(row.id),
+    prTypes,
+    monthlyPrTypes,
     createdAt: row.created_at,
     sourceDevice: row.source_device ?? 'Unknown',
     isCustom: row.is_custom === true,
   };
 }
 
-async function enrichRows(rows: PostRow[]): Promise<SleepPost[]> {
+export async function enrichSleepPostRows(rows: PostRow[]): Promise<SleepPost[]> {
   if (rows.length === 0) return [];
   const postIds = rows.map((r) => r.id);
   const { data: { user } } = await supabase.auth.getUser();
@@ -92,7 +103,11 @@ async function enrichRows(rows: PostRow[]): Promise<SleepPost[]> {
   const [kudosRes, commentsRes, prRes] = await Promise.all([
     supabase.from('kudos').select('post_id, user_id').in('post_id', postIds),
     supabase.from('comments').select('post_id').in('post_id', postIds),
-    supabase.from('personal_records').select('post_id').in('post_id', postIds).not('post_id', 'is', null),
+    supabase
+      .from('personal_records')
+      .select('post_id, record_type, scope')
+      .in('post_id', postIds)
+      .not('post_id', 'is', null),
   ]);
 
   const kudosCountMap: Record<string, number> = {};
@@ -105,9 +120,24 @@ async function enrichRows(rows: PostRow[]): Promise<SleepPost[]> {
   for (const c of commentsRes.data ?? []) {
     commentCountMap[c.post_id] = (commentCountMap[c.post_id] ?? 0) + 1;
   }
-  const prPostIds = new Set((prRes.data ?? []).map((r) => r.post_id as string));
 
-  return rows.map((row) => mapPostRow(row, kudosCountMap, myKudoPostIds, commentCountMap, prPostIds));
+  const prAllTimeMap = new Map<string, string[]>();
+  const prMonthlyMap = new Map<string, string[]>();
+  for (const r of prRes.data ?? []) {
+    const map = r.scope === 'monthly' ? prMonthlyMap : prAllTimeMap;
+    const arr = map.get(r.post_id) ?? [];
+    arr.push(r.record_type as string);
+    map.set(r.post_id, arr);
+  }
+
+  return rows.map((row) => mapPostRow(
+    row,
+    kudosCountMap,
+    myKudoPostIds,
+    commentCountMap,
+    prAllTimeMap,
+    prMonthlyMap,
+  ));
 }
 
 export async function fetchFeed(cursor?: string): Promise<SleepPost[]> {
@@ -137,7 +167,7 @@ export async function fetchFeed(cursor?: string): Promise<SleepPost[]> {
 
   const { data, error } = await query;
   if (error) throw error;
-  return enrichRows((data ?? []) as PostRow[]);
+  return enrichSleepPostRows((data ?? []) as PostRow[]);
 }
 
 export async function fetchPost(postId: string): Promise<SleepPost | null> {
@@ -151,7 +181,7 @@ export async function fetchPost(postId: string): Promise<SleepPost | null> {
   if (error) throw error;
   if (!data) return null;
 
-  const [post] = await enrichRows([data as PostRow]);
+  const [post] = await enrichSleepPostRows([data as PostRow]);
   return post ?? null;
 }
 
@@ -169,7 +199,7 @@ export async function fetchUserPosts(userId: string, cursor?: string): Promise<S
 
   const { data, error } = await query;
   if (error) throw error;
-  return enrichRows((data ?? []) as PostRow[]);
+  return enrichSleepPostRows((data ?? []) as PostRow[]);
 }
 
 export { avatarColorFromName };

@@ -14,9 +14,8 @@ export default function Challenges() {
 
   return (
     <div className="app-page">
-      <header className="app-page-header">
+      <header className="app-page-header app-page-header--compact">
         <h1>Challenges</h1>
-        <p className="app-muted">Active races and completed history.</p>
       </header>
 
       {loading && <p className="app-muted">Loading challenges…</p>}

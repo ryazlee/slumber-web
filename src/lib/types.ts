@@ -3,6 +3,8 @@ export type StageSegment = {
   minutes: number;
 };
 
+export type Vibe = 'CHARGED' | 'DRAGGING' | 'ZOMBIE';
+
 export type SleepSessionData = {
   bedtime: string;
   wakeTime: string;
@@ -13,7 +15,6 @@ export type SleepSessionData = {
   remMinutes: number;
   awakeMinutes: number;
   awakeEvents: number;
-  efficiency: number;
   segments: StageSegment[];
 };
 
@@ -29,7 +30,6 @@ export type SleepPost = {
   wakeTime: string;
   asleepMinutes: number;
   inBedMinutes: number;
-  efficiency: number;
   coreMinutes: number;
   deepMinutes: number;
   remMinutes: number;
@@ -37,6 +37,10 @@ export type SleepPost = {
   awakeEvents: number;
   stageSegments: StageSegment[];
   sessionBreakdown?: SleepSessionData[];
+  vibe?: Vibe;
+  photoUrls?: string[];
+  photoThumbUrls?: string[];
+  locationLabel?: string;
   tags: string[];
   dreamLog?: string;
   blurDream: boolean;
@@ -46,6 +50,8 @@ export type SleepPost = {
   hasKudoed: boolean;
   commentCount: number;
   isPR: boolean;
+  prTypes?: string[];
+  monthlyPrTypes?: string[];
   createdAt: string;
   sourceDevice: string;
   isCustom?: boolean;

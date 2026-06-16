@@ -13,8 +13,8 @@ export default function Feed() {
   } = useFeed();
 
   return (
-    <div className="app-page">
-      <header className="app-page-header">
+    <div className="app-page app-page--feed">
+      <header className="app-page-header app-page-header--compact">
         <h1>Feed</h1>
       </header>
 

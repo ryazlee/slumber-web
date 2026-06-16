@@ -18,7 +18,9 @@ type Props = {
 };
 
 export default function StageBreakdown({ post }: Props) {
-  const totalMinutes = post.inBedMinutes || post.asleepMinutes;
+  const stageTotalMinutes =
+    post.coreMinutes + post.deepMinutes + post.remMinutes + post.awakeMinutes;
+  const totalMinutes = stageTotalMinutes || post.inBedMinutes || post.asleepMinutes;
   const rows = STAGES
     .map((stage) => ({
       ...stage,

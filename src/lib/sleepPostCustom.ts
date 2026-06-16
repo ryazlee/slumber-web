@@ -20,3 +20,15 @@ export function isManualSleepRow(row: ManualSleepRowFlags): boolean {
 export function filterWearableSleepRows<T extends ManualSleepRowFlags>(rows: T[]): T[] {
   return rows.filter((row) => !isManualSleepRow(row));
 }
+
+/** Exclude manual logs from Supabase `sleep_posts` queries used for metrics. */
+export function wearablePostsOnly<
+  T extends {
+    neq: (column: string, value: string) => T;
+    not: (column: string, operator: string, value: boolean) => T;
+  },
+>(query: T): T {
+  return query
+    .neq('source_device', MANUAL_SLEEP_SOURCE_DEVICE)
+    .not('is_custom', 'eq', true);
+}

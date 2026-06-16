@@ -1,85 +1,89 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useIsModerator } from '../hooks/useAdmin';
+import { isNavActive, MAIN_NAV_ITEMS } from '../lib/appNav';
+import AppBottomNav, { useBottomNavItems } from './AppBottomNav';
+import HeaderMenu from './HeaderMenu';
+import HeaderProfileLink from './HeaderProfileLink';
 
 const base = import.meta.env.BASE_URL;
 
-function metaClass({ isActive }: { isActive: boolean }) {
-  return isActive ? 'site-header-link active' : 'site-header-link';
-}
-
-function appTabClass(active: boolean) {
+function desktopTabClass(active: boolean) {
   return active ? 'site-app-tab active' : 'site-app-tab';
 }
 
 export default function SiteHeader() {
-  const { session, user, signOut } = useAuth();
+  const { session } = useAuth();
   const isLoggedIn = Boolean(session);
   const moderatorQuery = useIsModerator(isLoggedIn);
   const isModerator = moderatorQuery.data === true;
   const location = useLocation();
-  const profilePath = user ? `/profile/${user.id}` : '/profile';
-  const profileActive = location.pathname === '/profile' || location.pathname.startsWith('/profile/');
+  const bottomNav = useBottomNavItems();
   const adminActive = location.pathname === '/admin' || location.pathname.startsWith('/admin/');
-
   const brandTarget = isLoggedIn ? '/feed' : '/home';
 
   return (
-    <header className="site-header">
-      <div className={`site-header-bar content-wrap${isLoggedIn ? ' site-header-bar--app' : ''}`}>
-        <div className="site-header-start">
-          <NavLink to={brandTarget} className="brand">
-            <img src={`${base}moon.png`} alt="" width={28} height={28} />
-            <span>Slumber</span>
-          </NavLink>
+    <>
+      <header className="site-header">
+        <div className={`site-header-bar content-wrap content-wrap--app${isLoggedIn ? ' site-header-bar--app' : ''}`}>
+          <div className="site-header-start">
+            <NavLink to={brandTarget} className="brand">
+              <img src={`${base}moon.png`} alt="" width={28} height={28} />
+              <span className="brand-label">Slumber</span>
+            </NavLink>
 
-          {isLoggedIn && (
-            <nav className="site-app-nav" aria-label="App">
-              <NavLink to="/feed" className={({ isActive }) => appTabClass(isActive)}>
-                Feed
-              </NavLink>
-              <NavLink to="/social" className={({ isActive }) => appTabClass(isActive)}>
-                Social
-              </NavLink>
-              <NavLink to={profilePath} className={appTabClass(profileActive)}>
-                Profile
-              </NavLink>
-              <NavLink to="/challenges" className={({ isActive }) => appTabClass(isActive)}>
-                Challenges
-              </NavLink>
-              {isModerator ? (
-                <NavLink to="/admin" className={appTabClass(adminActive)}>
-                  Admin
-                </NavLink>
-              ) : null}
-            </nav>
-          )}
-        </div>
-
-        <div className="site-header-end">
-          <nav className="site-header-links" aria-label="Site">
-            <NavLink to="/home" className={metaClass}>Home</NavLink>
-            <NavLink to="/privacy" className={metaClass}>Privacy</NavLink>
-            <NavLink to="/terms" className={metaClass}>Terms</NavLink>
-          </nav>
-
-          <div className="site-header-actions">
             {isLoggedIn ? (
-              <button
-                className="site-header-btn site-header-btn--ghost"
-                type="button"
-                onClick={() => signOut()}
-              >
-                Log out
-              </button>
-            ) : (
-              <NavLink to="/" end className="site-header-btn site-header-btn--primary">
-                Log in
-              </NavLink>
-            )}
+              <nav className="site-app-nav site-app-nav--desktop" aria-label="App">
+                {MAIN_NAV_ITEMS.map((item) => {
+                  const active = isNavActive(location.pathname, item);
+                  return (
+                    <NavLink
+                      key={item.label}
+                      to={item.to}
+                      end={item.end}
+                      className={desktopTabClass(active)}
+                      aria-current={active ? 'page' : undefined}
+                    >
+                      {item.label}
+                    </NavLink>
+                  );
+                })}
+              </nav>
+            ) : null}
+          </div>
+
+          <div className="site-header-end">
+            {!isLoggedIn ? (
+              <nav className="site-header-links" aria-label="Site">
+                <NavLink to="/home" className={({ isActive }) => (isActive ? 'site-header-link active' : 'site-header-link')}>
+                  Home
+                </NavLink>
+                <NavLink to="/privacy" className={({ isActive }) => (isActive ? 'site-header-link active' : 'site-header-link')}>
+                  Privacy
+                </NavLink>
+                <NavLink to="/terms" className={({ isActive }) => (isActive ? 'site-header-link active' : 'site-header-link')}>
+                  Terms
+                </NavLink>
+              </nav>
+            ) : null}
+
+            <div className="site-header-actions">
+              {isLoggedIn ? (
+                <>
+                  <HeaderProfileLink />
+                  <HeaderMenu showAdmin={isModerator} adminActive={adminActive} />
+                </>
+              ) : (
+                <NavLink to="/" end className="site-header-btn site-header-btn--primary">
+                  Log in
+                </NavLink>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {isLoggedIn ? <AppBottomNav items={bottomNav} /> : null}
+    </>
   );
 }

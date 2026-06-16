@@ -6,10 +6,15 @@ import SiteLayout from './components/SiteLayout';
 import AppEntry from './pages/app/AppEntry';
 import ChallengeDetail from './pages/app/ChallengeDetail';
 import Challenges from './pages/app/Challenges';
+import Compare from './pages/app/Compare';
 import Feed from './pages/app/Feed';
+import MyStats from './pages/app/MyStats';
 import PostDetail from './pages/app/PostDetail';
 import Profile from './pages/app/Profile';
-import Social from './pages/app/Social';
+import SocialClubs from './pages/app/SocialClubs';
+import SocialFriends from './pages/app/SocialFriends';
+import SocialLayout from './pages/app/SocialLayout';
+import StatsLayout from './pages/app/StatsLayout';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminHomePage from './pages/admin/AdminHomePage';
 import AdminAnalyticsPage from './pages/admin/AdminAnalyticsPage';
@@ -49,7 +54,16 @@ export default function App() {
         <Route index element={<AppEntry />} />
         <Route element={<ProtectedAppShell />}>
           <Route path="feed" element={<Feed />} />
-          <Route path="social" element={<Social />} />
+          <Route path="stats" element={<StatsLayout />}>
+            <Route index element={<MyStats />} />
+            <Route path="compare" element={<Compare />} />
+          </Route>
+          <Route path="social" element={<SocialLayout />}>
+            <Route index element={<SocialFriends />} />
+            <Route path="clubs" element={<SocialClubs />} />
+          </Route>
+          <Route path="compare" element={<Navigate to="/stats/compare" replace />} />
+          <Route path="social/compare" element={<Navigate to="/stats/compare" replace />} />
           <Route path="post/:id" element={<PostDetail />} />
           <Route path="profile" element={<Profile />} />
           <Route path="profile/:userId" element={<Profile />} />

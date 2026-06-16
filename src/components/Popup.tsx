@@ -6,9 +6,10 @@ type PopupProps = {
   onClose: () => void;
   title: string;
   children: ReactNode;
+  panelClassName?: string;
 };
 
-export default function Popup({ open, onClose, title, children }: PopupProps) {
+export default function Popup({ open, onClose, title, children, panelClassName = '' }: PopupProps) {
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -28,7 +29,7 @@ export default function Popup({ open, onClose, title, children }: PopupProps) {
   return createPortal(
     <div className="popup-backdrop" onClick={onClose} role="presentation">
       <div
-        className="popup-panel"
+        className={`popup-panel${panelClassName ? ` ${panelClassName}` : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="popup-title"
