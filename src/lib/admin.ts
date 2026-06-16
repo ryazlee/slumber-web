@@ -337,6 +337,21 @@ export async function updateUserPremium(
   if (error) throw error;
 }
 
+export async function fetchPremiumMetrics(): Promise<PremiumMetrics> {
+  const { data, error } = await supabase.rpc('admin_get_premium_metrics');
+  if (error) throw error;
+  return data as PremiumMetrics;
+}
+
+export async function fetchPremiumUsers(filters: PremiumUserFilters = {}): Promise<PremiumUserRow[]> {
+  const { data, error } = await supabase.rpc('admin_list_premium_users', {
+    p_query: filters.query?.trim() || null,
+    p_limit: filters.limit ?? 100,
+  });
+  if (error) throw error;
+  return (data as PremiumUserRow[] | null) ?? [];
+}
+
 export async function fetchAdminRoleDefinitions(): Promise<AdminRoleDefinitionRow[]> {
   const { data, error } = await supabase.rpc('admin_list_role_definitions');
   if (error) throw error;
@@ -365,6 +380,30 @@ export async function deleteAdminRoleDefinition(key: string): Promise<void> {
 export type SendNotificationResult = {
   notification_id: string;
   device_tokens: number;
+};
+
+export type PremiumMetrics = {
+  total_users: number;
+  premium_active: number;
+  premium_pct: number;
+  expiring_7d: number;
+  expiring_30d: number;
+  lifetime_grants: number;
+  past_due: number;
+};
+
+export type PremiumUserRow = {
+  id: string;
+  username: string;
+  email?: string | null;
+  premium_until: string | null;
+  days_remaining: number | null;
+  grant_type: 'lifetime' | 'timed' | 'past_due' | string;
+};
+
+export type PremiumUserFilters = {
+  query?: string;
+  limit?: number;
 };
 
 export async function sendAdminNotification(

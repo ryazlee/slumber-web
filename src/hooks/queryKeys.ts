@@ -1,5 +1,4 @@
-import type { AnalyticsFilters } from '../lib/admin';
-import type { UserSearchFilters } from '../lib/admin';
+import type { AnalyticsFilters, PremiumUserFilters, UserSearchFilters } from '../lib/admin';
 
 export const queryKeys = {
   feed: ['feed'] as const,
@@ -37,5 +36,7 @@ export const queryKeys = {
     analyticsPosts: (filters: AnalyticsFilters) => ['admin', 'analytics', 'posts', filters] as const,
     analyticsTags: (filters: AnalyticsFilters) => ['admin', 'analytics', 'tags', filters] as const,
     userSearch: (filters: UserSearchFilters) => ['admin', 'user-search', filters] as const,
+    premiumMetrics: ['admin', 'premium', 'metrics'] as const,
+    premiumUsers: (filters: PremiumUserFilters) => ['admin', 'premium', 'users', filters] as const,
   },
 };

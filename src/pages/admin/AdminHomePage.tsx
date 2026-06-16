@@ -39,6 +39,7 @@ export default function AdminHomePage() {
   const pendingReports = (metrics?.pending_post_reports ?? 0) + (metrics?.pending_comment_reports ?? 0);
 
   const quickActions = [
+    { to: '/admin/premium', label: 'Manage Premium', hint: 'Grants, expiry & stats' },
     { to: '/admin/users', label: 'Find a user', hint: 'Search & edit roles' },
     { to: '/admin/notify', label: 'Send notification', hint: 'Push + in-app' },
     { to: '/admin/analytics', label: 'View analytics', hint: 'Charts & tables' },
@@ -78,9 +79,15 @@ export default function AdminHomePage() {
             to="/admin/analytics"
           />
           <QuickStat
+            label="Premium users"
+            value={metrics.premium_users}
+            sub={`${metrics.total_users ? Math.round((metrics.premium_users / metrics.total_users) * 1000) / 10 : 0}% of all users`}
+            to="/admin/premium"
+          />
+          <QuickStat
             label="Total users"
             value={metrics.total_users}
-            sub={`${metrics.premium_users} premium`}
+            sub="All accounts"
             to="/admin/users"
           />
         </div>

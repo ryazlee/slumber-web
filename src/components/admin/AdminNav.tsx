@@ -18,6 +18,7 @@ export const ADMIN_PAGE_TITLES: Record<string, string> = {
   '/admin/analytics': 'Analytics',
   '/admin/reports': 'Reports',
   '/admin/users': 'Users',
+  '/admin/premium': 'Premium',
   '/admin/notify': 'Notify',
   '/admin/configure/tags': 'Tags',
   '/admin/configure/roles': 'Roles',
@@ -46,6 +47,7 @@ function buildAdminNavGroups(pendingReports = 0): AdminNavGroup[] {
       label: 'People',
       items: [
         { to: '/admin/users', label: 'Users' },
+        { to: '/admin/premium', label: 'Premium' },
         { to: '/admin/notify', label: 'Notify' },
       ],
     },

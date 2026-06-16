@@ -11,6 +11,8 @@ import {
   fetchDailyActivity,
   fetchDashboardMetrics,
   fetchPostReports,
+  fetchPremiumMetrics,
+  fetchPremiumUsers,
   fetchRecentPosts,
   fetchRecentUsers,
   searchAdminUsers,
@@ -24,6 +26,7 @@ import {
   type AnalyticsFilters,
   type TagDraft,
   type RoleDefinitionDraft,
+  type PremiumUserFilters,
   type UserSearchFilters,
 } from '../lib/admin';
 import { clearTagsCache } from '../lib/tags';
@@ -251,7 +254,24 @@ export function useUpdateUserPremium() {
       void qc.invalidateQueries({ queryKey: ['admin', 'user-search'] });
       void qc.invalidateQueries({ queryKey: ['admin', 'analytics', 'users'] });
       void qc.invalidateQueries({ queryKey: queryKeys.admin.dashboard });
+      void qc.invalidateQueries({ queryKey: queryKeys.admin.premiumMetrics });
+      void qc.invalidateQueries({ queryKey: ['admin', 'premium', 'users'] });
     },
+  });
+}
+
+export function usePremiumMetrics() {
+  return useQuery({
+    queryKey: queryKeys.admin.premiumMetrics,
+    queryFn: fetchPremiumMetrics,
+  });
+}
+
+export function usePremiumUsers(filters: PremiumUserFilters, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.admin.premiumUsers(filters),
+    queryFn: () => fetchPremiumUsers(filters),
+    enabled,
   });
 }
 

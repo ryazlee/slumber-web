@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { type GridColDef, type GridRowParams } from '@mui/x-data-grid';
 import type { RecentUserRow, UserSearchFilters } from '../../lib/admin';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
-import { useAdminUserSearch, useUpdateUserPremium, useUpdateUserRoles } from '../../hooks/useAdmin';
+import { useAdminUserSearch, useUpdateUserRoles } from '../../hooks/useAdmin';
 import { useAssignableRoles } from '../../hooks/useCatalog';
 import {
   formatRoleList,
@@ -15,33 +16,11 @@ import AdminFilterBar, { AdminFilterField } from './AdminFilterBar';
 import AdminGridAction from './AdminGridAction';
 import AdminListToolbar from './AdminListToolbar';
 import AdminSection, { AdminTableSummary } from './AdminSection';
-import AdminUserPremiumEditor from './AdminUserPremiumEditor';
 import AdminUserRoleEditor from './AdminUserRoleEditor';
 import { ADMIN_CATALOG_FORM_ID, scrollAdminPanelIntoView } from './adminScroll';
 import { dateColumn } from './dateColumn';
 
 type QuickFilter = 'new' | 'premium' | null;
-
-function toDateInputValue(iso: string | null | undefined): string {
-  if (!iso) return '';
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toISOString().slice(0, 10);
-}
-
-function defaultPremiumUntilDate(): string {
-  const date = new Date();
-  date.setUTCFullYear(date.getUTCFullYear() + 1);
-  return date.toISOString().slice(0, 10);
-}
-
-function lifetimePremiumUntilDate(): string {
-  return '2099-01-01';
-}
-
-function premiumUntilFromDateInput(value: string): string {
-  return new Date(`${value}T23:59:59.999Z`).toISOString();
-}
 
 export default function AdminUsers() {
   const [query, setQuery] = useState('');
@@ -70,7 +49,6 @@ export default function AdminUsers() {
   const roleOptions = rolesQuery.data ?? getCachedRoleOptions();
   const usersQuery = useAdminUserSearch(appliedFilters);
   const updateRolesMutation = useUpdateUserRoles();
-  const updatePremiumMutation = useUpdateUserPremium();
 
   const users = usersQuery.data ?? [];
   const searching = usersQuery.isFetching;
@@ -83,10 +61,7 @@ export default function AdminUsers() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<RecentUserRow | null>(null);
   const [draftRoles, setDraftRoles] = useState<string[]>([]);
-  const [draftPremiumGranted, setDraftPremiumGranted] = useState(false);
-  const [draftPremiumUntil, setDraftPremiumUntil] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
-  const [premiumError, setPremiumError] = useState<string | null>(null);
 
   const hasFilters = Boolean(query || roleFilter || premiumOnly || minPosts || joinedWithin || quickFilter);
 
@@ -107,10 +82,7 @@ export default function AdminUsers() {
     setEditingId(null);
     setEditingUser(null);
     setDraftRoles([]);
-    setDraftPremiumGranted(false);
-    setDraftPremiumUntil('');
     setFormError(null);
-    setPremiumError(null);
   }, []);
 
   useEscapeKey(Boolean(editingId), cancelEdit);
@@ -119,16 +91,9 @@ export default function AdminUsers() {
     setEditingId(user.id);
     setEditingUser(user);
     setFormError(null);
-    setPremiumError(null);
     const knownKeys = new Set(roleOptions.map((opt) => opt.key));
     const known = (user.user_roles ?? []).filter((r) => knownKeys.has(r));
     setDraftRoles(known);
-    setDraftPremiumGranted(user.is_premium);
-    setDraftPremiumUntil(
-      user.is_premium
-        ? toDateInputValue(user.premium_until) || defaultPremiumUntilDate()
-        : defaultPremiumUntilDate(),
-    );
     scrollAdminPanelIntoView(ADMIN_CATALOG_FORM_ID);
   }, [roleOptions]);
 
@@ -144,47 +109,6 @@ export default function AdminUsers() {
   };
 
   const saving = updateRolesMutation.isPending;
-  const savingPremium = updatePremiumMutation.isPending;
-
-  const premiumHasChanges = editingUser
-    ? draftPremiumGranted !== editingUser.is_premium
-      || (draftPremiumGranted && toDateInputValue(editingUser.premium_until) !== draftPremiumUntil)
-    : false;
-
-  const savePremium = async () => {
-    if (!editingId || !editingUser) return;
-    setPremiumError(null);
-    try {
-      await updatePremiumMutation.mutateAsync({
-        userId: editingId,
-        isPremium: draftPremiumGranted,
-        premiumUntil: draftPremiumGranted ? premiumUntilFromDateInput(draftPremiumUntil) : null,
-      });
-      setEditingUser({
-        ...editingUser,
-        is_premium: draftPremiumGranted,
-        premium_until: draftPremiumGranted ? premiumUntilFromDateInput(draftPremiumUntil) : null,
-      });
-    } catch (e: unknown) {
-      setPremiumError(e instanceof Error ? e.message : 'Could not save Premium.');
-    }
-  };
-
-  const resetPremiumDraft = () => {
-    if (!editingUser) return;
-    setPremiumError(null);
-    setDraftPremiumGranted(editingUser.is_premium);
-    setDraftPremiumUntil(
-      editingUser.is_premium
-        ? toDateInputValue(editingUser.premium_until) || defaultPremiumUntilDate()
-        : defaultPremiumUntilDate(),
-    );
-  };
-
-  const applyPremiumPreset = (preset: 'year' | 'lifetime') => {
-    setDraftPremiumGranted(true);
-    setDraftPremiumUntil(preset === 'lifetime' ? lifetimePremiumUntilDate() : defaultPremiumUntilDate());
-  };
 
   const toggleQuickFilter = (next: QuickFilter) => {
     setQuickFilter((current) => (current === next ? null : next));
@@ -352,37 +276,22 @@ export default function AdminUsers() {
         <AdminTableSummary>
           {users.length} user{users.length === 1 ? '' : 's'}
           {editingId ? ' · click a row or Roles to edit' : ' · click a row to edit roles'}
+          {' · '}
+          <Link to="/admin/premium">Grant Premium</Link>
         </AdminTableSummary>
       </AdminListToolbar>
 
       {editingUser && editingId ? (
-        <>
-          <AdminUserRoleEditor
-            user={editingUser}
-            roleOptions={roleOptions}
-            draftRoles={draftRoles}
-            saving={saving}
-            error={formError}
-            onChange={setDraftRoles}
-            onSave={saveRoles}
-            onCancel={cancelEdit}
-          />
-          <AdminUserPremiumEditor
-            username={editingUser.username}
-            isPremium={editingUser.is_premium}
-            premiumUntil={editingUser.premium_until ?? null}
-            draftGranted={draftPremiumGranted}
-            draftUntil={draftPremiumUntil}
-            saving={savingPremium}
-            error={premiumError}
-            onGrantChange={setDraftPremiumGranted}
-            onUntilChange={setDraftPremiumUntil}
-            onPreset={applyPremiumPreset}
-            onSave={savePremium}
-            onCancel={resetPremiumDraft}
-            hasChanges={premiumHasChanges}
-          />
-        </>
+        <AdminUserRoleEditor
+          user={editingUser}
+          roleOptions={roleOptions}
+          draftRoles={draftRoles}
+          saving={saving}
+          error={formError}
+          onChange={setDraftRoles}
+          onSave={saveRoles}
+          onCancel={cancelEdit}
+        />
       ) : null}
 
       <AdminDataGrid

@@ -5,9 +5,10 @@ type Props = {
   onClick: (e: MouseEvent<HTMLButtonElement>) => void;
   active?: boolean;
   danger?: boolean;
+  disabled?: boolean;
 };
 
-export default function AdminGridAction({ children, onClick, active, danger }: Props) {
+export default function AdminGridAction({ children, onClick, active, danger, disabled }: Props) {
   return (
     <button
       type="button"
@@ -17,6 +18,7 @@ export default function AdminGridAction({ children, onClick, active, danger }: P
         danger ? 'admin-action-btn--danger' : '',
       ].filter(Boolean).join(' ')}
       onClick={onClick}
+      disabled={disabled}
     >
       {children}
     </button>
