@@ -1,6 +1,8 @@
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { fetchFeed, PAGE_SIZE } from '../lib/feed';
+import { patchPostInCache } from '../lib/patchPostCache';
+import { getOptionalQueryErrorMessage } from '../lib/queryError';
 import type { SleepPost } from '../lib/types';
 import { queryKeys } from './queryKeys';
 
@@ -21,35 +23,14 @@ export function useFeed() {
   );
 
   const patchPost = useCallback((postId: string, patch: Partial<SleepPost>) => {
-    qc.setQueryData(queryKeys.feed, (old: typeof query.data) => {
-      if (!old) return old;
-      let changed = false;
-      const pages = old.pages.map((page) =>
-        page.map((p) => {
-          if (p.id !== postId) return p;
-          const next = { ...p, ...patch };
-          changed = changed || Object.entries(patch).some(
-            ([key, value]) => p[key as keyof SleepPost] !== value,
-          );
-          return next;
-        }),
-      );
-      return changed ? { ...old, pages } : old;
-    });
-    qc.setQueryData(queryKeys.post(postId), (old: SleepPost | null | undefined) => {
-      if (!old) return old;
-      const changed = Object.entries(patch).some(
-        ([key, value]) => old[key as keyof SleepPost] !== value,
-      );
-      return changed ? { ...old, ...patch } : old;
-    });
+    patchPostInCache(qc, postId, patch, { feed: true });
   }, [qc]);
 
   return {
     posts,
     loading: query.isLoading,
     loadingMore: query.isFetchingNextPage,
-    error: query.error instanceof Error ? query.error.message : null,
+    error: getOptionalQueryErrorMessage(query.error, 'Failed to load feed'),
     hasMore: query.hasNextPage ?? false,
     loadMore: () => { void query.fetchNextPage(); },
     patchPost,

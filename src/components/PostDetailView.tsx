@@ -1,16 +1,15 @@
-import { useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { formatMins, formatSleepDate, timeAgo } from '../lib/format';
+import { vibeColor } from '../lib/sleepPostMeta';
+import { getSessionLabel, isNapSession } from '../lib/napDay';
+import { usePostSocialPatch, useSleepPostDisplay } from '../hooks/useSleepPostDisplay';
 import type { SleepPost } from '../lib/types';
-import { formatMins, formatSleepDate, isLatestSleepPost, timeAgo } from '../lib/format';
-import { isManualSleepPost } from '../lib/sleepPostCustom';
-import { customSleepPostTitle } from '../lib/sleepPostTitle';
-import { countNaps, getSessionLabel, hasNapDay, isNapSession } from '../lib/napDay';
-import { VIBE_CONFIG, vibeColor } from '../lib/sleepPostMeta';
-import { segmentsForPost } from '../lib/timeline';
 import ManualLogSleepBlock from './ManualLogSleepBlock';
 import PersonalRecordBadges from './PersonalRecordBadges';
 import PostDetailSectionHeader from './PostDetailSectionHeader';
 import PostPhotoGallery from './PostPhotoGallery';
+import PostDetailMetrics from './post/PostDetailMetrics';
+import PostDreamBlock from './post/PostDreamBlock';
+import PostStageMetrics from './post/PostStageMetrics';
 import PostSocial, { type PostSocialPatch } from './PostSocial';
 import PostTagList from './PostTagList';
 import SleepTimelineBar from './SleepTimelineBar';
@@ -28,23 +27,21 @@ export default function PostDetailView({
   defaultCommentsOpen = true,
   onSocialPatch,
 }: Props) {
-  const { user } = useAuth();
-  const isManual = isManualSleepPost(post);
-  const isOwnPost = user?.id === post.userId;
-  const canReadDream = Boolean(post.dreamLog) && (!post.blurDream || isOwnPost);
-  const isLatest = isLatestSleepPost(post.sleepDate);
-  const vibe = post.vibe ? VIBE_CONFIG[post.vibe] : undefined;
-  const isNapDay = !isManual && hasNapDay(post);
-  const napCount = countNaps(post.sessionBreakdown) || (isNapDay ? 1 : 0);
-  const sessions = post.sessionBreakdown ?? [];
-  const showWearableSleep = !isManual && post.asleepMinutes > 0;
-  const timelineSegments = segmentsForPost(post);
-  const displayTitle = customSleepPostTitle(post.title, post.sleepDate);
+  const {
+    isManual,
+    isOwnPost,
+    canReadDream,
+    isLatest,
+    vibe,
+    isNapDay,
+    napCount,
+    sessions,
+    showWearableSleep,
+    timelineSegments,
+    displayTitle,
+  } = useSleepPostDisplay(post);
 
-  const handleSocialPatch = useCallback(
-    (patch: PostSocialPatch) => { onSocialPatch?.(post.id, patch); },
-    [onSocialPatch, post.id],
-  );
+  const handleSocialPatch = usePostSocialPatch(post.id, onSocialPatch);
 
   return (
     <article className="post-detail-view">
@@ -155,64 +152,16 @@ export default function PostDetailView({
                       {' · '}
                       {getSessionLabel(session, idx, sessions)}
                     </p>
-                    <div className="post-stage-metrics post-stage-metrics--session">
-                      {session.coreMinutes > 0 && (
-                        <span className="post-stage-metric post-stage-metric--core">
-                          Core {formatMins(session.coreMinutes)}
-                        </span>
-                      )}
-                      {session.deepMinutes > 0 && (
-                        <span className="post-stage-metric post-stage-metric--deep">
-                          Deep {formatMins(session.deepMinutes)}
-                        </span>
-                      )}
-                      {session.remMinutes > 0 && (
-                        <span className="post-stage-metric post-stage-metric--rem">
-                          REM {formatMins(session.remMinutes)}
-                        </span>
-                      )}
-                      {session.awakeMinutes > 0 && (
-                        <span className="post-stage-metric post-stage-metric--awake">
-                          Awake {formatMins(session.awakeMinutes)}
-                        </span>
-                      )}
-                      {session.awakeEvents > 0 && (
-                        <span className="post-stage-metric post-stage-metric--muted">
-                          {session.awakeEvents} {session.awakeEvents === 1 ? 'wake' : 'wakes'}
-                        </span>
-                      )}
-                    </div>
+                    <PostStageMetrics
+                      data={session}
+                      labelStyle="title"
+                      className="post-stage-metrics--session"
+                    />
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="post-stage-metrics post-detail-stage-chips">
-                {post.coreMinutes > 0 && (
-                  <span className="post-stage-metric post-stage-metric--core">
-                    {formatMins(post.coreMinutes)} core
-                  </span>
-                )}
-                {post.deepMinutes > 0 && (
-                  <span className="post-stage-metric post-stage-metric--deep">
-                    {formatMins(post.deepMinutes)} deep
-                  </span>
-                )}
-                {post.remMinutes > 0 && (
-                  <span className="post-stage-metric post-stage-metric--rem">
-                    {formatMins(post.remMinutes)} rem
-                  </span>
-                )}
-                {post.awakeMinutes > 0 && (
-                  <span className="post-stage-metric post-stage-metric--awake">
-                    {formatMins(post.awakeMinutes)} awake
-                  </span>
-                )}
-                {post.awakeEvents > 0 && (
-                  <span className="post-stage-metric post-stage-metric--muted">
-                    {post.awakeEvents} {post.awakeEvents === 1 ? 'wake' : 'wakes'}
-                  </span>
-                )}
-              </div>
+              <PostStageMetrics data={post} className="post-detail-stage-chips" />
             )}
           </div>
 
@@ -220,26 +169,7 @@ export default function PostDetailView({
           <StageBreakdown post={post} />
 
           <PostDetailSectionHeader title="Details" />
-          <dl className="post-detail-metrics">
-            <div className="post-detail-metric">
-              <dt>In bed</dt>
-              <dd>{formatMins(post.inBedMinutes)}</dd>
-            </div>
-            <div className="post-detail-metric">
-              <dt>Asleep</dt>
-              <dd>{formatMins(post.asleepMinutes)}</dd>
-            </div>
-            {post.awakeEvents > 0 ? (
-              <div className="post-detail-metric post-detail-metric--awake">
-                <dt>Wakes</dt>
-                <dd>{post.awakeEvents}</dd>
-              </div>
-            ) : null}
-            <div className="post-detail-metric">
-              <dt>Device</dt>
-              <dd className="post-detail-metric-device">{post.sourceDevice || '—'}</dd>
-            </div>
-          </dl>
+          <PostDetailMetrics post={post} />
         </>
       ) : null}
 
@@ -265,22 +195,12 @@ export default function PostDetailView({
         <>
           <PostDetailSectionHeader title="Dream" />
           <div className="post-detail-panel post-detail-dream">
-            {canReadDream ? (
-              <>
-                {post.blurDream && isOwnPost ? (
-                  <span className="post-dream-badge">Private dream</span>
-                ) : null}
-                <p className="post-dream-text">
-                  <span className="post-dream-icon" aria-hidden>💭</span>
-                  {post.dreamLog}
-                </p>
-              </>
-            ) : (
-              <div className="post-dream-private">
-                <span className="post-dream-badge">Private dream</span>
-                <p className="post-dream-hint">Dream logged (only they can read it)</p>
-              </div>
-            )}
+            <PostDreamBlock
+              dreamLog={post.dreamLog}
+              canReadDream={canReadDream}
+              blurDream={post.blurDream}
+              isOwnPost={isOwnPost}
+            />
           </div>
         </>
       ) : null}

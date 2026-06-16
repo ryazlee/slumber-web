@@ -62,6 +62,13 @@ export function getCompareMetrics(selectedIds: string[]): CompareMetricDef[] {
     .filter((m): m is CompareMetricDef => !!m);
 }
 
+export function groupCompareMetricsByCategory(metrics: CompareMetricDef[]) {
+  return COMPARE_METRIC_CATEGORIES.map((cat) => ({
+    ...cat,
+    metrics: metrics.filter((m) => m.category === cat.key),
+  })).filter((g) => g.metrics.length > 0);
+}
+
 export function formatCompareStat(metric: CompareMetricDef, stats: PeriodStats | null): string {
   if (!stats) return '—';
   const v = stats[metric.key];

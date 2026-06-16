@@ -20,6 +20,7 @@ import { buildMonthMetrics } from '../../lib/statsMetrics';
 import { resolvePr } from '../../lib/statsPr';
 import { stageColor } from '../../lib/stageColors';
 import { formatMins } from '../../lib/format';
+import { getQueryErrorMessage } from '../../lib/queryError';
 
 export default function MyStats() {
   const { user } = useAuth();
@@ -87,9 +88,7 @@ export default function MyStats() {
   }
 
   if (isStatsError || isLifetimeError) {
-    const message = (statsError ?? lifetimeError) instanceof Error
-      ? (statsError ?? lifetimeError)!.message
-      : 'Failed to load stats';
+    const message = getQueryErrorMessage(statsError ?? lifetimeError, 'Failed to load stats');
     return (
       <div className="stats-error">
         <p className="admin-error">{message}</p>

@@ -2848,13 +2848,6 @@ button.app-back-link {
   letter-spacing: -0.01em;
 }
 
-.compare-results-legend {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
 /* Mobile card layout */
 .compare-cards {
   display: flex;

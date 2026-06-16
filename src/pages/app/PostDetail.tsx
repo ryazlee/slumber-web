@@ -1,11 +1,11 @@
 import { useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { patchPostInCache } from '../../lib/patchPostCache';
+import { getOptionalQueryErrorMessage } from '../../lib/queryError';
 import PostDetailView from '../../components/PostDetailView';
 import type { PostSocialPatch } from '../../components/PostSocial';
 import { usePost } from '../../hooks/usePost';
-import { queryKeys } from '../../hooks/queryKeys';
-import type { SleepPost } from '../../lib/types';
 
 export default function PostDetail() {
   const { id } = useParams<{ id: string }>();
@@ -13,10 +13,7 @@ export default function PostDetail() {
   const { data: post, isLoading, error } = usePost(id);
 
   const handleSocialPatch = useCallback((postId: string, patch: PostSocialPatch) => {
-    qc.setQueryData(queryKeys.post(postId), (old: SleepPost | undefined) => {
-      if (!old) return old;
-      return { ...old, ...patch };
-    });
+    patchPostInCache(qc, postId, patch, { userPosts: 'all' });
   }, [qc]);
 
   if (isLoading) {
@@ -27,11 +24,8 @@ export default function PostDetail() {
     );
   }
 
-  const errorMessage = error instanceof Error
-    ? error.message
-    : !post
-      ? 'Post not found.'
-      : null;
+  const errorMessage = getOptionalQueryErrorMessage(error, 'Post not found.')
+    ?? (!post ? 'Post not found.' : null);
 
   if (errorMessage || !post) {
     return (

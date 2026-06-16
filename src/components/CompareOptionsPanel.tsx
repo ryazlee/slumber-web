@@ -6,12 +6,11 @@ import {
   DEFAULT_COMPARE_METRIC_IDS,
   type CompareMetricDef,
 } from '../lib/compareMetrics';
+import type { CompareParticipant } from '../lib/compareTypes';
 import type { WebFriend } from '../lib/types';
 
-type Participant = { id: string; username: string; isSelf: boolean };
-
 export type CompareOptionsPanelProps = {
-  me: Participant | null;
+  me: CompareParticipant | null;
   friends: WebFriend[];
   people: string[];
   metrics: string[];
@@ -19,7 +18,6 @@ export type CompareOptionsPanelProps = {
   onToggleMetric: (id: string) => void;
   onSelectAllMetrics: () => void;
   onResetMetrics: () => void;
-  layout: 'tabs' | 'stacked';
   pickerTab?: 'people' | 'metrics';
   onPickerTabChange?: (tab: 'people' | 'metrics') => void;
 };
@@ -70,11 +68,13 @@ function MetricRow({
 }) {
   return (
     <button type="button" className="compare-picker-row" onClick={() => onToggle(metric.id)}>
-      <span
-        className="compare-metric-dot"
-        style={{ background: metric.colorVar ?? 'var(--text-muted)' }}
-        aria-hidden
-      />
+      {metric.colorVar ? (
+        <span
+          className="compare-metric-dot"
+          style={{ background: metric.colorVar }}
+          aria-hidden
+        />
+      ) : null}
       <span className="compare-picker-row-title">{metric.label}</span>
       <Checkbox checked={selected} />
     </button>
@@ -189,39 +189,9 @@ export default function CompareOptionsPanel({
   onToggleMetric,
   onSelectAllMetrics,
   onResetMetrics,
-  layout,
   pickerTab = 'people',
   onPickerTabChange,
 }: CompareOptionsPanelProps) {
-  if (layout === 'stacked') {
-    return (
-      <div className="compare-options-stacked">
-        <section className="compare-options-block">
-          <h2 className="compare-options-heading">People</h2>
-          <div className="compare-picker-list compare-picker-list--sidebar">
-            <PeopleList
-              me={me}
-              friends={friends}
-              people={people}
-              onTogglePerson={onTogglePerson}
-            />
-          </div>
-        </section>
-        <section className="compare-options-block">
-          <h2 className="compare-options-heading">Metrics</h2>
-          <div className="compare-picker-list compare-picker-list--sidebar">
-            <MetricsList
-              metrics={metrics}
-              onToggleMetric={onToggleMetric}
-              onSelectAllMetrics={onSelectAllMetrics}
-              onResetMetrics={onResetMetrics}
-            />
-          </div>
-        </section>
-      </div>
-    );
-  }
-
   return (
     <>
       <div className="app-subtabs compare-picker-tabs" role="tablist" aria-label="Compare picker">
