@@ -70,23 +70,65 @@ function AuthorMeta({
   );
 }
 
+function ReporterContact({
+  reporter,
+  reporterId,
+  reporterEmail,
+}: {
+  reporter: string;
+  reporterId: string;
+  reporterEmail?: string | null;
+}) {
+  return (
+    <div className="admin-report-reporter">
+      <Link to={`/profile/${reporterId}`} className="admin-report-link">
+        @{reporter}
+      </Link>
+      {reporterEmail ? (
+        <span className="admin-report-reporter-email">
+          <a href={`mailto:${reporterEmail}`} className="admin-report-link">
+            {reporterEmail}
+          </a>
+          <AdminCopyButton value={reporterEmail} label="Copy email" />
+        </span>
+      ) : (
+        <span className="admin-report-reporter-email admin-muted">No email on file</span>
+      )}
+    </div>
+  );
+}
+
 function ReportReasons({
   reports,
 }: {
-  reports: { id: string; created_at: string; reason: string; reporter: string }[];
+  reports: {
+    id: string;
+    created_at: string;
+    reason: string;
+    reporter: string;
+    reporter_id: string;
+    reporter_email?: string | null;
+  }[];
 }) {
   return (
-    <ul className="admin-report-reasons">
-      {reports.map((report) => (
-        <li key={report.id}>
-          <div className="admin-report-reason-head">
-            <span className="admin-report-reason-who">@{report.reporter}</span>
-            <time dateTime={report.created_at}>{formatWhen(report.created_at)}</time>
-          </div>
-          <p className="admin-report-reason-text">{report.reason}</p>
-        </li>
-      ))}
-    </ul>
+    <div className="admin-report-reasons-wrap">
+      <h4 className="admin-report-reasons-title">Reports</h4>
+      <ul className="admin-report-reasons">
+        {reports.map((report) => (
+          <li key={report.id}>
+            <div className="admin-report-reason-head">
+              <ReporterContact
+                reporter={report.reporter}
+                reporterId={report.reporter_id}
+                reporterEmail={report.reporter_email}
+              />
+              <time dateTime={report.created_at}>{formatWhen(report.created_at)}</time>
+            </div>
+            <p className="admin-report-reason-text">{report.reason}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -144,7 +186,7 @@ function PostReportCard({
           View post
         </Link>
         <AdminGridAction onClick={onDismiss} disabled={acting}>
-          Dismiss
+          Close reports
         </AdminGridAction>
         {!group.postDeleted ? (
           <AdminGridAction danger onClick={onRemove} disabled={acting}>
@@ -205,7 +247,7 @@ function CommentReportCard({
           View post
         </Link>
         <AdminGridAction onClick={onDismiss} disabled={acting}>
-          Dismiss
+          Close reports
         </AdminGridAction>
         <AdminGridAction danger onClick={onRemove} disabled={acting}>
           Remove comment

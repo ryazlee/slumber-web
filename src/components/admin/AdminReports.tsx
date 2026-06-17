@@ -105,6 +105,13 @@ const postColumns: GridColDef<PostReportRow>[] = [
     valueFormatter: (value) => `@${value}`,
   },
   {
+    field: 'reporter_email',
+    headerName: 'Reporter email',
+    flex: 1.2,
+    minWidth: 180,
+    valueFormatter: (value) => (value ? String(value) : '—'),
+  },
+  {
     field: 'reporter_id',
     headerName: 'Reporter ID',
     flex: 1.1,
@@ -177,6 +184,13 @@ const commentColumns: GridColDef<CommentReportRow>[] = [
     flex: 0.8,
     minWidth: 110,
     valueFormatter: (value) => `@${value}`,
+  },
+  {
+    field: 'reporter_email',
+    headerName: 'Reporter email',
+    flex: 1.2,
+    minWidth: 180,
+    valueFormatter: (value) => (value ? String(value) : '—'),
   },
   {
     field: 'reporter_id',
@@ -276,28 +290,28 @@ export default function AdminReports({
   };
 
   const dismissPost = (postId: string) => {
-    if (!window.confirm('Dismiss all reports on this post?')) return;
+    if (!window.confirm('Close all reports on this post? They will be removed from the queue.')) return;
     void runAction(`post:${postId}`, () => dismissPostMutation.mutateAsync(postId));
   };
 
   const dismissComment = (commentId: string) => {
-    if (!window.confirm('Dismiss all reports on this comment?')) return;
+    if (!window.confirm('Close all reports on this comment? They will be removed from the queue.')) return;
     void runAction(`comment:${commentId}`, () => dismissCommentMutation.mutateAsync(commentId));
   };
 
   const removePost = (postId: string) => {
-    if (!window.confirm('Remove this post and dismiss its reports? This cannot be undone.')) return;
+    if (!window.confirm('Remove this post and close its reports? This cannot be undone.')) return;
     void runAction(`post:${postId}`, () => removePostMutation.mutateAsync(postId));
   };
 
   const removeComment = (commentId: string) => {
-    if (!window.confirm('Delete this comment and dismiss its reports? This cannot be undone.')) return;
+    if (!window.confirm('Delete this comment and close its reports? This cannot be undone.')) return;
     void runAction(`comment:${commentId}`, () => removeCommentMutation.mutateAsync(commentId));
   };
 
   return (
     <AdminSection
-      lead="Review reported posts and comments. The queue groups duplicate reports on the same item; dismiss after review or remove violating content."
+      lead="Review reported posts and comments. Each card groups reports on the same item — check reporter contact info, take action if needed, then close the reports when you're done."
       error={error}
     >
       <AdminTabs
@@ -317,7 +331,7 @@ export default function AdminReports({
         className="admin-tabs-view"
         tabs={[
           { id: 'queue', label: 'Review queue' },
-          { id: 'table', label: 'All reports' },
+          { id: 'table', label: 'All reports (table)' },
         ]}
       />
 

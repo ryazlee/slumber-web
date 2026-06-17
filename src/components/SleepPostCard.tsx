@@ -54,9 +54,7 @@ export default function SleepPostCard({
     post.inBedMinutes > 0 ? `${formatMins(post.inBedMinutes)} in bed` : null,
   ].filter(Boolean);
 
-  const postDetailLabel = displayTitle
-    ? `View post: ${displayTitle}`
-    : `View sleep from ${formatSleepDate(post.sleepDate)}`;
+  const postDetailLabel = `View post: ${displayTitle}`;
 
   return (
     <article className={`post-card${clickable ? ' post-card--clickable' : ''}${isLatest ? ' post-card--latest' : ''}`}>
@@ -84,7 +82,7 @@ export default function SleepPostCard({
 
       <p className="post-meta-strip">{metaParts.join(' · ')}</p>
 
-      {displayTitle ? <h2 className="post-title">{displayTitle}</h2> : null}
+      <h2 className="post-title">{displayTitle}</h2>
 
       {post.isPR && !isManual ? (
         <PersonalRecordBadges post={post} />

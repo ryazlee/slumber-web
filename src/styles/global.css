@@ -2778,6 +2778,36 @@ h1 {
   white-space: pre-wrap;
 }
 
+.admin-report-reasons-wrap {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-report-reasons-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.admin-report-reporter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  min-width: 0;
+}
+
+.admin-report-reporter-email {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
 .admin-report-reasons {
   list-style: none;
   margin: 0;
@@ -2795,9 +2825,15 @@ h1 {
 .admin-report-reason-head {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 12px;
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.admin-report-reason-head time {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .admin-report-reason-who {

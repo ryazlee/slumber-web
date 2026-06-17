@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import ChallengeContributionsByDay from '../../components/ChallengeContributionsByDay';
+import ChallengeGraceCountdown from '../../components/ChallengeGraceCountdown';
 import ChallengeProgressRow from '../../components/ChallengeProgressRow';
 import UserLink from '../../components/UserLink';
 import { useAuth } from '../../context/AuthContext';
@@ -9,7 +10,9 @@ import {
   useChallengeContributions,
   useChallengeProgress,
 } from '../../hooks/useChallenges';
+import { useGraceCountdown } from '../../hooks/useGraceCountdown';
 import { buildSplitBarsByUser } from '../../lib/challengeProgressBar';
+import { challengeGraceEndsAtMs } from '../../lib/challengeGrace';
 import { rankBySleepProgress } from '../../lib/challengeRank';
 import {
   formatChallengeRaceType,
@@ -83,6 +86,14 @@ export default function ChallengeDetail() {
     return rows;
   }, [progress, splitBarByUser, challenge?.isGroup, currentUserId]);
 
+  const graceEndsAtMs = useMemo(
+    () => (challenge?.status === 'pending_completion' && challenge
+      ? challengeGraceEndsAtMs(challenge)
+      : null),
+    [challenge],
+  );
+  const graceCountdown = useGraceCountdown(graceEndsAtMs);
+
   if (loading) {
     return (
       <div className="app-page">
@@ -103,6 +114,7 @@ export default function ChallengeDetail() {
   const title = challenge.title?.trim() || formatChallengeRaceType(challenge);
   const accepted = challenge.participants.filter((p) => p.inviteStatus === 'accepted');
   const pending = challenge.participants.filter((p) => p.inviteStatus === 'pending');
+  const isFinalizing = challenge.status === 'pending_completion';
   const winner = challenge.winnerId
     ? accepted.find((p) => p.userId === challenge.winnerId)
     : null;
@@ -135,6 +147,15 @@ export default function ChallengeDetail() {
               username={winner.username}
               avatarUrl={winner.avatarUrl}
               userRoles={winner.userRoles}
+            />
+          </p>
+        )}
+        {isFinalizing && (
+          <p className="challenge-grace-banner">
+            <ChallengeGraceCountdown
+              challenge={challenge}
+              prefix="Finalizing — "
+              suffix=" to sync"
             />
           </p>
         )}
@@ -197,6 +218,7 @@ export default function ChallengeDetail() {
                   place={challenge.isGroup ? row.place : null}
                   placeTied={challenge.isGroup ? row.tied : false}
                   showPlace={challenge.isGroup}
+                  syncCountdownLabel={isFinalizing ? graceCountdown.syncLabel : null}
                 />
               );
             })}

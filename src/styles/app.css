@@ -1385,6 +1385,21 @@
   color: var(--text-muted);
 }
 
+.challenge-grace-banner {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(52, 199, 89, 0.12);
+  color: #6ee7a0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.challenge-sync-countdown {
+  color: #6ee7a0;
+  font-weight: 600;
+}
+
 .challenge-participants {
   display: flex;
   flex-wrap: wrap;

@@ -6,6 +6,7 @@ export type PostReportEntry = {
   reason: string;
   reporter: string;
   reporter_id: string;
+  reporter_email?: string | null;
 };
 
 export type PostReportGroup = {
@@ -84,6 +85,7 @@ export function groupPostReports(rows: PostReportRow[]): PostReportGroup[] {
       reason: row.reason,
       reporter: row.reporter,
       reporter_id: row.reporter_id,
+      reporter_email: row.reporter_email,
     });
 
     if (new Date(row.created_at).getTime() > new Date(group.latestAt).getTime()) {
@@ -132,6 +134,7 @@ export function groupCommentReports(rows: CommentReportRow[]): CommentReportGrou
       reason: row.reason,
       reporter: row.reporter,
       reporter_id: row.reporter_id,
+      reporter_email: row.reporter_email,
     });
 
     if (new Date(row.created_at).getTime() > new Date(group.latestAt).getTime()) {

@@ -26,6 +26,14 @@ export function customSleepPostTitle(
   return trimmedOrNull(title);
 }
 
+/** Title shown on feed cards and post detail — always non-empty. */
+export function sleepPostDisplayTitle(
+  title: string | null | undefined,
+  sleepDateISO: string,
+): string {
+  return trimmedOrNull(title) ?? defaultSleepPostTitle(sleepDateISO);
+}
+
 function trimmedOrNull(title: string | null | undefined): string | null {
   const trimmed = (title ?? '').trim();
   return trimmed || null;

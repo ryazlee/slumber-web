@@ -4,7 +4,7 @@ import type { PostSocialPatch } from '../components/PostSocial';
 import type { SleepPost } from '../lib/types';
 import { isLatestSleepPost } from '../lib/format';
 import { isManualSleepPost } from '../lib/sleepPostCustom';
-import { customSleepPostTitle } from '../lib/sleepPostTitle';
+import { sleepPostDisplayTitle } from '../lib/sleepPostTitle';
 import { countNaps, hasNapDay } from '../lib/napDay';
 import { VIBE_CONFIG } from '../lib/sleepPostMeta';
 import { segmentsForPost } from '../lib/timeline';
@@ -21,7 +21,7 @@ export function useSleepPostDisplay(post: SleepPost) {
   const sessions = post.sessionBreakdown ?? [];
   const showWearableSleep = !isManual && post.asleepMinutes > 0;
   const timelineSegments = segmentsForPost(post);
-  const displayTitle = customSleepPostTitle(post.title, post.sleepDate);
+  const displayTitle = sleepPostDisplayTitle(post.title, post.sleepDate);
 
   return {
     isManual,

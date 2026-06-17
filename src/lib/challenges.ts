@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { filterWearableSleepRows } from './sleepPostCustom';
+import { sortPastChallenges } from './challengeGrace';
 import type {
   Challenge,
   ChallengeContributionPost,
@@ -10,7 +11,7 @@ import type {
 
 const BASE_CHALLENGE_SELECT = `
   id, creator_id, title, is_group, goal_minutes, no_expiration, scoring_mode, status,
-  created_at, started_at, expires_at, winner_id, goal_reached_at, goal_reached_by
+  created_at, started_at, expires_at, winner_id, goal_reached_at, goal_reached_by, grace_ends_at
 `;
 
 function withOneDayStartGrace(isoTimestamp: string): string {
@@ -81,6 +82,7 @@ function attachParticipants(challenges: Record<string, unknown>[], participantRo
       startedAt: (c.started_at as string | null) ?? null,
       expiresAt: (c.expires_at as string | null) ?? null,
       goalReachedAt: (c.goal_reached_at as string | null) ?? null,
+      graceEndsAt: (c.grace_ends_at as string | null) ?? null,
       winnerId: (c.winner_id as string | null) ?? null,
       participants,
     };
@@ -188,5 +190,11 @@ export async function fetchChallenges(statuses?: ChallengeStatus[]): Promise<Cha
 
   if (participantsError) throw participantsError;
 
-  return attachParticipants(challengeRows, participants ?? []);
+  const challenges = attachParticipants(challengeRows, participants ?? []);
+
+  if (statuses?.length === 1 && statuses[0] === 'completed') {
+    return sortPastChallenges(challenges);
+  }
+
+  return challenges;
 }

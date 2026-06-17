@@ -27,6 +27,7 @@ export type PostReportRow = {
   reason: string;
   reporter: string;
   reporter_id: string;
+  reporter_email?: string | null;
   author: string;
   author_id: string;
   author_joined: string;
@@ -48,6 +49,7 @@ export type CommentReportRow = {
   reason: string;
   reporter: string;
   reporter_id: string;
+  reporter_email?: string | null;
   author: string;
   author_id: string;
   author_joined: string;

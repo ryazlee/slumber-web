@@ -120,6 +120,7 @@ export type Challenge = {
   startedAt: string | null;
   expiresAt: string | null;
   goalReachedAt: string | null;
+  graceEndsAt: string | null;
   winnerId: string | null;
   participants: ChallengeParticipant[];
 };

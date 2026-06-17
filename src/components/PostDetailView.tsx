@@ -66,7 +66,7 @@ export default function PostDetailView({
         </p>
       </header>
 
-      {displayTitle ? <h1 className="post-detail-title">{displayTitle}</h1> : null}
+      <h1 className="post-detail-title">{displayTitle}</h1>
 
       {post.isPR && !isManual ? (
         <div className="post-detail-pr">
