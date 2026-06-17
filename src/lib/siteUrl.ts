@@ -9,36 +9,6 @@ export function getOgImageUrl(): string {
   return `${getSiteUrl()}/og-image.png`;
 }
 
-export function getLinkPreviewBaseUrl(): string {
-  const explicit = import.meta.env.VITE_LINK_PREVIEW_BASE_URL?.trim();
-  if (explicit) return explicit.replace(/\/$/, '');
-
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
-  if (supabaseUrl) {
-    return `${supabaseUrl.replace(/\/$/, '')}/functions/v1/link-preview`;
-  }
-
-  return getSiteUrl();
-}
-
-function previewPath(path: string): string {
-  const base = getLinkPreviewBaseUrl();
-  const normalized = path.startsWith('/') ? path : `/${path}`;
-  return `${base}${normalized}`;
-}
-
-export function buildPostShareUrl(postId: string): string {
-  return previewPath(`/post/${postId}`);
-}
-
-export function buildProfileShareUrl(userId: string): string {
-  return previewPath(`/profile/${userId}`);
-}
-
-export function buildChallengeShareUrl(challengeId: string): string {
-  return previewPath(`/challenge/${challengeId}`);
-}
-
 export function formatMins(mins: number): string {
   const total = Math.max(0, Math.round(mins));
   const hours = Math.floor(total / 60);

@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import DeepLinkLanding, { DeepLinkNotFound } from '../components/DeepLinkLanding';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { parseContentLinkPath } from '../lib/deepLinks';
-import { formatMins, formatSleepDate, getOgImageUrl, getSiteUrl } from '../lib/linkPreview';
+import { formatMins, formatSleepDate, getOgImageUrl, getSiteUrl } from '../lib/siteUrl';
 import { supabase } from '../lib/supabase';
 
 type ProfilePreview = {
