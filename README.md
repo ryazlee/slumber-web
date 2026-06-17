@@ -39,7 +39,11 @@ cp .env.example .env.local
 # VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY — same publishable key as the app
 ```
 
-For GitHub Pages, add repo secrets `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_SITE_URL` (canonical site root for link previews, e.g. `https://ryazlee.github.io/slumber-web`).
+For GitHub Pages, add repo secrets `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SITE_URL`, and `VITE_BASE_PATH` (e.g. `/slumber-web`).
+
+**Link previews (iMessage / Messenger):** Crawlers read static tags in `index.html` / `404.html` only — not React. The moon logo is served from `og-card.png` (1200×630, generated from `og-image.png` via `npm run prebuild`). After deploy, previews may take time to refresh (Apple caches aggressively).
+
+**Changing the public domain later:** update `VITE_SITE_URL` + `VITE_BASE_PATH` on the website, and `EXPO_PUBLIC_WEB_BASE_URL` in the app (see repo root `.env.example`). Rebuild/redeploy both; the app needs a new iOS build for `associatedDomains`.
 
 ## Admin
 

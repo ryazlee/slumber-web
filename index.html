@@ -9,10 +9,10 @@
     />
     <title>Slumber</title>
 
-    <link rel="icon" type="image/png" href="/moon.png" />
-    <link rel="apple-touch-icon" href="/og-image.png" />
+    <link rel="icon" type="image/png" href="__SITE_URL__/moon.png" />
+    <link rel="apple-touch-icon" href="__SITE_URL__/og-image.png" />
 
-    <!-- Open Graph / iMessage link preview -->
+    <!-- Open Graph / iMessage / Messenger link preview (static — crawlers do not run JS) -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Slumber" />
     <meta property="og:title" content="Slumber" />
@@ -21,19 +21,21 @@
       content="Social sleep tracking for iOS. Log from Apple Health, share with friends, and join sleep challenges."
     />
     <meta property="og:url" content="__SITE_URL__/" />
-    <meta property="og:image" content="__SITE_URL__/og-image.png" />
-    <meta property="og:image:width" content="512" />
-    <meta property="og:image:height" content="512" />
+    <meta property="og:image" content="__OG_IMAGE_URL__" />
+    <meta property="og:image:secure_url" content="__OG_IMAGE_URL__" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Slumber moon logo" />
+    <link rel="image_src" href="__OG_IMAGE_URL__" />
 
-    <!-- Twitter / other crawlers -->
-    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Slumber" />
     <meta
       name="twitter:description"
       content="Social sleep tracking for iOS. Log from Apple Health, share with friends, and join sleep challenges."
     />
-    <meta name="twitter:image" content="__SITE_URL__/og-image.png" />
+    <meta name="twitter:image" content="__OG_IMAGE_URL__" />
   </head>
   <body>
     <div id="root"></div>

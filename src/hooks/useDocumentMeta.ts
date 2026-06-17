@@ -41,8 +41,12 @@ export function useDocumentMeta(meta: DocumentMeta | null): void {
 
     if (meta.image) {
       setMetaTag('property', 'og:image', meta.image);
+      setMetaTag('property', 'og:image:secure_url', meta.image);
+      setMetaTag('property', 'og:image:type', 'image/png');
+      setMetaTag('property', 'og:image:width', '1200');
+      setMetaTag('property', 'og:image:height', '630');
       setMetaTag('name', 'twitter:image', meta.image);
-      setMetaTag('name', 'twitter:card', 'summary');
+      setMetaTag('name', 'twitter:card', 'summary_large_image');
     }
   }, [meta?.title, meta?.description, meta?.image, meta?.url]);
 }

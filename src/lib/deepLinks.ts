@@ -1,3 +1,5 @@
+import { normalizeWebAppPath } from './siteUrl';
+
 export const APP_STORE_URL = 'https://apps.apple.com/app/id6772449516';
 
 export type InviteLinkTarget =
@@ -17,14 +19,13 @@ function isUuid(value: string): boolean {
   return UUID_RE.test(value);
 }
 
+function pathSegments(pathname: string): string[] {
+  return normalizeWebAppPath(pathname).split('/').filter(Boolean);
+}
+
 /** Parse post / profile / challenge content paths. */
 export function parseContentLinkPath(pathname: string): ContentLinkTarget | null {
-  let path = pathname;
-  if (!path.startsWith('/')) path = `/${path}`;
-  if (path.startsWith('/slumber-web/')) {
-    path = path.slice('/slumber-web'.length);
-  }
-  const segments = path.replace(/\/+$/, '').split('/').filter(Boolean);
+  const segments = pathSegments(pathname);
 
   if (segments[0] === 'post' && segments[1] && isUuid(segments[1])) {
     return {
@@ -60,12 +61,7 @@ export function parseContentLinkPath(pathname: string): ContentLinkTarget | null
 
 /** Parse invite/join paths (matches app deep-link URL shapes). */
 export function parseInviteLinkPath(pathname: string): InviteLinkTarget | null {
-  let path = pathname;
-  if (!path.startsWith('/')) path = `/${path}`;
-  if (path.startsWith('/slumber-web/')) {
-    path = path.slice('/slumber-web'.length);
-  }
-  const segments = path.replace(/\/+$/, '').split('/').filter(Boolean);
+  const segments = pathSegments(pathname);
 
   if (segments[0] === 'invite' && segments[1] && TOKEN_RE.test(segments[1])) {
     return {

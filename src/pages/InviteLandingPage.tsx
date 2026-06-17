@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import DeepLinkLanding, { DeepLinkNotFound } from '../components/DeepLinkLanding';
+import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { parseInviteLinkPath } from '../lib/deepLinks';
+import { getOgImageUrl, getSiteUrl } from '../lib/siteUrl';
 import { supabase } from '../lib/supabase';
 
 type FriendPreview = {
@@ -37,6 +39,7 @@ function formatGoal(minutes?: number): string {
 export default function InviteLandingPage() {
   const { pathname } = useLocation();
   const target = useMemo(() => parseInviteLinkPath(pathname), [pathname]);
+  const siteUrl = getSiteUrl();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -126,6 +129,47 @@ export default function InviteLandingPage() {
       cancelled = true;
     };
   }, [target]);
+
+  const documentMeta = useMemo(() => {
+    if (!target || loading || error) return null;
+
+    const ogImage = getOgImageUrl();
+
+    if (target.kind === 'friend' && friendPreview?.valid) {
+      const handle = friendPreview.username ? `@${friendPreview.username}` : 'a friend';
+      return {
+        title: `Join ${handle} · Slumber`,
+        description: 'Add friends and share sleep on Slumber',
+        image: ogImage,
+        url: `${siteUrl}/invite/${target.token}`,
+      };
+    }
+
+    if (target.kind === 'challenge' && challengePreview?.challengeId) {
+      const title = challengePreview.title?.trim() || 'Sleep challenge';
+      const host = challengePreview.hostUsername ? `@${challengePreview.hostUsername}` : 'a friend';
+      return {
+        title: `${title} · Slumber`,
+        description: `Join ${host}'s sleep challenge in Slumber`,
+        image: ogImage,
+        url: `${siteUrl}/challenge/join/${target.token}`,
+      };
+    }
+
+    if (target.kind === 'club' && clubPreview?.clubId) {
+      const name = clubPreview.name?.trim() || 'Sleep club';
+      return {
+        title: `${name} · Slumber`,
+        description: 'Join this sleep club on Slumber',
+        image: ogImage,
+        url: `${siteUrl}/club/${target.clubId}/invite/${target.token}`,
+      };
+    }
+
+    return null;
+  }, [target, loading, error, friendPreview, challengePreview, clubPreview, siteUrl]);
+
+  useDocumentMeta(documentMeta);
 
   if (!target) {
     return (
