@@ -28,6 +28,11 @@ import Home from './pages/Home';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import InviteLandingPage from './pages/InviteLandingPage';
+import { withDeepLinkAuthGate } from './components/DeepLinkAuthGate';
+
+const GatedPostDetail = withDeepLinkAuthGate(PostDetail);
+const GatedProfile = withDeepLinkAuthGate(Profile);
+const GatedChallengeDetail = withDeepLinkAuthGate(ChallengeDetail);
 
 function ProtectedAppShell() {
   return (
@@ -55,6 +60,11 @@ export default function App() {
           </Route>
         </Route>
         <Route index element={<AppEntry />} />
+        {/* Shared deep-link paths: public landing when logged out, web app when signed in */}
+        <Route path="post/:id" element={<GatedPostDetail />} />
+        <Route path="profile/:userId" element={<GatedProfile />} />
+        <Route path="challenge/:id" element={<GatedChallengeDetail />} />
+        <Route path="challenges/:id" element={<GatedChallengeDetail />} />
         <Route element={<ProtectedAppShell />}>
           <Route path="feed" element={<Feed />} />
           <Route path="stats" element={<StatsLayout />}>
@@ -67,11 +77,8 @@ export default function App() {
           </Route>
           <Route path="compare" element={<Navigate to="/stats/compare" replace />} />
           <Route path="social/compare" element={<Navigate to="/stats/compare" replace />} />
-          <Route path="post/:id" element={<PostDetail />} />
           <Route path="profile" element={<Profile />} />
-          <Route path="profile/:userId" element={<Profile />} />
           <Route path="challenges" element={<Challenges />} />
-          <Route path="challenges/:id" element={<ChallengeDetail />} />
         </Route>
         <Route element={<Layout />}>
           <Route path="home" element={<Home />} />
