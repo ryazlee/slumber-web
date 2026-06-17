@@ -7,6 +7,7 @@
         "/slumber-web/post/*",
         "/slumber-web/profile/*",
         "/slumber-web/challenge/*",
+        "/slumber-web/challenges/*",
         "/slumber-web/challenge/join/*",
         "/slumber-web/invite/*",
         "/slumber-web/club/*/invite/*"

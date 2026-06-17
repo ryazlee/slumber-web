@@ -1,66 +1,159 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { APP_STORE_URL, buildSchemeUrl, tryOpenInApp } from '../lib/deepLinks';
+import { APP_STORE_URL, buildSchemeUrl, scheduleAppOpen, tryOpenInApp } from '../lib/deepLinks';
+
+export type DeepLinkIntent =
+  | 'friend-invite'
+  | 'challenge-join'
+  | 'club-invite'
+  | 'profile'
+  | 'post'
+  | 'challenge';
+
+const INTENT_LABEL: Record<DeepLinkIntent, string> = {
+  'friend-invite': 'Friend invite',
+  'challenge-join': 'Join challenge',
+  'club-invite': 'Club invite',
+  profile: 'Profile',
+  post: 'Sleep post',
+  challenge: 'Challenge',
+};
+
+const INTENT_ICON: Record<DeepLinkIntent, string> = {
+  'friend-invite': '👋',
+  'challenge-join': '🏁',
+  'club-invite': '💤',
+  profile: '👤',
+  post: '🌙',
+  challenge: '🏁',
+};
 
 type Props = {
+  intent: DeepLinkIntent;
   title: string;
   subtitle?: string;
-  detail?: string;
+  meta?: string;
   schemePath: string;
   loading?: boolean;
   error?: string | null;
-  children?: ReactNode;
+  /** Shown in preview row (e.g. club emoji). */
+  previewEmoji?: string | null;
 };
 
+const base = import.meta.env.BASE_URL;
+
 export default function DeepLinkLanding({
+  intent,
   title,
   subtitle,
-  detail,
+  meta,
   schemePath,
   loading = false,
   error = null,
-  children,
+  previewEmoji = null,
 }: Props) {
   const schemeUrl = buildSchemeUrl(schemePath);
+  const previewIcon = previewEmoji?.trim() || INTENT_ICON[intent];
 
   useEffect(() => {
-    if (loading || error) return;
+    return scheduleAppOpen(schemeUrl);
+  }, [schemeUrl]);
+
+  useEffect(() => {
+    if (loading) return;
     tryOpenInApp(schemeUrl);
-  }, [loading, error, schemeUrl]);
+  }, [loading, schemeUrl]);
 
   return (
-    <div className="content-wrap deeplink-page">
-      <div className="deeplink-card">
-        <p className="eyebrow">Slumber</p>
-        <h1>{title}</h1>
-        {subtitle ? <p className="lead">{subtitle}</p> : null}
-        {detail ? <p className="deeplink-detail">{detail}</p> : null}
-        {loading ? <p className="app-muted">Loading…</p> : null}
-        {error ? <p className="deeplink-error">{error}</p> : null}
-        {children}
-        <div className="deeplink-actions">
-          <button
-            type="button"
-            className="deeplink-btn deeplink-btn--primary"
-            onClick={() => tryOpenInApp(schemeUrl)}
-          >
-            Open in Slumber
-          </button>
-          <a
-            href={APP_STORE_URL}
-            className="deeplink-btn deeplink-btn--secondary"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Get the app
-          </a>
+    <main className="deeplink-page">
+      <header className="deeplink-brand">
+        <img
+          className="deeplink-app-icon"
+          src={`${base}moon.png`}
+          alt=""
+          width={64}
+          height={64}
+        />
+        <span className="deeplink-app-name">Slumber</span>
+      </header>
+
+      <section className="deeplink-preview" aria-busy={loading}>
+        <div className="deeplink-preview-icon" aria-hidden>
+          {loading ? <span className="deeplink-preview-skeleton deeplink-preview-skeleton--icon" /> : previewIcon}
         </div>
-        <p className="deeplink-hint">
-          If the app doesn&apos;t open, tap <strong>Open in Slumber</strong> above.
-          {' '}
-          <Link to="/home">Learn more</Link>
+
+        <p className="deeplink-preview-kind">{INTENT_LABEL[intent]}</p>
+
+        {loading ? (
+          <div className="deeplink-preview-loading" aria-label="Loading preview">
+            <span className="deeplink-preview-skeleton deeplink-preview-skeleton--title" />
+            <span className="deeplink-preview-skeleton deeplink-preview-skeleton--line" />
+            <span className="deeplink-preview-skeleton deeplink-preview-skeleton--line deeplink-preview-skeleton--short" />
+          </div>
+        ) : (
+          <>
+            <h1 className="deeplink-preview-title">{title}</h1>
+            {subtitle ? <p className="deeplink-preview-subtitle">{subtitle}</p> : null}
+            {meta ? <p className="deeplink-preview-meta">{meta}</p> : null}
+          </>
+        )}
+
+        {error ? (
+          <p className="deeplink-preview-notice" role="status">{error}</p>
+        ) : null}
+      </section>
+
+      <div className="deeplink-cta">
+        <button
+          type="button"
+          className="deeplink-cta-primary"
+          onClick={() => tryOpenInApp(schemeUrl)}
+        >
+          Open in Slumber
+        </button>
+        <a
+          href={APP_STORE_URL}
+          className="deeplink-cta-store"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Get Slumber on the App Store
+        </a>
+        <p className="deeplink-cta-hint">
+          If nothing happens, tap <strong>Open in Slumber</strong>.
         </p>
       </div>
-    </div>
+
+      <footer className="deeplink-footer">
+        <Link to="/home">About Slumber</Link>
+        <span aria-hidden>·</span>
+        <Link to="/privacy">Privacy</Link>
+      </footer>
+    </main>
+  );
+}
+
+export function DeepLinkNotFound({ message }: { message: string }) {
+  return (
+    <main className="deeplink-page">
+      <header className="deeplink-brand">
+        <img className="deeplink-app-icon" src={`${base}moon.png`} alt="" width={64} height={64} />
+        <span className="deeplink-app-name">Slumber</span>
+      </header>
+      <section className="deeplink-preview">
+        <div className="deeplink-preview-icon" aria-hidden>🔗</div>
+        <p className="deeplink-preview-kind">Link</p>
+        <h1 className="deeplink-preview-title">Link not found</h1>
+        <p className="deeplink-preview-subtitle">{message}</p>
+      </section>
+      <div className="deeplink-cta">
+        <a href={APP_STORE_URL} className="deeplink-cta-primary deeplink-cta-primary--link" rel="noreferrer" target="_blank">
+          Get Slumber on the App Store
+        </a>
+      </div>
+      <footer className="deeplink-footer">
+        <Link to="/home">About Slumber</Link>
+      </footer>
+    </main>
   );
 }

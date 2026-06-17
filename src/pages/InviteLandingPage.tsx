@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import DeepLinkLanding from '../components/DeepLinkLanding';
+import { useLocation } from 'react-router-dom';
+import DeepLinkLanding, { DeepLinkNotFound } from '../components/DeepLinkLanding';
 import { parseInviteLinkPath } from '../lib/deepLinks';
 import { supabase } from '../lib/supabase';
 
@@ -31,7 +31,7 @@ type ClubPreview = {
 function formatGoal(minutes?: number): string {
   if (!minutes) return '';
   const hours = Math.round((minutes / 60) * 10) / 10;
-  return `${hours}h goal`;
+  return `${hours}h sleep goal`;
 }
 
 export default function InviteLandingPage() {
@@ -129,16 +129,7 @@ export default function InviteLandingPage() {
 
   if (!target) {
     return (
-      <div className="content-wrap deeplink-page">
-        <div className="deeplink-card">
-          <p className="eyebrow">Slumber</p>
-          <h1>Link not found</h1>
-          <p className="lead">This URL doesn&apos;t match a friend, challenge, or club invite.</p>
-          <p className="deeplink-hint">
-            <Link to="/home">Learn about Slumber</Link>
-          </p>
-        </div>
-      </div>
+      <DeepLinkNotFound message="This URL doesn't match a friend, challenge, or club invite." />
     );
   }
 
@@ -146,9 +137,10 @@ export default function InviteLandingPage() {
     const username = friendPreview?.username ? `@${friendPreview.username}` : 'a friend';
     return (
       <DeepLinkLanding
-        title="You're invited to Slumber"
-        subtitle={loading ? undefined : `Join ${username} on Slumber`}
-        detail="Log sleep with friends, race in challenges, and compare stats."
+        intent="friend-invite"
+        title={loading ? 'Friend invite' : `Join ${username}`}
+        subtitle={loading ? undefined : 'Add them on Slumber and share sleep with friends.'}
+        meta={loading ? undefined : 'Sleep tracking · challenges · stats'}
         schemePath={target.schemePath}
         loading={loading}
         error={error}
@@ -163,9 +155,12 @@ export default function InviteLandingPage() {
 
     return (
       <DeepLinkLanding
+        intent="challenge-join"
         title={loading ? 'Join challenge' : title}
-        subtitle={loading ? undefined : `Hosted by ${host} · ${formatGoal(challengePreview?.goalMinutes)}`}
-        detail={loading ? undefined : `${racers} racer${racers === 1 ? '' : 's'} joined`}
+        subtitle={loading ? undefined : `Hosted by ${host}`}
+        meta={loading
+          ? undefined
+          : `${formatGoal(challengePreview?.goalMinutes)} · ${racers} racer${racers === 1 ? '' : 's'}`}
         schemePath={target.schemePath}
         loading={loading}
         error={error}
@@ -173,16 +168,16 @@ export default function InviteLandingPage() {
     );
   }
 
-  const displayName = clubPreview?.emoji
-    ? `${clubPreview.emoji} ${clubPreview.name}`
-    : clubPreview?.name ?? 'Sleep club';
+  const clubName = clubPreview?.name?.trim() || 'Sleep club';
   const members = clubPreview?.memberCount ?? 0;
 
   return (
     <DeepLinkLanding
-      title={loading ? 'Club invite' : displayName}
+      intent="club-invite"
+      title={loading ? 'Club invite' : clubName}
       subtitle={loading ? undefined : 'Join this sleep club on Slumber'}
-      detail={loading ? undefined : `${members} member${members === 1 ? '' : 's'}`}
+      meta={loading ? undefined : `${members} member${members === 1 ? '' : 's'}`}
+      previewEmoji={clubPreview?.emoji}
       schemePath={target.schemePath}
       loading={loading}
       error={error}

@@ -28,6 +28,7 @@ import Home from './pages/Home';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import InviteLandingPage from './pages/InviteLandingPage';
+import DeepLinkLayout from './components/DeepLinkLayout';
 import { withDeepLinkAuthGate } from './components/DeepLinkAuthGate';
 
 const GatedPostDetail = withDeepLinkAuthGate(PostDetail);
@@ -45,6 +46,16 @@ function ProtectedAppShell() {
 export default function App() {
   return (
     <Routes>
+      <Route element={<DeepLinkLayout />}>
+        <Route path="invite/:token" element={<InviteLandingPage />} />
+        <Route path="challenge/join/:token" element={<InviteLandingPage />} />
+        <Route path="club/:clubId/invite/:token" element={<InviteLandingPage />} />
+        <Route path="post/:id" element={<GatedPostDetail />} />
+        <Route path="profile/:userId" element={<GatedProfile />} />
+        <Route path="challenge/:id" element={<GatedChallengeDetail />} />
+        <Route path="challenges/:id" element={<GatedChallengeDetail />} />
+      </Route>
+
       <Route element={<SiteLayout />}>
         <Route path="admin" element={<AdminLayout />}>
           <Route index element={<AdminHomePage />} />
@@ -60,11 +71,6 @@ export default function App() {
           </Route>
         </Route>
         <Route index element={<AppEntry />} />
-        {/* Shared deep-link paths: public landing when logged out, web app when signed in */}
-        <Route path="post/:id" element={<GatedPostDetail />} />
-        <Route path="profile/:userId" element={<GatedProfile />} />
-        <Route path="challenge/:id" element={<GatedChallengeDetail />} />
-        <Route path="challenges/:id" element={<GatedChallengeDetail />} />
         <Route element={<ProtectedAppShell />}>
           <Route path="feed" element={<Feed />} />
           <Route path="stats" element={<StatsLayout />}>
@@ -84,9 +90,6 @@ export default function App() {
           <Route path="home" element={<Home />} />
           <Route path="privacy" element={<Privacy />} />
           <Route path="terms" element={<Terms />} />
-          <Route path="invite/:token" element={<InviteLandingPage />} />
-          <Route path="challenge/join/:token" element={<InviteLandingPage />} />
-          <Route path="club/:clubId/invite/:token" element={<InviteLandingPage />} />
         </Route>
       </Route>
     </Routes>

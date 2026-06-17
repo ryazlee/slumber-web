@@ -9,9 +9,9 @@ export function withDeepLinkAuthGate(AppPage: ComponentType) {
 
     if (loading) {
       return (
-        <div className="content-wrap deeplink-page">
-          <p className="app-muted">Loading…</p>
-        </div>
+        <main className="deeplink-page">
+          <p className="deeplink-loading-text">Loading…</p>
+        </main>
       );
     }
 

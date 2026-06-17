@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import DeepLinkLanding from '../components/DeepLinkLanding';
+import { useLocation } from 'react-router-dom';
+import DeepLinkLanding, { DeepLinkNotFound } from '../components/DeepLinkLanding';
 import { parseContentLinkPath } from '../lib/deepLinks';
 import { supabase } from '../lib/supabase';
 
@@ -28,7 +28,7 @@ type ChallengePreview = {
 function formatGoal(minutes?: number): string {
   if (!minutes) return '';
   const hours = Math.round((minutes / 60) * 10) / 10;
-  return `${hours}h goal`;
+  return `${hours}h sleep goal`;
 }
 
 export default function ContentLandingPage() {
@@ -119,26 +119,18 @@ export default function ContentLandingPage() {
 
   if (!target) {
     return (
-      <div className="content-wrap deeplink-page">
-        <div className="deeplink-card">
-          <p className="eyebrow">Slumber</p>
-          <h1>Link not found</h1>
-          <p className="lead">This URL doesn&apos;t match a post, profile, or challenge.</p>
-          <p className="deeplink-hint">
-            <Link to="/home">Learn about Slumber</Link>
-          </p>
-        </div>
-      </div>
+      <DeepLinkNotFound message="This URL doesn't match a post, profile, or challenge." />
     );
   }
 
   if (target.kind === 'profile') {
-    const username = profilePreview?.username ? `@${profilePreview.username}` : 'a Slumber user';
+    const username = profilePreview?.username ? `@${profilePreview.username}` : 'Slumber user';
     return (
       <DeepLinkLanding
+        intent="profile"
         title={loading ? 'Profile' : username}
-        subtitle={loading ? undefined : 'View sleep stats and posts on Slumber'}
-        detail="Open in the app to follow and compare sleep."
+        subtitle={loading ? undefined : 'View sleep stats and posts'}
+        meta={loading ? undefined : 'Follow and compare sleep in the app'}
         schemePath={target.schemePath}
         loading={loading}
         error={error}
@@ -153,9 +145,10 @@ export default function ContentLandingPage() {
 
     return (
       <DeepLinkLanding
+        intent="post"
         title={loading ? 'Sleep post' : title}
-        subtitle={loading ? undefined : `${author}${date ? ` · ${date}` : ''}`}
-        detail="Open in Slumber to see the full sleep log."
+        subtitle={loading ? undefined : author}
+        meta={loading ? undefined : (date ? `Night of ${date}` : 'Open the full sleep log in Slumber')}
         schemePath={target.schemePath}
         loading={loading}
         error={error}
@@ -169,9 +162,12 @@ export default function ContentLandingPage() {
 
   return (
     <DeepLinkLanding
+      intent="challenge"
       title={loading ? 'Challenge' : title}
-      subtitle={loading ? undefined : `Hosted by ${host} · ${formatGoal(challengePreview?.goalMinutes)}`}
-      detail={loading ? undefined : 'Open in Slumber to view standings and race progress.'}
+      subtitle={loading ? undefined : `Hosted by ${host}`}
+      meta={loading
+        ? undefined
+        : `${formatGoal(challengePreview?.goalMinutes)} · view standings in the app`}
       schemePath={target.schemePath}
       loading={loading}
       error={error}

@@ -113,6 +113,30 @@ export function buildSchemeUrl(path: string): string {
   return `slumber://${normalized}`;
 }
 
+function openWithHiddenAnchor(schemeUrl: string): void {
+  const anchor = document.createElement('a');
+  anchor.href = schemeUrl;
+  anchor.style.display = 'none';
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+}
+
+/** Best-effort handoff to the native app (Safari often blocks silent redirects). */
 export function tryOpenInApp(schemeUrl: string): void {
-  window.location.href = schemeUrl;
+  openWithHiddenAnchor(schemeUrl);
+  window.setTimeout(() => {
+    window.location.replace(schemeUrl);
+  }, 50);
+}
+
+/** Retry a few times — helps when the landing page mounts before Safari allows navigation. */
+export function scheduleAppOpen(schemeUrl: string): () => void {
+  tryOpenInApp(schemeUrl);
+  const retry1 = window.setTimeout(() => tryOpenInApp(schemeUrl), 400);
+  const retry2 = window.setTimeout(() => tryOpenInApp(schemeUrl), 1200);
+  return () => {
+    window.clearTimeout(retry1);
+    window.clearTimeout(retry2);
+  };
 }
