@@ -1,13 +1,22 @@
 import { useMemo, useState } from 'react';
 import { type GridColDef } from '@mui/x-data-grid';
 import type { CommentReportRow, PostReportRow } from '../../lib/admin';
+import { groupCommentReports, groupPostReports } from '../../lib/groupReports';
+import {
+  useAdminDeleteComment,
+  useAdminSoftDeletePost,
+  useDismissCommentReports,
+  useDismissPostReports,
+} from '../../hooks/useAdmin';
 import AdminDataGrid from './AdminDataGrid';
+import AdminReportReviewQueue from './AdminReportReviewQueue';
 import AdminSection, { AdminTableSummary } from './AdminSection';
 import AdminTabs from './AdminTabs';
 import { dateColumn } from './dateColumn';
 import { formatWhen } from './format';
 
 type Tab = 'posts' | 'comments';
+type View = 'queue' | 'table';
 
 type Props = {
   postReports: PostReportRow[];
@@ -235,16 +244,60 @@ export default function AdminReports({
   reportCounts,
 }: Props) {
   const [tab, setTab] = useState<Tab>('posts');
+  const [view, setView] = useState<View>('queue');
+  const [actingKey, setActingKey] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const dismissPostMutation = useDismissPostReports();
+  const dismissCommentMutation = useDismissCommentReports();
+  const removePostMutation = useAdminSoftDeletePost();
+  const removeCommentMutation = useAdminDeleteComment();
+
+  const postGroups = useMemo(() => groupPostReports(postReports), [postReports]);
+  const commentGroups = useMemo(() => groupCommentReports(commentReports), [commentReports]);
 
   const rows = tab === 'posts' ? postReports : commentReports;
   const columns = tab === 'posts' ? postColumns : commentColumns;
   const total = tab === 'posts' ? reportCounts.posts : reportCounts.comments;
+  const groupCount = tab === 'posts' ? postGroups.length : commentGroups.length;
 
   const gridKey = useMemo(() => `${tab}-${rows.length}`, [tab, rows.length]);
 
+  const runAction = async (key: string, action: () => Promise<unknown>) => {
+    setActionError(null);
+    setActingKey(key);
+    try {
+      await action();
+    } catch (e: unknown) {
+      setActionError(e instanceof Error ? e.message : 'Action failed.');
+    } finally {
+      setActingKey(null);
+    }
+  };
+
+  const dismissPost = (postId: string) => {
+    if (!window.confirm('Dismiss all reports on this post?')) return;
+    void runAction(`post:${postId}`, () => dismissPostMutation.mutateAsync(postId));
+  };
+
+  const dismissComment = (commentId: string) => {
+    if (!window.confirm('Dismiss all reports on this comment?')) return;
+    void runAction(`comment:${commentId}`, () => dismissCommentMutation.mutateAsync(commentId));
+  };
+
+  const removePost = (postId: string) => {
+    if (!window.confirm('Remove this post and dismiss its reports? This cannot be undone.')) return;
+    void runAction(`post:${postId}`, () => removePostMutation.mutateAsync(postId));
+  };
+
+  const removeComment = (commentId: string) => {
+    if (!window.confirm('Delete this comment and dismiss its reports? This cannot be undone.')) return;
+    void runAction(`comment:${commentId}`, () => removeCommentMutation.mutateAsync(commentId));
+  };
+
   return (
     <AdminSection
-      lead="Review reported posts and comments. Use the table toolbar to sort, filter, and show extra columns."
+      lead="Review reported posts and comments. The queue groups duplicate reports on the same item; dismiss after review or remove violating content."
       error={error}
     >
       <AdminTabs
@@ -257,17 +310,50 @@ export default function AdminReports({
         ]}
       />
 
+      <AdminTabs
+        ariaLabel="Reports view"
+        active={view}
+        onChange={setView}
+        className="admin-tabs-view"
+        tabs={[
+          { id: 'queue', label: 'Review queue' },
+          { id: 'table', label: 'All reports' },
+        ]}
+      />
+
       {loading && <p className="admin-muted">Loading reports…</p>}
 
-      {!loading && rows.length > 0 ? (
+      {!loading && view === 'queue' ? (
+        <>
+          {groupCount > 0 ? (
+            <AdminTableSummary>
+              {groupCount} {tab === 'posts' ? 'post' : 'comment'}
+              {groupCount === 1 ? '' : 's'} with reports ({total} total report{total === 1 ? '' : 's'})
+            </AdminTableSummary>
+          ) : null}
+          <AdminReportReviewQueue
+            tab={tab}
+            postGroups={postGroups}
+            commentGroups={commentGroups}
+            actingKey={actingKey}
+            actionError={actionError}
+            onDismissPost={dismissPost}
+            onDismissComment={dismissComment}
+            onRemovePost={removePost}
+            onRemoveComment={removeComment}
+          />
+        </>
+      ) : null}
+
+      {!loading && view === 'table' && rows.length > 0 ? (
         <AdminTableSummary>
           {total} {tab} report{total === 1 ? '' : 's'} — sort and filter in the table toolbar
         </AdminTableSummary>
       ) : null}
 
-      {!loading && rows.length === 0 ? (
+      {!loading && view === 'table' && rows.length === 0 ? (
         <p className="admin-muted admin-empty">No {tab} reports yet.</p>
-      ) : !loading ? (
+      ) : !loading && view === 'table' ? (
         <AdminDataGrid
           key={gridKey}
           persistKey={`admin-reports-${tab}`}

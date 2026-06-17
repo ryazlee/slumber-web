@@ -2670,6 +2670,163 @@ h1 {
   color: #fca5a5;
 }
 
+.admin-tabs-view {
+  margin-top: -4px;
+}
+
+.admin-report-queue {
+  display: grid;
+  gap: 16px;
+}
+
+.admin-report-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.admin-report-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.admin-report-card-eyebrow {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.admin-report-card-title {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.3;
+}
+
+.admin-report-card-sub {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.admin-report-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.admin-report-badge--muted {
+  background: var(--surface-2, rgba(255, 255, 255, 0.06));
+  color: var(--text-muted);
+}
+
+.admin-report-id {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.admin-report-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px 16px;
+  margin: 0;
+  padding: 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--border) 35%, transparent);
+}
+
+.admin-report-meta dt {
+  margin: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.admin-report-meta dd {
+  margin: 2px 0 0;
+  font-size: 13px;
+}
+
+.admin-report-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.admin-report-link:hover {
+  text-decoration: underline;
+}
+
+.admin-report-quote {
+  margin: 0;
+  padding: 12px 14px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: color-mix(in srgb, var(--border) 25%, transparent);
+  font-size: 14px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.admin-report-reasons {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.admin-report-reasons li {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.admin-report-reason-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.admin-report-reason-who {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.admin-report-reason-text {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.admin-report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.admin-report-actions .admin-action-btn--ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  min-height: 34px;
+  padding: 0 12px;
+}
+
 .admin-link-btn {
   background: none;
   border: none;

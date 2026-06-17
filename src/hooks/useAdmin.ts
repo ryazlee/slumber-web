@@ -21,6 +21,10 @@ import {
   updateUserRoles,
   upsertAdminRoleDefinition,
   upsertAdminTag,
+  dismissPostReports,
+  dismissCommentReports,
+  adminSoftDeletePost,
+  adminDeleteComment,
   checkIsModerator,
   formatAdminRpcError,
   type AnalyticsFilters,
@@ -80,6 +84,44 @@ export function useCommentReports() {
   return useQuery({
     queryKey: queryKeys.admin.commentReports,
     queryFn: fetchCommentReports,
+  });
+}
+
+function invalidateReportQueries(qc: ReturnType<typeof useQueryClient>) {
+  void qc.invalidateQueries({ queryKey: queryKeys.admin.postReports });
+  void qc.invalidateQueries({ queryKey: queryKeys.admin.commentReports });
+  void qc.invalidateQueries({ queryKey: queryKeys.admin.dashboard });
+}
+
+export function useDismissPostReports() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (postId: string) => dismissPostReports(postId),
+    onSuccess: () => invalidateReportQueries(qc),
+  });
+}
+
+export function useDismissCommentReports() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (commentId: string) => dismissCommentReports(commentId),
+    onSuccess: () => invalidateReportQueries(qc),
+  });
+}
+
+export function useAdminSoftDeletePost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (postId: string) => adminSoftDeletePost(postId),
+    onSuccess: () => invalidateReportQueries(qc),
+  });
+}
+
+export function useAdminDeleteComment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (commentId: string) => adminDeleteComment(commentId),
+    onSuccess: () => invalidateReportQueries(qc),
   });
 }
 

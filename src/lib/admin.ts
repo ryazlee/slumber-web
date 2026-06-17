@@ -274,6 +274,36 @@ export async function fetchCommentReports(): Promise<CommentReportRow[]> {
   return (data as CommentReportRow[] | null) ?? [];
 }
 
+export async function dismissPostReports(postId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('admin_dismiss_post_reports', {
+    p_post_id: postId,
+  });
+  if (error) throw error;
+  return typeof data === 'number' ? data : 0;
+}
+
+export async function dismissCommentReports(commentId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('admin_dismiss_comment_reports', {
+    p_comment_id: commentId,
+  });
+  if (error) throw error;
+  return typeof data === 'number' ? data : 0;
+}
+
+export async function adminSoftDeletePost(postId: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_soft_delete_post', {
+    p_post_id: postId,
+  });
+  if (error) throw error;
+}
+
+export async function adminDeleteComment(commentId: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_delete_comment', {
+    p_comment_id: commentId,
+  });
+  if (error) throw error;
+}
+
 export async function fetchAdminTags(filters?: AnalyticsFilters): Promise<AdminTagRow[]> {
   const rangedArgs = {
     p_start: filters?.start || null,
