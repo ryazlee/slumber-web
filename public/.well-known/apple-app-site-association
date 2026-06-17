@@ -1,0 +1,16 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [{
+      "appID": "L57M37HLYR.com.ryan.slumber",
+      "paths": [
+        "/slumber-web/post/*",
+        "/slumber-web/profile/*",
+        "/slumber-web/challenge/*",
+        "/slumber-web/challenge/join/*",
+        "/slumber-web/invite/*",
+        "/slumber-web/club/*/invite/*"
+      ]
+    }]
+  }
+}

@@ -27,6 +27,7 @@ import AdminUsersPage from './pages/admin/AdminUsersPage';
 import Home from './pages/Home';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
+import InviteLandingPage from './pages/InviteLandingPage';
 
 function ProtectedAppShell() {
   return (
@@ -76,6 +77,9 @@ export default function App() {
           <Route path="home" element={<Home />} />
           <Route path="privacy" element={<Privacy />} />
           <Route path="terms" element={<Terms />} />
+          <Route path="invite/:token" element={<InviteLandingPage />} />
+          <Route path="challenge/join/:token" element={<InviteLandingPage />} />
+          <Route path="club/:clubId/invite/:token" element={<InviteLandingPage />} />
         </Route>
       </Route>
     </Routes>
