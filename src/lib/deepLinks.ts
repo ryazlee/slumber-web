@@ -110,7 +110,8 @@ export function parseInviteLinkPath(pathname: string): InviteLinkTarget | null {
 /** Custom-scheme URL that opens the native app when installed. */
 export function buildSchemeUrl(path: string): string {
   const normalized = path.replace(/^\//, '');
-  return `slumber://${normalized}`;
+  // Triple slash keeps the route in pathname (slumber:///post/id), not the URL host.
+  return `slumber:///${normalized}`;
 }
 
 function openWithHiddenAnchor(schemeUrl: string): void {
