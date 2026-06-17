@@ -58,7 +58,6 @@ export default defineConfig(({ mode }) => {
   const base = env.VITE_BASE_PATH ?? '/slumber-web/';
   const basePath = base.replace(/\/$/, '');
   const siteUrl = (env.VITE_SITE_URL ?? DEFAULT_SITE_URL).replace(/\/$/, '');
-  const ogImageUrl = `${siteUrl}/og-card.png`;
 
   return {
     base,
@@ -68,9 +67,7 @@ export default defineConfig(({ mode }) => {
       {
         name: 'html-site-url',
         transformIndexHtml(html) {
-          return html
-            .replaceAll('__SITE_URL__', siteUrl)
-            .replaceAll('__OG_IMAGE_URL__', ogImageUrl);
+          return html.replaceAll('__SITE_URL__', siteUrl);
         },
       },
     ],

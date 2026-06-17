@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import DeepLinkLanding, { DeepLinkNotFound } from '../components/DeepLinkLanding';
-import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { parseContentLinkPath } from '../lib/deepLinks';
-import { formatMins, formatSleepDate, getOgImageUrl, getSiteUrl } from '../lib/siteUrl';
+import { formatMins, formatSleepDate } from '../lib/siteUrl';
 import { supabase } from '../lib/supabase';
 
 type ProfilePreview = {
@@ -60,71 +59,12 @@ function postMetaDescription(row: PostPreview): string {
 export default function ContentLandingPage() {
   const { pathname } = useLocation();
   const target = useMemo(() => parseContentLinkPath(pathname), [pathname]);
-  const siteUrl = getSiteUrl();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profilePreview, setProfilePreview] = useState<ProfilePreview | null>(null);
   const [postPreview, setPostPreview] = useState<PostPreview | null>(null);
   const [challengePreview, setChallengePreview] = useState<ChallengePreview | null>(null);
-
-  const documentMeta = useMemo(() => {
-    if (!target || loading || error) return null;
-
-    const ogImage = getOgImageUrl();
-
-    if (target.kind === 'profile' && profilePreview?.valid) {
-      const handle = profilePreview.username ? `@${profilePreview.username}` : 'Slumber user';
-      return {
-        title: `${handle} · Slumber`,
-        description: 'View sleep stats and posts · Follow friends on Slumber',
-        image: ogImage,
-        url: `${siteUrl}/profile/${target.userId}`,
-      };
-    }
-
-    if (target.kind === 'post' && postPreview?.valid) {
-      return {
-        title: `${postDisplayTitle(postPreview)} · Slumber`,
-        description: postMetaDescription(postPreview),
-        image: ogImage,
-        url: `${siteUrl}/post/${target.postId}`,
-      };
-    }
-
-    if (target.kind === 'challenge' && challengePreview?.valid) {
-      const challengeTitle = challengePreview.title?.trim()
-        || (challengePreview.isGroup ? 'Group sleep challenge' : 'Sleep challenge');
-      const host = challengePreview.hostUsername ? `@${challengePreview.hostUsername}` : 'a friend';
-      const goal = formatGoal(challengePreview.goalMinutes);
-      const racers = challengePreview.participantCount
-        ? `${challengePreview.participantCount} racers`
-        : null;
-      const descriptionParts = [`Hosted by ${host}`];
-      if (goal) descriptionParts.push(goal);
-      if (racers) descriptionParts.push(racers);
-      descriptionParts.push('Join in Slumber');
-
-      return {
-        title: `${challengeTitle} · Slumber`,
-        description: descriptionParts.join(' · '),
-        image: ogImage,
-        url: `${siteUrl}/challenge/${target.challengeId}`,
-      };
-    }
-
-    return null;
-  }, [
-    target,
-    loading,
-    error,
-    profilePreview,
-    postPreview,
-    challengePreview,
-    siteUrl,
-  ]);
-
-  useDocumentMeta(documentMeta);
 
   useEffect(() => {
     if (!target) {

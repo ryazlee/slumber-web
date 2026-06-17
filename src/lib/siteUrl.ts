@@ -47,15 +47,6 @@ export function normalizeWebAppPath(pathname: string): string {
   return path.replace(/\/+$/, '') || '/';
 }
 
-export function getOgImageUrl(): string {
-  return `${getSiteUrl()}/og-card.png`;
-}
-
-/** Square icon for apple-touch-icon and favicons. */
-export function getOgIconUrl(): string {
-  return `${getSiteUrl()}/og-image.png`;
-}
-
 export function formatMins(mins: number): string {
   const total = Math.max(0, Math.round(mins));
   const hours = Math.floor(total / 60);
