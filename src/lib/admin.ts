@@ -1,6 +1,5 @@
 import type { PostgrestError } from '@supabase/supabase-js';
 import {
-  ADMIN_DEFAULT_PAGE_SIZE,
   ADMIN_QUEUE_FETCH_LIMIT,
   parsePaginatedResult,
   resolvePageOffset,
@@ -8,7 +7,11 @@ import {
   type PaginatedResult,
   type PaginationFilters,
 } from './adminPagination';
+import { ADMIN_MIGRATION_HINT, isMissingAdminRpc } from './adminRpc';
 import { supabase } from './supabase';
+
+/** Pre-migration 100 cap on admin_get_recent_posts(p_limit, …). */
+const LEGACY_RECENT_POSTS_CAP = 200;
 
 export function formatAdminRpcError(label: string, err: unknown): string {
   if (err && typeof err === 'object' && 'message' in err) {
@@ -244,15 +247,60 @@ export async function fetchRecentUsers(filters: AnalyticsFilters = {}): Promise<
 export async function fetchRecentPosts(filters: AnalyticsFilters = {}): Promise<PaginatedRecentPosts> {
   const pageSize = resolvePageSize(filters.pageSize, filters.limit);
   const page = filters.page ?? 0;
-  const { data, error } = await supabase.rpc('admin_get_recent_posts', {
+  const offset = resolvePageOffset(page, pageSize);
+  const rpcArgs = {
     p_limit: pageSize,
-    p_offset: resolvePageOffset(page, pageSize),
+    p_offset: offset,
+    p_start: filters.start || null,
+    p_end: filters.end || null,
+    p_app_version: filters.appVersion || null,
+  };
+
+  let result = await supabase.rpc('admin_get_recent_posts', rpcArgs);
+
+  if (result.error && isMissingAdminRpc(result.error, 'admin_get_recent_posts')) {
+    result = await fetchRecentPostsLegacy(filters, pageSize, offset);
+  }
+
+  if (result.error) throw result.error;
+  return parseRecentPostsResult(result.data, pageSize, offset);
+}
+
+async function fetchRecentPostsLegacy(
+  filters: AnalyticsFilters,
+  pageSize: number,
+  offset: number,
+) {
+  const fetchLimit = Math.min(LEGACY_RECENT_POSTS_CAP, offset + pageSize);
+  if (offset + pageSize > LEGACY_RECENT_POSTS_CAP) {
+    throw new Error(
+      `Posts pagination is limited to ${LEGACY_RECENT_POSTS_CAP} rows until migration 100 is applied. ${ADMIN_MIGRATION_HINT}`,
+    );
+  }
+
+  return supabase.rpc('admin_get_recent_posts', {
+    p_limit: fetchLimit,
     p_start: filters.start || null,
     p_end: filters.end || null,
     p_app_version: filters.appVersion || null,
   });
-  if (error) throw error;
-  return parsePaginatedResult<RecentPostRow>(data);
+}
+
+function parseRecentPostsResult(
+  data: unknown,
+  pageSize: number,
+  offset: number,
+): PaginatedRecentPosts {
+  if (data && typeof data === 'object' && 'rows' in data) {
+    return parsePaginatedResult<RecentPostRow>(data);
+  }
+
+  const allRows = (data as RecentPostRow[] | null) ?? [];
+  const rows = allRows.slice(offset, offset + pageSize);
+  const fetchLimit = Math.min(LEGACY_RECENT_POSTS_CAP, offset + pageSize);
+  const total = allRows.length < fetchLimit ? allRows.length : fetchLimit;
+
+  return { total, rows };
 }
 
 export async function fetchDailyActivity(filters: AnalyticsFilters): Promise<DailyActivityRow[]> {
@@ -284,7 +332,9 @@ export async function fetchAppVersions(): Promise<AppVersionRow[]> {
 export async function fetchPostReports(
   filters: ReportListFilters = {},
 ): Promise<PaginatedResult<PostReportRow>> {
-  const pageSize = filters.pageSize ?? filters.limit ?? ADMIN_DEFAULT_PAGE_SIZE;
+  const pageSize = filters.pageSize === ADMIN_QUEUE_FETCH_LIMIT || filters.limit === ADMIN_QUEUE_FETCH_LIMIT
+    ? ADMIN_QUEUE_FETCH_LIMIT
+    : resolvePageSize(filters.pageSize, filters.limit);
   const page = filters.page ?? 0;
   const { data, error } = await supabase.rpc('admin_get_post_reports', {
     p_limit: pageSize,
@@ -297,7 +347,9 @@ export async function fetchPostReports(
 export async function fetchCommentReports(
   filters: ReportListFilters = {},
 ): Promise<PaginatedResult<CommentReportRow>> {
-  const pageSize = filters.pageSize ?? filters.limit ?? ADMIN_DEFAULT_PAGE_SIZE;
+  const pageSize = filters.pageSize === ADMIN_QUEUE_FETCH_LIMIT || filters.limit === ADMIN_QUEUE_FETCH_LIMIT
+    ? ADMIN_QUEUE_FETCH_LIMIT
+    : resolvePageSize(filters.pageSize, filters.limit);
   const page = filters.page ?? 0;
   const { data, error } = await supabase.rpc('admin_get_comment_reports', {
     p_limit: pageSize,

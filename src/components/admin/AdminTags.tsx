@@ -1,61 +1,45 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { FormEvent } from 'react';
 import type { AdminTagRow, TagDraft } from '../../lib/admin';
-import { useEscapeKey } from '../../hooks/useEscapeKey';
-import { useAdminGridPagination } from '../../hooks/useAdminGridPagination';
+import { getOptionalQueryErrorMessage } from '../../lib/queryError';
+import { useAdminCatalogForm } from '../../hooks/useAdminCatalogForm';
+import { usePaginatedFilters } from '../../hooks/usePaginatedFilters';
 import { useAdminTagsCatalog, useDeleteAdminTag, useUpsertAdminTag } from '../../hooks/useAdmin';
 import { ADMIN_CATALOG_FORM_ID, scrollAdminPanelIntoView } from './adminScroll';
 import { buildAdminTagColumns } from './catalogGridColumns';
 import AdminDataGrid from './AdminDataGrid';
+import AdminGridClientFilterHint from './AdminGridClientFilterHint';
 import AdminListToolbar from './AdminListToolbar';
-import AdminSection from './AdminSection';
+import AdminSection, { AdminTableSummary } from './AdminSection';
 import AdminTagForm from './AdminTagForm';
+import { pluralCount } from './format';
 
 const EMPTY_DRAFT: TagDraft = { value: '', emoji: '', label: '', sort_order: 0 };
 
 export default function AdminTags() {
-  const [draft, setDraft] = useState<TagDraft>(EMPTY_DRAFT);
-  const [editingValue, setEditingValue] = useState<string | null>(null);
-  const [formOpen, setFormOpen] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
+  const {
+    draft,
+    setDraft,
+    editingId: editingValue,
+    setEditingId: setEditingValue,
+    formError,
+    setFormError,
+    showForm,
+    closeForm,
+    openCreate,
+  } = useAdminCatalogForm(EMPTY_DRAFT);
 
-  const { paginationModel, setPaginationModel } = useAdminGridPagination();
-  const catalogFilters = useMemo(() => ({
-    page: paginationModel.page,
-    pageSize: paginationModel.pageSize,
-  }), [paginationModel.page, paginationModel.pageSize]);
+  const { paginationModel, setPaginationModel, filters: catalogFilters } = usePaginatedFilters({});
 
   const tagsQuery = useAdminTagsCatalog(catalogFilters);
   const tags = tagsQuery.data?.rows ?? [];
   const tagsTotal = tagsQuery.data?.total ?? 0;
   const loading = tagsQuery.isLoading;
-  const error = tagsQuery.error instanceof Error
-    ? tagsQuery.error.message
-    : tagsQuery.error
-      ? 'Could not load tags.'
-      : null;
+  const error = getOptionalQueryErrorMessage(tagsQuery.error, 'Could not load tags.');
 
   const upsertMutation = useUpsertAdminTag();
   const deleteMutation = useDeleteAdminTag();
   const saving = upsertMutation.isPending || deleteMutation.isPending;
-  const showForm = formOpen || editingValue !== null;
-
-  const closeForm = useCallback(() => {
-    setDraft(EMPTY_DRAFT);
-    setEditingValue(null);
-    setFormOpen(false);
-    setFormError(null);
-  }, []);
-
-  useEscapeKey(showForm, closeForm);
-
-  const openCreate = () => {
-    setDraft(EMPTY_DRAFT);
-    setEditingValue(null);
-    setFormOpen(true);
-    setFormError(null);
-    scrollAdminPanelIntoView(ADMIN_CATALOG_FORM_ID);
-  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -70,7 +54,6 @@ export default function AdminTags() {
 
   const handleEdit = (tag: AdminTagRow) => {
     setEditingValue(tag.value);
-    setFormOpen(true);
     setDraft({
       value: tag.value,
       emoji: tag.emoji,
@@ -110,15 +93,20 @@ export default function AdminTags() {
     <AdminSection className="admin-tags" error={error}>
       <AdminListToolbar
         actions={!showForm ? (
-          <button className="admin-button" type="button" onClick={openCreate}>
+          <button className="admin-button" type="button" onClick={() => {
+            openCreate();
+            scrollAdminPanelIntoView(ADMIN_CATALOG_FORM_ID);
+          }}
+          >
             + Add tag
           </button>
         ) : null}
       >
-        <p className="admin-muted admin-table-summary">
-          {tagsTotal} tag{tagsTotal === 1 ? '' : 's'}
-          {' · toolbar search and column filters apply to the current page · click Edit to change'}
-        </p>
+        <AdminTableSummary>
+          {pluralCount(tagsTotal, 'tag')}
+          {' · '}
+          <AdminGridClientFilterHint suffix=" · click Edit to change" />
+        </AdminTableSummary>
       </AdminListToolbar>
 
       {showForm ? (
@@ -143,12 +131,11 @@ export default function AdminTags() {
           loading={tagsQuery.isFetching}
           label="Tags"
           getRowClassName={(params) => (params.id === editingValue ? 'admin-grid-row-editing' : '')}
-          paginationMode="server"
-          rowCount={tagsTotal}
-          paginationModel={paginationModel}
-          onPaginationModelChange={setPaginationModel}
-          pageSizeOptions={[25, 50, 100]}
-          disableColumnSorting
+          serverPagination={{
+            rowCount: tagsTotal,
+            paginationModel,
+            onPaginationModelChange: setPaginationModel,
+          }}
           initialState={{
             sorting: { sortModel: [{ field: 'sort_order', sort: 'asc' }] },
           }}

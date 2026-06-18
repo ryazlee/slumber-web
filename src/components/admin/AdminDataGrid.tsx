@@ -1,5 +1,9 @@
-import { DataGrid, useGridApiRef, type DataGridProps, type GridInitialState } from '@mui/x-data-grid';
+import { DataGrid, useGridApiRef, type DataGridProps, type GridInitialState, type GridPaginationModel } from '@mui/x-data-grid';
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  ADMIN_DEFAULT_PAGE_SIZE,
+  ADMIN_SERVER_GRID_PAGE_SIZE_OPTIONS,
+} from '../../lib/adminPagination';
 import {
   loadAdminGridState,
   mergeGridInitialState,
@@ -7,8 +11,13 @@ import {
 } from '../../lib/adminGridState';
 import { ADMIN_SEARCH_DEBOUNCE_MS } from '../../lib/adminSearch';
 
-const DEFAULT_PAGE_SIZE = 25;
 const PERSIST_DEBOUNCE_MS = 300;
+
+export type AdminServerPagination = {
+  rowCount: number;
+  paginationModel: GridPaginationModel;
+  onPaginationModelChange: (model: GridPaginationModel) => void;
+};
 
 const GRID_CONTAINMENT_SX = {
   width: '100%',
@@ -48,13 +57,15 @@ const GRID_CONTAINMENT_SX = {
 type AdminDataGridProps = DataGridProps & {
   /** Unique key for persisting sort, filters, columns, and pagination in localStorage. */
   persistKey: string;
+  /** When set, enables server-side pagination with shared admin defaults. */
+  serverPagination?: AdminServerPagination;
 };
 
 function buildDefaultInitialState(initialState?: GridInitialState): GridInitialState {
   return {
     pagination: {
       paginationModel: {
-        pageSize: DEFAULT_PAGE_SIZE,
+        pageSize: ADMIN_DEFAULT_PAGE_SIZE,
         ...initialState?.pagination?.paginationModel,
       },
       ...initialState?.pagination,
@@ -66,7 +77,13 @@ function buildDefaultInitialState(initialState?: GridInitialState): GridInitialS
 export default function AdminDataGrid({
   persistKey,
   initialState,
-  pageSizeOptions = [10, 25, 50, 100],
+  serverPagination,
+  pageSizeOptions: pageSizeOptionsProp,
+  paginationMode: paginationModeProp,
+  rowCount: rowCountProp,
+  paginationModel: paginationModelProp,
+  onPaginationModelChange: onPaginationModelChangeProp,
+  disableColumnSorting: disableColumnSortingProp,
   sx,
   slotProps,
   ...props
@@ -114,6 +131,25 @@ export default function AdminDataGrid({
     },
   }), [slotProps]);
 
+  const pageSizeOptions = pageSizeOptionsProp
+    ?? (serverPagination ? [...ADMIN_SERVER_GRID_PAGE_SIZE_OPTIONS] : [10, 25, 50, 100]);
+
+  const paginationProps = serverPagination
+    ? {
+        paginationMode: 'server' as const,
+        rowCount: serverPagination.rowCount,
+        paginationModel: serverPagination.paginationModel,
+        onPaginationModelChange: serverPagination.onPaginationModelChange,
+        disableColumnSorting: disableColumnSortingProp ?? true,
+      }
+    : {
+        paginationMode: paginationModeProp,
+        rowCount: rowCountProp,
+        paginationModel: paginationModelProp,
+        onPaginationModelChange: onPaginationModelChangeProp,
+        disableColumnSorting: disableColumnSortingProp,
+      };
+
   return (
     <div className="admin-table-wrap admin-data-grid-wrap">
       <DataGrid
@@ -128,6 +164,7 @@ export default function AdminDataGrid({
         pageSizeOptions={pageSizeOptions}
         initialState={restoredInitialState}
         onStateChange={handleStateChange}
+        {...paginationProps}
         {...props}
       />
     </div>

@@ -2,9 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { type GridRowParams } from '@mui/x-data-grid';
 import type { RecentUserRow, UserSearchFilters } from '../../lib/admin';
+import { getOptionalQueryErrorMessage } from '../../lib/queryError';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
-import { useAdminGridPagination } from '../../hooks/useAdminGridPagination';
+import { usePaginatedFilters } from '../../hooks/usePaginatedFilters';
 import { useAdminUserSearch, useUpdateUserRoles } from '../../hooks/useAdmin';
 import { useAssignableRoles } from '../../hooks/useCatalog';
 import {
@@ -14,9 +15,11 @@ import AdminDataGrid from './AdminDataGrid';
 import AdminFilterBar, { AdminFilterField } from './AdminFilterBar';
 import AdminGridAction from './AdminGridAction';
 import AdminGridActions from './AdminGridActions';
+import AdminGridClientFilterHint from './AdminGridClientFilterHint';
 import AdminListToolbar from './AdminListToolbar';
 import AdminSection, { AdminTableSummary } from './AdminSection';
 import AdminUserRoleEditor from './AdminUserRoleEditor';
+import { pluralCount } from './format';
 import { ADMIN_CATALOG_FORM_ID, scrollAdminPanelIntoView } from './adminScroll';
 import { buildAdminUserSearchColumns } from './userGridColumns';
 
@@ -34,16 +37,7 @@ export default function AdminUsers() {
   const debouncedQuery = useDebouncedValue(query);
   const debouncedMinPosts = useDebouncedValue(minPosts);
 
-  const { paginationModel, setPaginationModel } = useAdminGridPagination([
-    debouncedQuery,
-    roleFilter,
-    premiumOnly,
-    debouncedMinPosts,
-    joinedWithin,
-    quickFilter,
-  ]);
-
-  const appliedFilters = useMemo<UserSearchFilters>(() => ({
+  const searchFilters = useMemo<Omit<UserSearchFilters, 'page' | 'pageSize'>>(() => ({
     query: debouncedQuery.trim() || undefined,
     role: roleFilter || null,
     premiumOnly: quickFilter === 'premium' ? true : premiumOnly,
@@ -51,18 +45,12 @@ export default function AdminUsers() {
     joinedWithinDays: quickFilter === 'new'
       ? 7
       : joinedWithin === '' ? null : Number(joinedWithin),
-    page: paginationModel.page,
-    pageSize: paginationModel.pageSize,
-  }), [
-    debouncedQuery,
-    roleFilter,
-    premiumOnly,
-    debouncedMinPosts,
-    joinedWithin,
-    quickFilter,
-    paginationModel.page,
-    paginationModel.pageSize,
-  ]);
+  }), [debouncedQuery, roleFilter, premiumOnly, debouncedMinPosts, joinedWithin, quickFilter]);
+
+  const { paginationModel, setPaginationModel, filters: appliedFilters } = usePaginatedFilters(
+    searchFilters,
+    [debouncedQuery, roleFilter, premiumOnly, debouncedMinPosts, joinedWithin, quickFilter],
+  );
 
   const rolesQuery = useAssignableRoles();
   const roleOptions = rolesQuery.data ?? getCachedRoleOptions();
@@ -72,11 +60,7 @@ export default function AdminUsers() {
   const users = usersQuery.data?.rows ?? [];
   const usersTotal = usersQuery.data?.total ?? 0;
   const searching = usersQuery.isFetching;
-  const error = usersQuery.error instanceof Error
-    ? usersQuery.error.message
-    : usersQuery.error
-      ? 'Could not load users.'
-      : null;
+  const error = getOptionalQueryErrorMessage(usersQuery.error, 'Could not load users.');
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<RecentUserRow | null>(null);
@@ -245,9 +229,10 @@ export default function AdminUsers() {
 
       <AdminListToolbar>
         <AdminTableSummary>
-          {usersTotal} user{usersTotal === 1 ? '' : 's'}
+          {pluralCount(usersTotal, 'user')}
           {editingId ? ' · click a row or Roles to edit' : ' · click a row to edit roles'}
-          {' · toolbar search and column filters apply to the current page'}
+          {' · '}
+          <AdminGridClientFilterHint />
           {' · '}
           <Link to="/admin/premium">Grant Premium</Link>
         </AdminTableSummary>
@@ -275,12 +260,11 @@ export default function AdminUsers() {
         label="Users"
         onRowClick={handleRowClick}
         getRowClassName={(params) => (params.id === editingId ? 'admin-grid-row-editing' : '')}
-        paginationMode="server"
-        rowCount={usersTotal}
-        paginationModel={paginationModel}
-        onPaginationModelChange={setPaginationModel}
-        pageSizeOptions={[25, 50, 100]}
-        disableColumnSorting
+        serverPagination={{
+          rowCount: usersTotal,
+          paginationModel,
+          onPaginationModelChange: setPaginationModel,
+        }}
         initialState={{
           sorting: { sortModel: [{ field: 'created_at', sort: 'desc' }] },
         }}

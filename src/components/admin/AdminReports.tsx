@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { CommentReportRow, PostReportRow } from '../../lib/admin';
+import { getOptionalQueryErrorMessage } from '../../lib/queryError';
 import { groupCommentReports, groupPostReports } from '../../lib/groupReports';
 import {
   useAdminDeleteComment,
@@ -11,8 +12,9 @@ import {
   usePostReportsPage,
   usePostReportsQueue,
 } from '../../hooks/useAdmin';
-import { useAdminGridPagination } from '../../hooks/useAdminGridPagination';
+import { usePaginatedFilters } from '../../hooks/usePaginatedFilters';
 import AdminDataGrid from './AdminDataGrid';
+import AdminGridClientFilterHint from './AdminGridClientFilterHint';
 import AdminReportReviewQueue from './AdminReportReviewQueue';
 import AdminSection, { AdminTableSummary } from './AdminSection';
 import AdminTabs from './AdminTabs';
@@ -34,12 +36,7 @@ export default function AdminReports() {
   const [actingKey, setActingKey] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const { paginationModel, setPaginationModel } = useAdminGridPagination([tab, view]);
-
-  const tableFilters = useMemo(() => ({
-    page: paginationModel.page,
-    pageSize: paginationModel.pageSize,
-  }), [paginationModel.page, paginationModel.pageSize]);
+  const { paginationModel, setPaginationModel, filters: tableFilters } = usePaginatedFilters({}, [tab, view]);
 
   const postQueueQuery = usePostReportsQueue();
   const commentQueueQuery = useCommentReportsQueue();
@@ -61,8 +58,9 @@ export default function AdminReports() {
 
   const queueError = postQueueQuery.error ?? commentQueueQuery.error;
   const tableError = postTableQuery.error ?? commentTableQuery.error;
-  const error = view === 'queue' ? queueError : tableError;
-  const errorMessage = error instanceof Error ? error.message : error ? 'Could not load reports.' : null;
+  const errorMessage = view === 'queue'
+    ? getOptionalQueryErrorMessage(queueError, 'Could not load reports.')
+    : getOptionalQueryErrorMessage(tableError, 'Could not load reports.');
 
   const reportCounts = useMemo(() => ({
     posts: postQueueQuery.data?.total ?? 0,
@@ -166,7 +164,8 @@ export default function AdminReports() {
       {!loading && view === 'table' && tableTotal > 0 ? (
         <AdminTableSummary>
           {tableTotal} {tab} report{tableTotal === 1 ? '' : 's'}
-          {' · toolbar search and column filters apply to the current page'}
+          {' · '}
+          <AdminGridClientFilterHint />
         </AdminTableSummary>
       ) : null}
 
@@ -180,12 +179,11 @@ export default function AdminReports() {
           getRowId={(row) => row.id}
           loading={loading}
           label={`${tab} reports`}
-          paginationMode="server"
-          rowCount={tableTotal}
-          paginationModel={paginationModel}
-          onPaginationModelChange={setPaginationModel}
-          pageSizeOptions={[25, 50, 100]}
-          disableColumnSorting
+          serverPagination={{
+            rowCount: tableTotal,
+            paginationModel,
+            onPaginationModelChange: setPaginationModel,
+          }}
           initialState={{
             sorting: { sortModel: [{ field: 'created_at', sort: 'desc' }] },
             columns: {

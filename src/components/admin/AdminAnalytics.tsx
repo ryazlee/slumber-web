@@ -6,23 +6,21 @@ import {
   type DailyActivityRow,
   type RecentUserRow,
 } from '../../lib/admin';
-import {
-  formatRangeLabel,
-  type DateRange,
-  type RangePreset,
-} from '../../lib/analyticsRange';
+import { formatRangeLabel } from '../../lib/analyticsRange';
+import { ADMIN_GRID_CLIENT_FILTER_HINT } from '../../lib/adminCopy';
 import { Link } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext';
 import { useAdminAnalyticsBundle, useAdminRecentUsers, useAppVersions } from '../../hooks/useAdmin';
-import { useAdminGridPagination } from '../../hooks/useAdminGridPagination';
+import { usePaginatedFilters } from '../../hooks/usePaginatedFilters';
+import type { AdminAnalyticsScreenProps } from './adminAnalyticsTypes';
 import AdminActivityChart from './AdminActivityChart';
 import AdminAnalyticsFilters from './AdminAnalyticsFilters';
 import AdminDataGrid from './AdminDataGrid';
+import AdminMetricCard from './AdminMetricCard';
 import AdminSection, { AdminTableSummary } from './AdminSection';
 import AdminSubsection from './AdminSubsection';
 import AdminTabs from './AdminTabs';
 import { buildRecentSignupColumns } from './userGridColumns';
-import { formatNumber } from './format';
 
 type AnalyticsTab = 'overview' | 'users' | 'social' | 'tags';
 
@@ -33,24 +31,7 @@ const TABS: { id: AnalyticsTab; label: string }[] = [
   { id: 'tags', label: 'Tags' },
 ];
 
-type Props = {
-  range: DateRange;
-  preset: RangePreset;
-  appVersion: string;
-  onPresetChange: (preset: RangePreset) => void;
-  onRangeChange: (range: DateRange) => void;
-  onAppVersionChange: (version: string) => void;
-};
-
-function MetricCard({ label, value, sub }: { label: string; value: number; sub?: string }) {
-  return (
-    <div className="admin-metric-card">
-      <p className="admin-metric-label">{label}</p>
-      <p className="admin-metric-value">{formatNumber(value)}</p>
-      {sub ? <p className="admin-metric-sub">{sub}</p> : null}
-    </div>
-  );
-}
+type Props = AdminAnalyticsScreenProps;
 
 function FilterSummary({
   rangeLabel,
@@ -192,28 +173,28 @@ function OverviewPanel({
         <Link to="/admin/posts">Posts</Link>.
       </p>
       <div className="admin-metric-grid admin-metric-grid--dense">
-        <MetricCard label="Signups" value={metrics.signups} sub={`Joined ${rangeLabel}`} />
-        <MetricCard
+        <AdminMetricCard label="Signups" value={metrics.signups} sub={`Joined ${rangeLabel}`} />
+        <AdminMetricCard
           label="Active posters"
           value={metrics.active_users}
           sub={`${postsPerActive} posts per active user`}
         />
-        <MetricCard label="Sleep posts" value={metrics.posts} sub={rangeLabel} />
-        <MetricCard label="Comments" value={metrics.comments} sub={rangeLabel} />
-        <MetricCard label="Kudos" value={metrics.kudos} sub={rangeLabel} />
-        <MetricCard
+        <AdminMetricCard label="Sleep posts" value={metrics.posts} sub={rangeLabel} />
+        <AdminMetricCard label="Comments" value={metrics.comments} sub={rangeLabel} />
+        <AdminMetricCard label="Kudos" value={metrics.kudos} sub={rangeLabel} />
+        <AdminMetricCard
           label="New friendships"
           value={metrics.friendships_accepted}
           sub="Accepted in range"
         />
         {appliedVersion ? (
-          <MetricCard
+          <AdminMetricCard
             label="Users on version"
             value={metrics.version_user_count ?? 0}
             sub={`Last reported v${appliedVersion}`}
           />
         ) : (
-          <MetricCard
+          <AdminMetricCard
             label="Version reporting"
             value={metrics.users_with_version_reported}
             sub="Users with a reported app version"
@@ -239,17 +220,10 @@ function UsersPanel({
   versionLabel: string;
   showVersion: boolean;
 }) {
-  const { paginationModel, setPaginationModel } = useAdminGridPagination([
-    filters.start,
-    filters.end,
-    filters.appVersion,
-  ]);
-
-  const userFilters = useMemo<AnalyticsFilters>(() => ({
-    ...filters,
-    page: paginationModel.page,
-    pageSize: paginationModel.pageSize,
-  }), [filters, paginationModel.page, paginationModel.pageSize]);
+  const { paginationModel, setPaginationModel, filters: userFilters } = usePaginatedFilters(
+    filters,
+    [filters.start, filters.end, filters.appVersion],
+  );
 
   const usersQuery = useAdminRecentUsers(userFilters);
   const users = usersQuery.data?.rows ?? [];
@@ -259,8 +233,8 @@ function UsersPanel({
     <div className="admin-analytics-panel">
       <FilterSummary rangeLabel={rangeLabel} versionLabel={versionLabel} metrics={metrics} />
       <div className="admin-metric-grid admin-metric-grid--dense">
-        <MetricCard label="Signups" value={metrics.signups} sub={`Joined ${rangeLabel}`} />
-        <MetricCard label="Active posters" value={metrics.active_users} sub="Posted at least once in range" />
+        <AdminMetricCard label="Signups" value={metrics.signups} sub={`Joined ${rangeLabel}`} />
+        <AdminMetricCard label="Active posters" value={metrics.active_users} sub="Posted at least once in range" />
       </div>
 
       {activity.length > 0 && (
@@ -273,7 +247,7 @@ function UsersPanel({
       <AdminSubsection
         title="Signups in range"
         meta={metrics.signups > usersTotal ? `${usersTotal} matching filters` : undefined}
-        footer="Toolbar search and column filters apply to the current page only."
+        footer={ADMIN_GRID_CLIENT_FILTER_HINT}
       >
         {usersTotal === 0 ? (
           <p className="admin-muted">No signups match your filters.</p>
@@ -307,9 +281,9 @@ function SocialPanel({
     <div className="admin-analytics-panel">
       <FilterSummary rangeLabel={rangeLabel} versionLabel={versionLabel} metrics={metrics} />
       <div className="admin-metric-grid admin-metric-grid--dense">
-        <MetricCard label="Comments" value={metrics.comments} sub={rangeLabel} />
-        <MetricCard label="Kudos" value={metrics.kudos} sub={rangeLabel} />
-        <MetricCard
+        <AdminMetricCard label="Comments" value={metrics.comments} sub={rangeLabel} />
+        <AdminMetricCard label="Kudos" value={metrics.kudos} sub={rangeLabel} />
+        <AdminMetricCard
           label="New friendships"
           value={metrics.friendships_accepted}
           sub="Accepted in range"
@@ -392,12 +366,11 @@ function RecentSignupsGrid({
       getRowId={(row) => row.id}
       label="Signups in range"
       loading={loading}
-      paginationMode="server"
-      rowCount={usersTotal}
-      paginationModel={paginationModel}
-      onPaginationModelChange={onPaginationModelChange}
-      pageSizeOptions={[25, 50, 100]}
-      disableColumnSorting
+      serverPagination={{
+        rowCount: usersTotal,
+        paginationModel,
+        onPaginationModelChange,
+      }}
       initialState={{
         sorting: { sortModel: [{ field: 'created_at', sort: 'desc' }] },
         columns: {

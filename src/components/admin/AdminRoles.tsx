@@ -1,15 +1,18 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { FormEvent } from 'react';
 import type { AdminRoleDefinitionRow, RoleDefinitionDraft } from '../../lib/admin';
-import { useEscapeKey } from '../../hooks/useEscapeKey';
-import { useAdminGridPagination } from '../../hooks/useAdminGridPagination';
+import { getOptionalQueryErrorMessage } from '../../lib/queryError';
+import { useAdminCatalogForm } from '../../hooks/useAdminCatalogForm';
+import { usePaginatedFilters } from '../../hooks/usePaginatedFilters';
 import { useAdminRoleDefinitions, useDeleteAdminRole, useUpsertAdminRole } from '../../hooks/useAdmin';
 import { ADMIN_CATALOG_FORM_ID, scrollAdminPanelIntoView } from './adminScroll';
 import { buildAdminRoleColumns } from './catalogGridColumns';
 import AdminDataGrid from './AdminDataGrid';
+import AdminGridClientFilterHint from './AdminGridClientFilterHint';
 import AdminListToolbar from './AdminListToolbar';
 import AdminRoleDefinitionForm from './AdminRoleDefinitionForm';
-import AdminSection from './AdminSection';
+import AdminSection, { AdminTableSummary } from './AdminSection';
+import { pluralCount } from './format';
 
 const EMPTY_DRAFT: RoleDefinitionDraft = {
   key: '',
@@ -23,48 +26,29 @@ const EMPTY_DRAFT: RoleDefinitionDraft = {
 };
 
 export default function AdminRoles() {
-  const [draft, setDraft] = useState<RoleDefinitionDraft>(EMPTY_DRAFT);
-  const [editingKey, setEditingKey] = useState<string | null>(null);
-  const [formOpen, setFormOpen] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
+  const {
+    draft,
+    setDraft,
+    editingId: editingKey,
+    setEditingId: setEditingKey,
+    formError,
+    setFormError,
+    showForm,
+    closeForm,
+    openCreate,
+  } = useAdminCatalogForm(EMPTY_DRAFT);
 
-  const { paginationModel, setPaginationModel } = useAdminGridPagination();
-  const catalogFilters = useMemo(() => ({
-    page: paginationModel.page,
-    pageSize: paginationModel.pageSize,
-  }), [paginationModel.page, paginationModel.pageSize]);
+  const { paginationModel, setPaginationModel, filters: catalogFilters } = usePaginatedFilters({});
 
   const rolesQuery = useAdminRoleDefinitions(catalogFilters);
   const roles = rolesQuery.data?.rows ?? [];
   const rolesTotal = rolesQuery.data?.total ?? 0;
   const loading = rolesQuery.isLoading;
-  const error = rolesQuery.error instanceof Error
-    ? rolesQuery.error.message
-    : rolesQuery.error
-      ? 'Could not load roles.'
-      : null;
+  const error = getOptionalQueryErrorMessage(rolesQuery.error, 'Could not load roles.');
 
   const upsertMutation = useUpsertAdminRole();
   const deleteMutation = useDeleteAdminRole();
   const saving = upsertMutation.isPending || deleteMutation.isPending;
-  const showForm = formOpen || editingKey !== null;
-
-  const closeForm = useCallback(() => {
-    setDraft(EMPTY_DRAFT);
-    setEditingKey(null);
-    setFormOpen(false);
-    setFormError(null);
-  }, []);
-
-  useEscapeKey(showForm, closeForm);
-
-  const openCreate = () => {
-    setDraft(EMPTY_DRAFT);
-    setEditingKey(null);
-    setFormOpen(true);
-    setFormError(null);
-    scrollAdminPanelIntoView(ADMIN_CATALOG_FORM_ID);
-  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -79,7 +63,6 @@ export default function AdminRoles() {
 
   const handleEdit = (role: AdminRoleDefinitionRow) => {
     setEditingKey(role.key);
-    setFormOpen(true);
     setDraft({
       key: role.key,
       label: role.label,
@@ -124,18 +107,23 @@ export default function AdminRoles() {
   );
 
   return (
-    <AdminSection className="admin-tags" error={error}>
+    <AdminSection className="admin-roles" error={error}>
       <AdminListToolbar
         actions={!showForm ? (
-          <button className="admin-button" type="button" onClick={openCreate}>
+          <button className="admin-button" type="button" onClick={() => {
+            openCreate();
+            scrollAdminPanelIntoView(ADMIN_CATALOG_FORM_ID);
+          }}
+          >
             + Add role
           </button>
         ) : null}
       >
-        <p className="admin-muted admin-table-summary">
-          {rolesTotal} role{rolesTotal === 1 ? '' : 's'}
-          {' · toolbar search and column filters apply to the current page · click Edit to change'}
-        </p>
+        <AdminTableSummary>
+          {pluralCount(rolesTotal, 'role')}
+          {' · '}
+          <AdminGridClientFilterHint suffix=" · click Edit to change" />
+        </AdminTableSummary>
       </AdminListToolbar>
 
       {showForm ? (
@@ -160,12 +148,11 @@ export default function AdminRoles() {
           loading={rolesQuery.isFetching}
           label="Roles"
           getRowClassName={(params) => (params.id === editingKey ? 'admin-grid-row-editing' : '')}
-          paginationMode="server"
-          rowCount={rolesTotal}
-          paginationModel={paginationModel}
-          onPaginationModelChange={setPaginationModel}
-          pageSizeOptions={[25, 50, 100]}
-          disableColumnSorting
+          serverPagination={{
+            rowCount: rolesTotal,
+            paginationModel,
+            onPaginationModelChange: setPaginationModel,
+          }}
           initialState={{
             sorting: { sortModel: [{ field: 'sort_order', sort: 'asc' }] },
           }}

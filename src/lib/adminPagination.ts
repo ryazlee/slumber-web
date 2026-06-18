@@ -5,6 +5,7 @@ export type PaginatedResult<T> = {
 
 export const ADMIN_DEFAULT_PAGE_SIZE = 25;
 export const ADMIN_MAX_PAGE_SIZE = 100;
+export const ADMIN_SERVER_GRID_PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
 /** Max rows loaded for moderation queue grouping (not the paginated table view). */
 export const ADMIN_QUEUE_FETCH_LIMIT = 5000;
 

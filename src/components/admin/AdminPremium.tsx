@@ -1,20 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { GridColDef } from '@mui/x-data-grid';
 import type { PremiumUserRow, RecentUserRow } from '../../lib/admin';
-import { useDebouncedValue } from '../../hooks/useDebouncedValue';
-import { useAdminGridPagination } from '../../hooks/useAdminGridPagination';
+import { getOptionalQueryErrorMessage } from '../../lib/queryError';
+import { useAdminDebouncedSearch } from '../../hooks/useAdminDebouncedSearch';
+import { useAdminUserPickerSearch } from '../../hooks/useAdminUserPickerSearch';
+import { usePaginatedFilters } from '../../hooks/usePaginatedFilters';
 import {
-  useAdminUserSearch,
   usePremiumMetrics,
   usePremiumUsers,
   useUpdateUserPremium,
 } from '../../hooks/useAdmin';
 import AdminDataGrid from './AdminDataGrid';
 import AdminFilterBar, { AdminFilterField } from './AdminFilterBar';
+import AdminGridClientFilterHint from './AdminGridClientFilterHint';
 import AdminListToolbar from './AdminListToolbar';
+import AdminMetricCard from './AdminMetricCard';
 import AdminPanel from './AdminPanel';
 import AdminSection, { AdminTableSummary } from './AdminSection';
-import { formatNumber } from './format';
+import { AdminUserPickerList, AdminUserPickerSearchField } from './AdminUserPicker';
+import { pluralCount, formatNumber } from './format';
 import { buildPremiumSubscriberColumns } from './premiumGridColumns';
 import {
   defaultPremiumUntilDate,
@@ -24,44 +28,45 @@ import {
   toDateInputValue,
 } from './premiumDateUtils';
 
-function MetricCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
-  return (
-    <div className="admin-metric-card">
-      <p className="admin-metric-label">{label}</p>
-      <p className="admin-metric-value">{typeof value === 'number' ? formatNumber(value) : value}</p>
-      {sub ? <p className="admin-metric-sub">{sub}</p> : null}
-    </div>
-  );
-}
-
 export default function AdminPremium() {
-  const [grantQuery, setGrantQuery] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [draftUntil, setDraftUntil] = useState(defaultPremiumUntilDate());
-  const [subscriberQuery, setSubscriberQuery] = useState('');
   const [grantError, setGrantError] = useState<string | null>(null);
   const [rowError, setRowError] = useState<string | null>(null);
   const [actingUserId, setActingUserId] = useState<string | null>(null);
   const grantSearchRef = useRef<HTMLInputElement>(null);
 
-  const debouncedGrantQuery = useDebouncedValue(grantQuery);
-  const debouncedSubscriberQuery = useDebouncedValue(subscriberQuery);
-  const grantSearchActive = debouncedGrantQuery.trim().length >= 2;
+  const {
+    query: grantQuery,
+    setQuery: setGrantQuery,
+    trimmedDebounced: debouncedGrantQuery,
+    isActive: grantSearchActive,
+  } = useAdminDebouncedSearch();
 
-  const { paginationModel, setPaginationModel } = useAdminGridPagination([debouncedSubscriberQuery]);
+  const {
+    query: subscriberQuery,
+    setQuery: setSubscriberQuery,
+    trimmedDebounced: debouncedSubscriberQuery,
+  } = useAdminDebouncedSearch();
 
-  const subscriberFilters = useMemo(() => ({
-    query: debouncedSubscriberQuery.trim() || undefined,
-    page: paginationModel.page,
-    pageSize: paginationModel.pageSize,
-  }), [debouncedSubscriberQuery, paginationModel.page, paginationModel.pageSize]);
+  const subscriberBase = useMemo(() => ({
+    query: debouncedSubscriberQuery || undefined,
+  }), [debouncedSubscriberQuery]);
+
+  const { paginationModel, setPaginationModel, filters: subscriberFilters } = usePaginatedFilters(
+    subscriberBase,
+    [debouncedSubscriberQuery],
+  );
 
   const metricsQuery = usePremiumMetrics();
   const subscribersQuery = usePremiumUsers(subscriberFilters);
-  const grantUsersQuery = useAdminUserSearch(
-    grantSearchActive
-      ? { query: debouncedGrantQuery.trim(), limit: 25 }
-      : { limit: 15, premiumOnly: false },
+  const grantUsersQuery = useAdminUserPickerSearch(
+    debouncedGrantQuery,
+    grantSearchActive,
+    {
+      activeLimit: 25,
+      inactive: { limit: 15, premiumOnly: false },
+    },
   );
   const updatePremiumMutation = useUpdateUserPremium();
 
@@ -72,11 +77,8 @@ export default function AdminPremium() {
   const selectedUser = grantUsers.find((u) => u.id === selectedUserId) ?? null;
 
   const loading = metricsQuery.isLoading;
-  const error = metricsQuery.error instanceof Error
-    ? metricsQuery.error.message
-    : subscribersQuery.error instanceof Error
-      ? subscribersQuery.error.message
-      : null;
+  const error = getOptionalQueryErrorMessage(metricsQuery.error, 'Could not load Premium metrics.')
+    ?? getOptionalQueryErrorMessage(subscribersQuery.error, 'Could not load subscribers.');
 
   useEffect(() => {
     grantSearchRef.current?.focus();
@@ -164,28 +166,28 @@ export default function AdminPremium() {
         <p className="admin-muted">Loading Premium metrics…</p>
       ) : metrics ? (
         <div className="admin-metric-grid">
-          <MetricCard
+          <AdminMetricCard
             label="Active Premium"
             value={metrics.premium_active}
             sub={`${metrics.premium_pct}% of ${formatNumber(metrics.total_users)} users`}
           />
-          <MetricCard
+          <AdminMetricCard
             label="Expiring ≤7 days"
             value={metrics.expiring_7d}
             sub="Timed grants"
           />
-          <MetricCard
+          <AdminMetricCard
             label="Expiring ≤30 days"
             value={metrics.expiring_30d}
             sub="Timed grants"
           />
-          <MetricCard
+          <AdminMetricCard
             label="Lifetime / comp"
             value={metrics.lifetime_grants}
             sub="No practical expiry"
           />
           {metrics.past_due > 0 ? (
-            <MetricCard
+            <AdminMetricCard
               label="Past due"
               value={metrics.past_due}
               sub="Flagged premium but expired"
@@ -200,57 +202,32 @@ export default function AdminPremium() {
           title="Grant Premium"
           description="Search any user, pick a duration, and save. Comps set is_premium — separate from the cosmetic premium avatar role."
         >
-          <AdminFilterBar nested>
-            <AdminFilterField label="Search user" htmlFor="premium-grant-search" className="admin-filter-field--wide">
-              <input
-                ref={grantSearchRef}
-                id="premium-grant-search"
-                className="admin-input"
-                type="search"
-                placeholder="Username or email…"
-                value={grantQuery}
-                onChange={(e) => {
-                  setGrantQuery(e.target.value);
-                  setSelectedUserId(null);
-                  setGrantError(null);
-                }}
-                autoComplete="off"
-              />
-            </AdminFilterField>
-          </AdminFilterBar>
+          <AdminUserPickerSearchField
+            inputId="premium-grant-search"
+            label="Search user"
+            placeholder="Username or email…"
+            query={grantQuery}
+            searchRef={grantSearchRef}
+            onQueryChange={(value) => {
+              setGrantQuery(value);
+              setSelectedUserId(null);
+              setGrantError(null);
+            }}
+          />
 
-          {grantUsersQuery.isFetching && grantUsers.length === 0 ? (
-            <p className="admin-empty-inline">Looking up users…</p>
-          ) : null}
-
-          <ul className="admin-picker-list" aria-label="Users">
-            {grantUsers.map((user) => {
-              const active = selectedUserId === user.id;
-              return (
-                <li key={user.id}>
-                  <button
-                    type="button"
-                    className={`admin-picker-item${active ? ' admin-picker-item--selected' : ''}`}
-                    aria-pressed={active}
-                    onClick={() => {
-                      setSelectedUserId(user.id);
-                      setGrantError(null);
-                    }}
-                  >
-                    <span className="admin-picker-item-main">
-                      <span className="admin-picker-item-title">@{user.username}</span>
-                      {user.email ? <span className="admin-picker-item-sub">{user.email}</span> : null}
-                    </span>
-                    {user.is_premium ? (
-                      <span className="admin-picker-item-meta">Premium</span>
-                    ) : (
-                      <span className="admin-picker-item-meta">Free</span>
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          <AdminUserPickerList
+            users={grantUsers}
+            selectedUserId={selectedUserId}
+            onSelectUser={(userId) => {
+              setSelectedUserId(userId);
+              setGrantError(null);
+            }}
+            searching={grantUsersQuery.isFetching}
+            isActive={grantSearchActive}
+            trimmedQuery={debouncedGrantQuery}
+            metaMode="premium"
+            formatJoined={() => ''}
+          />
 
           {selectedUser ? (
             <div className="admin-premium-grant-form">
@@ -350,8 +327,9 @@ function AdminSubscribersSection({
     <>
       <AdminListToolbar>
         <AdminTableSummary>
-          {subscribersTotal} active Premium subscriber{subscribersTotal === 1 ? '' : 's'}
-          {' · toolbar search and column filters apply to the current page'}
+          {pluralCount(subscribersTotal, 'active Premium subscriber', 'active Premium subscribers')}
+          {' · '}
+          <AdminGridClientFilterHint />
         </AdminTableSummary>
       </AdminListToolbar>
 
@@ -378,12 +356,11 @@ function AdminSubscribersSection({
         getRowId={(row) => row.id}
         loading={loading}
         label="Premium subscribers"
-        paginationMode="server"
-        rowCount={subscribersTotal}
-        paginationModel={paginationModel}
-        onPaginationModelChange={onPaginationModelChange}
-        pageSizeOptions={[25, 50, 100]}
-        disableColumnSorting
+        serverPagination={{
+          rowCount: subscribersTotal,
+          paginationModel,
+          onPaginationModelChange,
+        }}
         initialState={{
           sorting: { sortModel: [{ field: 'premium_until', sort: 'asc' }] },
         }}

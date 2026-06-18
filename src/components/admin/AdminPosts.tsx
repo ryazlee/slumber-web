@@ -1,14 +1,11 @@
 import { Link } from 'react-router-dom';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { GridColDef, GridPaginationModel } from '@mui/x-data-grid';
+import { useCallback, useMemo, useState } from 'react';
+import type { GridColDef } from '@mui/x-data-grid';
 import type { RecentPostRow } from '../../lib/admin';
-import {
-  formatRangeLabel,
-  type DateRange,
-  type RangePreset,
-} from '../../lib/analyticsRange';
+import { formatRangeLabel } from '../../lib/analyticsRange';
 import { formatRecalcStagesError } from '../../lib/adminPostStages';
 import { useAdmin } from '../../context/AdminContext';
+import { usePaginatedFilters } from '../../hooks/usePaginatedFilters';
 import {
   useAdminPostsPageData,
   useAppVersions,
@@ -17,34 +14,19 @@ import {
   useRepairDoubledSleepPostStages,
   useRepairDoubledSleepPostStagesBulk,
 } from '../../hooks/useAdmin';
+import type { AdminAnalyticsScreenProps } from './adminAnalyticsTypes';
 import AdminActivityChart from './AdminActivityChart';
 import AdminAnalyticsFilters from './AdminAnalyticsFilters';
 import AdminDataGrid from './AdminDataGrid';
 import AdminGridActions from './AdminGridActions';
+import AdminGridClientFilterHint from './AdminGridClientFilterHint';
 import AdminListToolbar from './AdminListToolbar';
+import AdminMetricCard from './AdminMetricCard';
 import AdminSection, { AdminTableSummary } from './AdminSection';
 import { gridActionsColumn } from './gridColumnHelpers';
 import { buildRecentPostColumns } from './postGridColumns';
-import { formatNumber } from './format';
 
-type Props = {
-  range: DateRange;
-  preset: RangePreset;
-  appVersion: string;
-  onPresetChange: (preset: RangePreset) => void;
-  onRangeChange: (range: DateRange) => void;
-  onAppVersionChange: (version: string) => void;
-};
-
-function MetricCard({ label, value, sub }: { label: string; value: number; sub?: string }) {
-  return (
-    <div className="admin-metric-card">
-      <p className="admin-metric-label">{label}</p>
-      <p className="admin-metric-value">{formatNumber(value)}</p>
-      {sub ? <p className="admin-metric-sub">{sub}</p> : null}
-    </div>
-  );
-}
+type Props = AdminAnalyticsScreenProps;
 
 export default function AdminPosts({
   range,
@@ -57,22 +39,17 @@ export default function AdminPosts({
   const { refreshing } = useAdmin();
   const [stageMessage, setStageMessage] = useState<string | null>(null);
   const [actingPostId, setActingPostId] = useState<string | null>(null);
-  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
-    page: 0,
-    pageSize: 25,
-  });
 
-  const filters = useMemo(() => ({
+  const baseFilters = useMemo(() => ({
     start: range.start,
     end: range.end,
     appVersion: appVersion || null,
-    page: paginationModel.page,
-    pageSize: paginationModel.pageSize,
-  }), [range.start, range.end, appVersion, paginationModel.page, paginationModel.pageSize]);
+  }), [range.start, range.end, appVersion]);
 
-  useEffect(() => {
-    setPaginationModel((current) => (current.page === 0 ? current : { ...current, page: 0 }));
-  }, [range.start, range.end, appVersion]);
+  const { paginationModel, setPaginationModel, filters } = usePaginatedFilters(
+    baseFilters,
+    [range.start, range.end, appVersion],
+  );
 
   const versionsQuery = useAppVersions();
   const versions = versionsQuery.data ?? [];
@@ -242,18 +219,18 @@ export default function AdminPosts({
           </AdminTableSummary>
 
           <div className="admin-metric-grid admin-metric-grid--dense">
-            <MetricCard label="Sleep posts" value={metrics.posts} sub={rangeLabel} />
-            <MetricCard
+            <AdminMetricCard label="Sleep posts" value={metrics.posts} sub={rangeLabel} />
+            <AdminMetricCard
               label="Wearable logs"
               value={metrics.wearable_posts}
               sub={`${metrics.manual_posts} manual`}
             />
-            <MetricCard
+            <AdminMetricCard
               label="Dream logs"
               value={metrics.posts_with_dreams}
               sub="With dream text"
             />
-            <MetricCard
+            <AdminMetricCard
               label="Active posters"
               value={metrics.active_users}
               sub={`${postsPerActive} posts per poster`}
@@ -291,7 +268,7 @@ export default function AdminPosts({
             )}
           >
             <AdminTableSummary>
-              Toolbar search and column filters apply to the current page only.
+              <AdminGridClientFilterHint fullSentence />
               {' · '}
               <Link to="/admin/reports">Post reports</Link>
             </AdminTableSummary>
@@ -320,12 +297,11 @@ export default function AdminPosts({
               loading={fetching || refreshing}
               label="Sleep posts"
               ignoreDiacritics
-              paginationMode="server"
-              rowCount={postsTotal}
-              paginationModel={paginationModel}
-              onPaginationModelChange={setPaginationModel}
-              pageSizeOptions={[25, 50, 100]}
-              disableColumnSorting
+              serverPagination={{
+                rowCount: postsTotal,
+                paginationModel,
+                onPaginationModelChange: setPaginationModel,
+              }}
               initialState={{
                 columns: {
                   columnVisibilityModel: {
