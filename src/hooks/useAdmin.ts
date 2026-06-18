@@ -27,6 +27,8 @@ import {
   adminDeleteComment,
   checkIsModerator,
   formatAdminRpcError,
+  recalculateSleepPostStages,
+  recalculateSleepPostStagesBulk,
   type AnalyticsFilters,
   type TagDraft,
   type RoleDefinitionDraft,
@@ -356,5 +358,25 @@ export function useSendAdminNotification() {
   return useMutation({
     mutationFn: ({ userId, message }: { userId: string; message: string }) =>
       sendAdminNotification(userId, message),
+  });
+}
+
+export function useRecalculateSleepPostStages() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (postId: string) => recalculateSleepPostStages(postId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'analytics', 'posts'] });
+    },
+  });
+}
+
+export function useRecalculateSleepPostStagesBulk() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (postIds: string[]) => recalculateSleepPostStagesBulk(postIds),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'analytics', 'posts'] });
+    },
   });
 }

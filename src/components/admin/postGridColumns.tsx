@@ -1,7 +1,17 @@
 import type { GridColDef } from '@mui/x-data-grid';
 import type { RecentPostRow } from '../../lib/admin';
+import AdminGridAction from './AdminGridAction';
 import { dateColumn } from './dateColumn';
-import { idCodeColumn } from './gridColumnHelpers';
+import { gridActionsColumn, idCodeColumn } from './gridColumnHelpers';
+
+export type RecentPostColumnOptions = {
+  actingPostId?: string | null;
+  onRecalculate?: (post: RecentPostRow) => void;
+};
+
+function isWearablePost(row: RecentPostRow): boolean {
+  return !row.is_custom && row.source_device !== 'Custom';
+}
 
 function formatSleepMinutes(minutes: number): string {
   const h = Math.floor(minutes / 60);
@@ -33,8 +43,12 @@ function postSourceLabel(row: RecentPostRow): string {
   return row.source_device?.trim() || 'Wearable';
 }
 
-export function buildRecentPostColumns(): GridColDef<RecentPostRow>[] {
-  return [
+export function buildRecentPostColumns(
+  options: RecentPostColumnOptions = {},
+): GridColDef<RecentPostRow>[] {
+  const { actingPostId = null, onRecalculate } = options;
+
+  const cols: GridColDef<RecentPostRow>[] = [
     idCodeColumn<RecentPostRow>('id', 'Post ID'),
     idCodeColumn<RecentPostRow>('user_id', 'User ID'),
     {
@@ -120,4 +134,30 @@ export function buildRecentPostColumns(): GridColDef<RecentPostRow>[] {
     },
     dateColumn('created_at', 'Logged'),
   ];
+
+  if (onRecalculate) {
+    cols.push({
+      field: 'recalculate_stages',
+      headerName: 'Stages',
+      ...gridActionsColumn,
+      width: 120,
+      renderCell: ({ row }) => {
+        const wearable = isWearablePost(row);
+        const busy = actingPostId === row.id;
+        return (
+          <AdminGridAction
+            disabled={!wearable || busy}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRecalculate(row);
+            }}
+          >
+            {busy ? '…' : 'Recalc'}
+          </AdminGridAction>
+        );
+      },
+    });
+  }
+
+  return cols;
 }

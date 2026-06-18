@@ -311,6 +311,53 @@ export async function adminDeleteComment(commentId: string): Promise<void> {
   if (error) throw error;
 }
 
+export type RecalculateSleepStagesResult = {
+  ok: boolean;
+  post_id: string;
+  changed: boolean;
+  before: {
+    core_minutes: number | null;
+    deep_minutes: number | null;
+    rem_minutes: number | null;
+    awake_minutes: number | null;
+    asleep_minutes: number;
+    awake_events: number | null;
+  };
+  after: {
+    core_minutes: number;
+    deep_minutes: number;
+    rem_minutes: number;
+    awake_minutes: number;
+    asleep_minutes: number;
+    awake_events: number;
+  };
+};
+
+export type RecalculateSleepStagesBulkResult = {
+  fixed: number;
+  skipped: number;
+  errors: { post_id: string; error: string }[];
+};
+
+export async function recalculateSleepPostStages(postId: string): Promise<RecalculateSleepStagesResult> {
+  const { data, error } = await supabase.rpc('admin_recalculate_sleep_post_stages', {
+    p_post_id: postId,
+  });
+  if (error) throw error;
+  return data as RecalculateSleepStagesResult;
+}
+
+export async function recalculateSleepPostStagesBulk(
+  postIds: string[],
+): Promise<RecalculateSleepStagesBulkResult> {
+  const { data, error } = await supabase.rpc('admin_recalculate_sleep_post_stages_bulk', {
+    p_post_ids: postIds,
+  });
+  if (error) throw error;
+  const row = data as RecalculateSleepStagesBulkResult | null;
+  return row ?? { fixed: 0, skipped: 0, errors: [] };
+}
+
 export async function fetchAdminTags(filters?: AnalyticsFilters): Promise<AdminTagRow[]> {
   const rangedArgs = {
     p_start: filters?.start || null,
