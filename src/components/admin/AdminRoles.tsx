@@ -1,12 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { type GridColDef } from '@mui/x-data-grid';
 import type { AdminRoleDefinitionRow, RoleDefinitionDraft } from '../../lib/admin';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useDeleteAdminRole, useUpsertAdminRole } from '../../hooks/useAdmin';
 import { ADMIN_CATALOG_FORM_ID, scrollAdminPanelIntoView } from './adminScroll';
+import { buildAdminRoleColumns } from './catalogGridColumns';
 import AdminDataGrid from './AdminDataGrid';
-import AdminGridAction from './AdminGridAction';
 import AdminListToolbar from './AdminListToolbar';
 import AdminRoleDefinitionForm from './AdminRoleDefinitionForm';
 import AdminSection from './AdminSection';
@@ -27,16 +26,6 @@ const EMPTY_DRAFT: RoleDefinitionDraft = {
   assignable: true,
   sort_order: 0,
 };
-
-function RoleSwatch({ color }: { color: string }) {
-  return (
-    <span
-      className="admin-role-swatch"
-      style={{ backgroundColor: color }}
-      aria-hidden="true"
-    />
-  );
-}
 
 export default function AdminRoles({ roles, loading, error }: Props) {
   const [draft, setDraft] = useState<RoleDefinitionDraft>(EMPTY_DRAFT);
@@ -112,101 +101,15 @@ export default function AdminRoles({ roles, loading, error }: Props) {
     }
   };
 
-  const columns: GridColDef<AdminRoleDefinitionRow>[] = [
-    {
-      field: 'label',
-      headerName: 'Role',
-      flex: 1,
-      minWidth: 140,
-      valueGetter: (_value, row) => `${row.badge} ${row.label}`,
-    },
-    {
-      field: 'key',
-      headerName: 'Key',
-      flex: 1,
-      minWidth: 120,
-      renderCell: ({ value }) => <code className="admin-code">{value}</code>,
-    },
-    {
-      field: 'ring_color',
-      headerName: 'Colors',
-      flex: 1.2,
-      minWidth: 180,
-      sortable: false,
-      valueGetter: (_value, row) => `${row.ring_color} ${row.badge_color ?? ''}`,
-      renderCell: ({ row }) => (
-        <div className="admin-td-stack">
-          <span className="admin-color-row">
-            <RoleSwatch color={row.ring_color} /> Ring {row.ring_color}
-          </span>
-          {row.badge_color ? (
-            <span className="admin-color-row">
-              <RoleSwatch color={row.badge_color} /> Badge {row.badge_color}
-            </span>
-          ) : null}
-        </div>
-      ),
-    },
-    {
-      field: 'is_admin',
-      headerName: 'Flags',
-      flex: 1,
-      minWidth: 120,
-      valueGetter: (_value, row) => `${row.is_admin ? 'Admin' : ''} ${row.assignable ? 'Assignable' : 'Hidden'}`,
-      renderCell: ({ row }) => (
-        <span>
-          {row.is_admin ? 'Admin' : '—'}
-          {row.assignable ? ' · Assignable' : ' · Hidden'}
-        </span>
-      ),
-    },
-    {
-      field: 'sort_order',
-      headerName: 'Order',
-      type: 'number',
-      width: 90,
-    },
-    {
-      field: 'usage_count',
-      headerName: 'Users',
-      type: 'number',
-      width: 90,
-    },
-    {
-      field: 'actions',
-      headerName: '',
-      sortable: false,
-      filterable: false,
-      disableColumnMenu: true,
-      width: 140,
-      renderCell: ({ row }) => (
-        <div className="admin-grid-actions">
-          <AdminGridAction
-            active={editingKey === row.key}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (editingKey === row.key) {
-                closeForm();
-              } else {
-                handleEdit(row);
-              }
-            }}
-          >
-            {editingKey === row.key ? 'Editing' : 'Edit'}
-          </AdminGridAction>
-          <AdminGridAction
-            danger
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDelete(row);
-            }}
-          >
-            Delete
-          </AdminGridAction>
-        </div>
-      ),
-    },
-  ];
+  const columns = useMemo(
+    () => buildAdminRoleColumns({
+      editingKey,
+      onEdit: handleEdit,
+      onCloseEdit: closeForm,
+      onDelete: (role) => { void handleDelete(role); },
+    }),
+    [editingKey, closeForm, handleEdit, handleDelete],
+  );
 
   return (
     <AdminSection className="admin-tags" error={error}>
@@ -218,7 +121,7 @@ export default function AdminRoles({ roles, loading, error }: Props) {
         ) : null}
       >
         <p className="admin-muted admin-table-summary">
-          {roles.length} role{roles.length === 1 ? '' : 's'} — click Edit on a row to change it
+          {roles.length} role{roles.length === 1 ? '' : 's'} — sort/filter via toolbar · click Edit to change
         </p>
       </AdminListToolbar>
 

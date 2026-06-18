@@ -151,6 +151,11 @@ export type RecentPostRow = {
   title: string;
   asleep_minutes: number;
   in_bed_minutes: number;
+  core_minutes: number | null;
+  deep_minutes: number | null;
+  rem_minutes: number | null;
+  awake_minutes: number | null;
+  efficiency: number | null;
   is_custom: boolean;
   source_device: string | null;
   has_dream: boolean;

@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { type GridColDef } from '@mui/x-data-grid';
 import {
   type AdminTagRow,
   type AnalyticsMetrics,
@@ -20,7 +19,8 @@ import AdminDataGrid from './AdminDataGrid';
 import AdminSection, { AdminTableSummary } from './AdminSection';
 import AdminSubsection from './AdminSubsection';
 import AdminTabs from './AdminTabs';
-import { dateColumn } from './dateColumn';
+import { buildRecentPostColumns } from './postGridColumns';
+import { buildRecentSignupColumns } from './userGridColumns';
 import { formatNumber } from './format';
 
 type AnalyticsTab = 'overview' | 'users' | 'posts' | 'social' | 'tags';
@@ -42,13 +42,6 @@ type Props = {
   onAppVersionChange: (version: string) => void;
   listLimit: number;
 };
-
-function formatSleepMinutes(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h === 0) return `${m}m`;
-  return m ? `${h}h ${m}m` : `${h}h`;
-}
 
 function MetricCard({ label, value, sub }: { label: string; value: number; sub?: string }) {
   return (
@@ -283,7 +276,11 @@ function UsersPanel({
       <AdminSubsection
         title="Signups in range"
         meta={metrics.signups > users.length ? `showing ${users.length} of ${metrics.signups}` : undefined}
-        footer={metrics.signups > listLimit ? `Limited to the ${listLimit} most recent signups.` : undefined}
+        footer={(
+          metrics.signups > listLimit
+            ? `Limited to the ${listLimit} most recent signups. `
+            : ''
+        ) + 'Sort and filter any column via headers or the toolbar (filters, columns, search).'}
       >
         {users.length === 0 ? (
           <p className="admin-muted">No signups match your filters.</p>
@@ -343,7 +340,11 @@ function PostsPanel({
       <AdminSubsection
         title="Posts in range"
         meta={metrics.posts > posts.length ? `showing ${posts.length} of ${metrics.posts}` : undefined}
-        footer={metrics.posts > listLimit ? `Limited to the ${listLimit} most recent posts.` : undefined}
+        footer={(
+          metrics.posts > listLimit
+            ? `Limited to the ${listLimit} most recent posts. `
+            : ''
+        ) + 'Sort and filter any column via headers or the toolbar (filters, columns, search).'}
       >
         {posts.length === 0 ? (
           <p className="admin-muted">No posts match your filters.</p>
@@ -427,84 +428,8 @@ function TagsPanel({
   );
 }
 
-function idCell(value: unknown) {
-  return value ? <code className="admin-code">{String(value)}</code> : '—';
-}
-
 function RecentPostsGrid({ posts }: { posts: RecentPostRow[] }) {
-  const columns = useMemo<GridColDef<RecentPostRow>[]>(() => [
-    {
-      field: 'id',
-      headerName: 'Post ID',
-      flex: 1.2,
-      minWidth: 200,
-      renderCell: ({ value }) => idCell(value),
-    },
-    {
-      field: 'user_id',
-      headerName: 'User ID',
-      flex: 1.2,
-      minWidth: 200,
-      renderCell: ({ value }) => idCell(value),
-    },
-    {
-      field: 'username',
-      headerName: 'User',
-      flex: 1,
-      minWidth: 120,
-      valueFormatter: (value) => `@${value}`,
-    },
-    {
-      field: 'sleep_date',
-      headerName: 'Sleep date',
-      width: 120,
-      valueFormatter: (value) => {
-        if (!value) return '—';
-        const d = new Date(`${value}T12:00:00`);
-        return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-      },
-    },
-    {
-      field: 'title',
-      headerName: 'Title',
-      flex: 1.5,
-      minWidth: 160,
-    },
-    {
-      field: 'asleep_minutes',
-      headerName: 'Asleep',
-      width: 90,
-      valueFormatter: (value) => formatSleepMinutes(Number(value)),
-    },
-    {
-      field: 'source',
-      headerName: 'Source',
-      width: 110,
-      valueGetter: (_value, row) => {
-        if (row.is_custom) return 'Manual';
-        return row.source_device?.trim() || 'Wearable';
-      },
-    },
-    {
-      field: 'has_dream',
-      headerName: 'Dream',
-      width: 72,
-      valueFormatter: (value) => (value ? 'Yes' : '—'),
-    },
-    {
-      field: 'kudos_count',
-      headerName: 'Kudos',
-      type: 'number',
-      width: 80,
-    },
-    {
-      field: 'comments_count',
-      headerName: 'Comments',
-      type: 'number',
-      width: 100,
-    },
-    dateColumn('created_at', 'Logged'),
-  ], []);
+  const columns = useMemo(() => buildRecentPostColumns(), []);
 
   return (
     <AdminDataGrid
@@ -513,67 +438,27 @@ function RecentPostsGrid({ posts }: { posts: RecentPostRow[] }) {
       columns={columns}
       getRowId={(row) => row.id}
       label="Posts in range"
+      ignoreDiacritics
       initialState={{
         sorting: { sortModel: [{ field: 'created_at', sort: 'desc' }] },
+        columns: {
+          columnVisibilityModel: {
+            id: false,
+            user_id: false,
+            source_device: false,
+            is_custom: false,
+          },
+        },
       }}
     />
   );
 }
 
 function RecentSignupsGrid({ users, showVersion }: { users: RecentUserRow[]; showVersion: boolean }) {
-  const columns = useMemo<GridColDef<RecentUserRow>[]>(() => {
-    const cols: GridColDef<RecentUserRow>[] = [
-      {
-        field: 'id',
-        headerName: 'User ID',
-        flex: 1.2,
-        minWidth: 200,
-        renderCell: ({ value }) => idCell(value),
-      },
-      {
-        field: 'username',
-        headerName: 'Username',
-        flex: 1,
-        minWidth: 140,
-        valueFormatter: (value) => `@${value}`,
-      },
-      {
-        field: 'email',
-        headerName: 'Email',
-        flex: 1.5,
-        minWidth: 200,
-        valueFormatter: (value) => (value ? String(value) : '—'),
-      },
-      dateColumn('created_at', 'Joined'),
-      {
-        field: 'posts_count',
-        headerName: 'Posts',
-        type: 'number',
-        width: 100,
-      },
-      {
-        field: 'user_roles',
-        headerName: 'Roles',
-        flex: 1.5,
-        minWidth: 160,
-        valueGetter: (_value, row) => {
-          const parts: string[] = [];
-          if (row.is_premium && !row.user_roles?.includes('premium')) parts.push('premium');
-          if (row.user_roles?.length) parts.push(...row.user_roles);
-          return parts.length ? parts.join(', ') : '—';
-        },
-      },
-    ];
-    if (showVersion) {
-      cols.push({
-        field: 'last_app_version',
-        headerName: 'App version',
-        width: 120,
-        valueFormatter: (value) => (value ? `v${value}` : '—'),
-      });
-    }
-    return cols;
-  }, [showVersion]);
+  const columns = useMemo(
+    () => buildRecentSignupColumns({ showVersion }),
+    [showVersion],
+  );
 
   return (
     <AdminDataGrid
@@ -584,6 +469,11 @@ function RecentSignupsGrid({ users, showVersion }: { users: RecentUserRow[]; sho
       label="Signups in range"
       initialState={{
         sorting: { sortModel: [{ field: 'created_at', sort: 'desc' }] },
+        columns: {
+          columnVisibilityModel: {
+            id: false,
+          },
+        },
       }}
     />
   );

@@ -115,6 +115,7 @@ export default function AdminDataGrid({
         disableRowSelectionOnClick
         autoHeight
         showToolbar
+        ignoreDiacritics
         filterDebounceMs={ADMIN_SEARCH_DEBOUNCE_MS}
         sx={mergedSx}
         slotProps={mergedSlotProps}

@@ -33,16 +33,33 @@ import {
   type PremiumUserFilters,
   type UserSearchFilters,
 } from '../lib/admin';
+import {
+  ADMIN_CATALOG_STALE_MS,
+  ADMIN_QUERY_GC_MS,
+  ADMIN_QUERY_STALE_MS,
+  ADMIN_REPORTS_STALE_MS,
+} from '../lib/adminQueryCache';
 import { clearTagsCache } from '../lib/tags';
 import { clearRoleDefinitionCache } from '../lib/userRoles';
 import { queryKeys } from './queryKeys';
+
+const adminQueryOptions = {
+  staleTime: ADMIN_QUERY_STALE_MS,
+  gcTime: ADMIN_QUERY_GC_MS,
+} as const;
+
+const catalogQueryOptions = {
+  staleTime: ADMIN_CATALOG_STALE_MS,
+  gcTime: ADMIN_QUERY_GC_MS,
+} as const;
 
 export function useIsModerator(enabled: boolean) {
   return useQuery({
     queryKey: queryKeys.isModerator,
     queryFn: checkIsModerator,
     enabled,
-    staleTime: 5 * 60_000,
+    staleTime: ADMIN_CATALOG_STALE_MS,
+    gcTime: ADMIN_QUERY_GC_MS,
   });
 }
 
@@ -51,6 +68,7 @@ export function useDashboardMetrics(enabled: boolean) {
     queryKey: queryKeys.admin.dashboard,
     queryFn: fetchDashboardMetrics,
     enabled,
+    ...adminQueryOptions,
   });
 }
 
@@ -77,6 +95,8 @@ export function usePostReports() {
   return useQuery({
     queryKey: queryKeys.admin.postReports,
     queryFn: fetchPostReports,
+    staleTime: ADMIN_REPORTS_STALE_MS,
+    gcTime: ADMIN_QUERY_GC_MS,
   });
 }
 
@@ -84,6 +104,8 @@ export function useCommentReports() {
   return useQuery({
     queryKey: queryKeys.admin.commentReports,
     queryFn: fetchCommentReports,
+    staleTime: ADMIN_REPORTS_STALE_MS,
+    gcTime: ADMIN_QUERY_GC_MS,
   });
 }
 
@@ -129,6 +151,7 @@ export function useAdminTagsCatalog() {
   return useQuery({
     queryKey: queryKeys.admin.tags,
     queryFn: () => fetchAdminTags(),
+    ...catalogQueryOptions,
   });
 }
 
@@ -136,6 +159,7 @@ export function useAdminRoleDefinitions() {
   return useQuery({
     queryKey: queryKeys.admin.roleDefinitions,
     queryFn: fetchAdminRoleDefinitions,
+    ...catalogQueryOptions,
   });
 }
 
@@ -143,6 +167,7 @@ export function useAppVersions() {
   return useQuery({
     queryKey: queryKeys.admin.appVersions,
     queryFn: fetchAppVersions,
+    ...catalogQueryOptions,
   });
 }
 
@@ -151,6 +176,8 @@ export function useAdminUserSearch(filters: UserSearchFilters, enabled = true) {
     queryKey: queryKeys.admin.userSearch(filters),
     queryFn: () => searchAdminUsers(filters),
     enabled,
+    placeholderData: (previous) => previous,
+    ...adminQueryOptions,
   });
 }
 
@@ -160,22 +187,27 @@ export function useAdminAnalyticsBundle(filters: AnalyticsFilters) {
       {
         queryKey: queryKeys.admin.analyticsMetrics(filters),
         queryFn: () => fetchAnalyticsMetrics(filters),
+        ...adminQueryOptions,
       },
       {
         queryKey: queryKeys.admin.analyticsActivity(filters),
         queryFn: () => fetchDailyActivity(filters),
+        ...adminQueryOptions,
       },
       {
         queryKey: queryKeys.admin.analyticsUsers(filters),
         queryFn: () => fetchRecentUsers(filters),
+        ...adminQueryOptions,
       },
       {
         queryKey: queryKeys.admin.analyticsPosts(filters),
         queryFn: () => fetchRecentPosts(filters),
+        ...adminQueryOptions,
       },
       {
         queryKey: queryKeys.admin.analyticsTags(filters),
         queryFn: () => fetchAdminTags(filters),
+        ...catalogQueryOptions,
       },
     ],
   });
@@ -306,6 +338,7 @@ export function usePremiumMetrics() {
   return useQuery({
     queryKey: queryKeys.admin.premiumMetrics,
     queryFn: fetchPremiumMetrics,
+    ...adminQueryOptions,
   });
 }
 
@@ -314,6 +347,8 @@ export function usePremiumUsers(filters: PremiumUserFilters, enabled = true) {
     queryKey: queryKeys.admin.premiumUsers(filters),
     queryFn: () => fetchPremiumUsers(filters),
     enabled,
+    placeholderData: (previous) => previous,
+    ...adminQueryOptions,
   });
 }
 

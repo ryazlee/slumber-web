@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { type GridColDef } from '@mui/x-data-grid';
+import type { GridColDef } from '@mui/x-data-grid';
 import type { PremiumUserRow, RecentUserRow } from '../../lib/admin';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import {
@@ -10,16 +10,14 @@ import {
 } from '../../hooks/useAdmin';
 import AdminDataGrid from './AdminDataGrid';
 import AdminFilterBar, { AdminFilterField } from './AdminFilterBar';
-import AdminGridAction from './AdminGridAction';
 import AdminListToolbar from './AdminListToolbar';
 import AdminPanel from './AdminPanel';
 import AdminSection, { AdminTableSummary } from './AdminSection';
 import { formatNumber } from './format';
+import { buildPremiumSubscriberColumns } from './premiumGridColumns';
 import {
   defaultPremiumUntilDate,
   extendPremiumUntilOneYear,
-  formatDaysRemaining,
-  formatPremiumExpiry,
   lifetimePremiumUntilDate,
   premiumUntilFromDateInput,
   toDateInputValue,
@@ -122,96 +120,31 @@ export default function AdminPremium() {
     });
   };
 
-  const columns = useMemo<GridColDef<PremiumUserRow>[]>(() => [
-    {
-      field: 'username',
-      headerName: 'User',
-      flex: 1,
-      minWidth: 130,
-      valueFormatter: (value) => `@${value}`,
-    },
-    {
-      field: 'email',
-      headerName: 'Email',
-      flex: 1.4,
-      minWidth: 180,
-      valueFormatter: (value) => (value ? String(value) : '—'),
-    },
-    {
-      field: 'grant_type',
-      headerName: 'Type',
-      width: 100,
-      valueFormatter: (value) => {
-        if (value === 'lifetime') return 'Lifetime';
-        if (value === 'past_due') return 'Past due';
-        return 'Timed';
-      },
-    },
-    {
-      field: 'premium_until',
-      headerName: 'Expires',
-      flex: 1,
-      minWidth: 120,
-      valueFormatter: (value) => formatPremiumExpiry(value ? String(value) : null),
-    },
-    {
-      field: 'days_remaining',
-      headerName: 'Remaining',
-      width: 110,
-      valueGetter: (_value, row) => formatDaysRemaining(row.days_remaining, row.grant_type),
-    },
-    {
-      field: 'actions',
-      headerName: '',
-      sortable: false,
-      filterable: false,
-      disableColumnMenu: true,
-      width: 200,
-      renderCell: ({ row }) => {
-        const busy = actingUserId === row.id && updatePremiumMutation.isPending;
-        return (
-          <span style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-            <AdminGridAction
-              disabled={busy}
-              onClick={(e) => {
-                e.stopPropagation();
-                void grantPremium(
-                  { id: row.id, username: row.username, is_premium: true, premium_until: row.premium_until },
-                  { until: extendPremiumUntilOneYear(row.premium_until) },
-                );
-              }}
-            >
-              +1 yr
-            </AdminGridAction>
-            <AdminGridAction
-              disabled={busy}
-              onClick={(e) => {
-                e.stopPropagation();
-                void grantPremium(
-                  { id: row.id, username: row.username, is_premium: true, premium_until: row.premium_until },
-                  { until: premiumUntilFromDateInput(lifetimePremiumUntilDate()) },
-                );
-              }}
-            >
-              Lifetime
-            </AdminGridAction>
-            <AdminGridAction
-              disabled={busy}
-              onClick={(e) => {
-                e.stopPropagation();
-                void grantPremium(
-                  { id: row.id, username: row.username, is_premium: true, premium_until: row.premium_until },
-                  { revoke: true, until: '' },
-                );
-              }}
-            >
-              Revoke
-            </AdminGridAction>
-          </span>
+  const columns = useMemo(
+    () => buildPremiumSubscriberColumns({
+      actingUserId,
+      saving: updatePremiumMutation.isPending,
+      onExtendYear: (row) => {
+        void grantPremium(
+          { id: row.id, username: row.username, is_premium: true, premium_until: row.premium_until },
+          { until: extendPremiumUntilOneYear(row.premium_until) },
         );
       },
-    },
-  ], [actingUserId, grantPremium, updatePremiumMutation.isPending]);
+      onLifetime: (row) => {
+        void grantPremium(
+          { id: row.id, username: row.username, is_premium: true, premium_until: row.premium_until },
+          { until: premiumUntilFromDateInput(lifetimePremiumUntilDate()) },
+        );
+      },
+      onRevoke: (row) => {
+        void grantPremium(
+          { id: row.id, username: row.username, is_premium: true, premium_until: row.premium_until },
+          { revoke: true, until: '' },
+        );
+      },
+    }),
+    [actingUserId, grantPremium, updatePremiumMutation.isPending],
+  );
 
   const savingGrant = updatePremiumMutation.isPending && actingUserId === selectedUserId;
 
@@ -399,6 +332,7 @@ function AdminSubscribersSection({
       <AdminListToolbar>
         <AdminTableSummary>
           {subscribers.length} active Premium subscriber{subscribers.length === 1 ? '' : 's'}
+          {' · sort/filter via column headers or toolbar'}
         </AdminTableSummary>
       </AdminListToolbar>
 

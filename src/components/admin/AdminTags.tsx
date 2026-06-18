@@ -1,12 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { type GridColDef } from '@mui/x-data-grid';
 import type { AdminTagRow, TagDraft } from '../../lib/admin';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useDeleteAdminTag, useUpsertAdminTag } from '../../hooks/useAdmin';
 import { ADMIN_CATALOG_FORM_ID, scrollAdminPanelIntoView } from './adminScroll';
+import { buildAdminTagColumns } from './catalogGridColumns';
 import AdminDataGrid from './AdminDataGrid';
-import AdminGridAction from './AdminGridAction';
 import AdminListToolbar from './AdminListToolbar';
 import AdminSection from './AdminSection';
 import AdminTagForm from './AdminTagForm';
@@ -85,68 +84,15 @@ export default function AdminTags({ tags, loading, error }: Props) {
     }
   };
 
-  const columns: GridColDef<AdminTagRow>[] = [
-    {
-      field: 'label',
-      headerName: 'Tag',
-      flex: 1.2,
-      minWidth: 140,
-      valueGetter: (_value, row) => `${row.emoji} ${row.label}`,
-    },
-    {
-      field: 'value',
-      headerName: 'Value',
-      flex: 1,
-      minWidth: 140,
-      renderCell: ({ value }) => <code className="admin-code">{value}</code>,
-    },
-    {
-      field: 'sort_order',
-      headerName: 'Order',
-      type: 'number',
-      width: 90,
-    },
-    {
-      field: 'usage_count',
-      headerName: 'Used',
-      type: 'number',
-      width: 90,
-    },
-    {
-      field: 'actions',
-      headerName: '',
-      sortable: false,
-      filterable: false,
-      disableColumnMenu: true,
-      width: 140,
-      renderCell: ({ row }) => (
-        <div className="admin-grid-actions">
-          <AdminGridAction
-            active={editingValue === row.value}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (editingValue === row.value) {
-                closeForm();
-              } else {
-                handleEdit(row);
-              }
-            }}
-          >
-            {editingValue === row.value ? 'Editing' : 'Edit'}
-          </AdminGridAction>
-          <AdminGridAction
-            danger
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDelete(row);
-            }}
-          >
-            Delete
-          </AdminGridAction>
-        </div>
-      ),
-    },
-  ];
+  const columns = useMemo(
+    () => buildAdminTagColumns({
+      editingValue,
+      onEdit: handleEdit,
+      onCloseEdit: closeForm,
+      onDelete: (tag) => { void handleDelete(tag); },
+    }),
+    [editingValue, closeForm],
+  );
 
   return (
     <AdminSection className="admin-tags" error={error}>
@@ -158,7 +104,7 @@ export default function AdminTags({ tags, loading, error }: Props) {
         ) : null}
       >
         <p className="admin-muted admin-table-summary">
-          {tags.length} tag{tags.length === 1 ? '' : 's'} — click Edit on a row to change it
+          {tags.length} tag{tags.length === 1 ? '' : 's'} — sort/filter via toolbar · click Edit to change
         </p>
       </AdminListToolbar>
 

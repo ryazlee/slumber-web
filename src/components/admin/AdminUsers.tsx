@@ -1,16 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { type GridColDef, type GridRowParams } from '@mui/x-data-grid';
+import { type GridRowParams } from '@mui/x-data-grid';
 import type { RecentUserRow, UserSearchFilters } from '../../lib/admin';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useAdminUserSearch, useUpdateUserRoles } from '../../hooks/useAdmin';
 import { useAssignableRoles } from '../../hooks/useCatalog';
 import {
-  formatRoleList,
   getCachedRoleOptions,
 } from '../../lib/userRoles';
-import AdminCopyButton from './AdminCopyButton';
 import AdminDataGrid from './AdminDataGrid';
 import AdminFilterBar, { AdminFilterField } from './AdminFilterBar';
 import AdminGridAction from './AdminGridAction';
@@ -18,7 +16,7 @@ import AdminListToolbar from './AdminListToolbar';
 import AdminSection, { AdminTableSummary } from './AdminSection';
 import AdminUserRoleEditor from './AdminUserRoleEditor';
 import { ADMIN_CATALOG_FORM_ID, scrollAdminPanelIntoView } from './adminScroll';
-import { dateColumn } from './dateColumn';
+import { buildAdminUserSearchColumns } from './userGridColumns';
 
 type QuickFilter = 'new' | 'premium' | null;
 
@@ -114,61 +112,9 @@ export default function AdminUsers() {
     setQuickFilter((current) => (current === next ? null : next));
   };
 
-  const columns = useMemo<GridColDef<RecentUserRow>[]>(() => [
-    {
-      field: 'username',
-      headerName: 'Username',
-      flex: 1,
-      minWidth: 140,
-      valueFormatter: (value) => `@${value}`,
-    },
-    {
-      field: 'email',
-      headerName: 'Email',
-      flex: 1.5,
-      minWidth: 200,
-      valueFormatter: (value) => (value ? String(value) : '—'),
-    },
-    dateColumn('created_at', 'Joined'),
-    {
-      field: 'posts_count',
-      headerName: 'Posts',
-      type: 'number',
-      width: 90,
-    },
-    {
-      field: 'user_roles',
-      headerName: 'Roles',
-      flex: 1.5,
-      minWidth: 160,
-      valueGetter: (_value, row) => formatRoleList(row.user_roles ?? null),
-    },
-    {
-      field: 'is_premium',
-      headerName: 'Premium',
-      type: 'boolean',
-      width: 100,
-    },
-    {
-      field: 'id',
-      headerName: 'User ID',
-      flex: 1.2,
-      minWidth: 220,
-      renderCell: ({ value }) => (
-        <span className="admin-id-cell">
-          <code className="admin-code">{value}</code>
-          <AdminCopyButton value={String(value)} />
-        </span>
-      ),
-    },
-    {
-      field: 'actions',
-      headerName: '',
-      sortable: false,
-      filterable: false,
-      disableColumnMenu: true,
-      width: 110,
-      renderCell: ({ row }) => (
+  const columns = useMemo(
+    () => buildAdminUserSearchColumns({
+      renderActions: ({ row }) => (
         <AdminGridAction
           active={editingId === row.id}
           onClick={(e) => {
@@ -183,8 +129,9 @@ export default function AdminUsers() {
           {editingId === row.id ? 'Editing' : 'Roles'}
         </AdminGridAction>
       ),
-    },
-  ], [startEdit, editingId, cancelEdit]);
+    }),
+    [startEdit, editingId, cancelEdit],
+  );
 
   const handleRowClick = (params: GridRowParams<RecentUserRow>) => {
     if (editingId === params.id) {
@@ -276,6 +223,7 @@ export default function AdminUsers() {
         <AdminTableSummary>
           {users.length} user{users.length === 1 ? '' : 's'}
           {editingId ? ' · click a row or Roles to edit' : ' · click a row to edit roles'}
+          {' · sort/filter via column headers or toolbar'}
           {' · '}
           <Link to="/admin/premium">Grant Premium</Link>
         </AdminTableSummary>
