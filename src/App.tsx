@@ -18,6 +18,7 @@ import StatsLayout from './pages/app/StatsLayout';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminHomePage from './pages/admin/AdminHomePage';
 import AdminAnalyticsPage from './pages/admin/AdminAnalyticsPage';
+import AdminPostsPage from './pages/admin/AdminPostsPage';
 import AdminPremiumPage from './pages/admin/AdminPremiumPage';
 import AdminNotifyPage from './pages/admin/AdminNotifyPage';
 import AdminReportsPage from './pages/admin/AdminReportsPage';
@@ -60,6 +61,7 @@ export default function App() {
         <Route path="admin" element={<AdminLayout />}>
           <Route index element={<AdminHomePage />} />
           <Route path="analytics" element={<AdminAnalyticsPage />} />
+          <Route path="posts" element={<AdminPostsPage />} />
           <Route path="reports" element={<AdminReportsPage />} />
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="premium" element={<AdminPremiumPage />} />

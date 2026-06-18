@@ -42,6 +42,7 @@ export default function AdminHomePage() {
     { to: '/admin/premium', label: 'Manage Premium', hint: 'Grants, expiry & stats' },
     { to: '/admin/users', label: 'Find a user', hint: 'Search & edit roles' },
     { to: '/admin/notify', label: 'Send notification', hint: 'Push + in-app' },
+    { to: '/admin/posts', label: 'Browse posts', hint: 'Fix stages & open posts' },
     { to: '/admin/analytics', label: 'View analytics', hint: 'Charts & tables' },
     { to: '/admin/configure/tags', label: 'Edit tags', hint: 'Composer catalog' },
   ];
@@ -76,7 +77,7 @@ export default function AdminHomePage() {
             label="Sleep posts"
             value={metrics.posts_7d}
             sub="Last 7 days"
-            to="/admin/analytics"
+            to="/admin/posts"
           />
           <QuickStat
             label="Premium users"

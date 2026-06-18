@@ -183,6 +183,58 @@ export function useAdminUserSearch(filters: UserSearchFilters, enabled = true) {
   });
 }
 
+export function useAdminRecentPosts(filters: AnalyticsFilters) {
+  return useQuery({
+    queryKey: queryKeys.admin.recentPosts(filters),
+    queryFn: () => fetchRecentPosts(filters),
+    ...adminQueryOptions,
+  });
+}
+
+export function useAdminPostsPageData(filters: AnalyticsFilters) {
+  const results = useQueries({
+    queries: [
+      {
+        queryKey: queryKeys.admin.postsPageMetrics(filters),
+        queryFn: () => fetchAnalyticsMetrics(filters),
+        ...adminQueryOptions,
+      },
+      {
+        queryKey: queryKeys.admin.postsPageActivity(filters),
+        queryFn: () => fetchDailyActivity(filters),
+        ...adminQueryOptions,
+      },
+      {
+        queryKey: queryKeys.admin.recentPosts(filters),
+        queryFn: () => fetchRecentPosts(filters),
+        ...adminQueryOptions,
+      },
+    ],
+  });
+
+  const [metricsQ, activityQ, postsQ] = results;
+  const loading = results.some((r) => r.isLoading);
+  const fetching = results.some((r) => r.isFetching);
+
+  let error: string | null = null;
+  if (metricsQ.isError) {
+    error = formatAdminRpcError('Metrics', metricsQ.error);
+  } else if (activityQ.isError) {
+    error = formatAdminRpcError('Daily activity', activityQ.error);
+  } else if (postsQ.isError) {
+    error = formatAdminRpcError('Posts', postsQ.error);
+  }
+
+  return {
+    metrics: metricsQ.data ?? null,
+    activity: activityQ.data ?? [],
+    posts: postsQ.data ?? [],
+    loading,
+    fetching,
+    error,
+  };
+}
+
 export function useAdminAnalyticsBundle(filters: AnalyticsFilters) {
   const results = useQueries({
     queries: [
@@ -202,11 +254,6 @@ export function useAdminAnalyticsBundle(filters: AnalyticsFilters) {
         ...adminQueryOptions,
       },
       {
-        queryKey: queryKeys.admin.analyticsPosts(filters),
-        queryFn: () => fetchRecentPosts(filters),
-        ...adminQueryOptions,
-      },
-      {
         queryKey: queryKeys.admin.analyticsTags(filters),
         queryFn: () => fetchAdminTags(filters),
         ...catalogQueryOptions,
@@ -214,7 +261,7 @@ export function useAdminAnalyticsBundle(filters: AnalyticsFilters) {
     ],
   });
 
-  const [metricsQ, activityQ, usersQ, postsQ, tagsQ] = results;
+  const [metricsQ, activityQ, usersQ, tagsQ] = results;
 
   const loading = results.some((r) => r.isLoading);
   const fetching = results.some((r) => r.isFetching);
@@ -228,7 +275,6 @@ export function useAdminAnalyticsBundle(filters: AnalyticsFilters) {
     error = formatAdminRpcError('Daily activity', activityQ.error);
   } else {
     if (usersQ.isError) warnings.push(formatAdminRpcError('Users', usersQ.error));
-    if (postsQ.isError) warnings.push(formatAdminRpcError('Posts', postsQ.error));
     if (tagsQ.isError) warnings.push(formatAdminRpcError('Tags', tagsQ.error));
     if (warnings.length > 0) error = warnings.join(' · ');
   }
@@ -241,7 +287,6 @@ export function useAdminAnalyticsBundle(filters: AnalyticsFilters) {
     metrics: metricsQ.data ?? null,
     activity: activityQ.data ?? [],
     users: usersQ.data ?? [],
-    posts: postsQ.data ?? [],
     tags,
     loading,
     fetching,
@@ -366,7 +411,7 @@ export function useRecalculateSleepPostStages() {
   return useMutation({
     mutationFn: (postId: string) => recalculateSleepPostStages(postId),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['admin', 'analytics', 'posts'] });
+      void qc.invalidateQueries({ queryKey: ['admin', 'posts'] });
     },
   });
 }
@@ -376,7 +421,7 @@ export function useRecalculateSleepPostStagesBulk() {
   return useMutation({
     mutationFn: (postIds: string[]) => recalculateSleepPostStagesBulk(postIds),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['admin', 'analytics', 'posts'] });
+      void qc.invalidateQueries({ queryKey: ['admin', 'posts'] });
     },
   });
 }

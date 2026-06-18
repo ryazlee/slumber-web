@@ -1,9 +1,8 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   type AdminTagRow,
   type AnalyticsMetrics,
   type DailyActivityRow,
-  type RecentPostRow,
   type RecentUserRow,
 } from '../../lib/admin';
 import {
@@ -11,29 +10,23 @@ import {
   type DateRange,
   type RangePreset,
 } from '../../lib/analyticsRange';
+import { Link } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext';
-import {
-  useAdminAnalyticsBundle,
-  useAppVersions,
-  useRecalculateSleepPostStages,
-  useRecalculateSleepPostStagesBulk,
-} from '../../hooks/useAdmin';
+import { useAdminAnalyticsBundle, useAppVersions } from '../../hooks/useAdmin';
 import AdminActivityChart from './AdminActivityChart';
 import AdminAnalyticsFilters from './AdminAnalyticsFilters';
 import AdminDataGrid from './AdminDataGrid';
 import AdminSection, { AdminTableSummary } from './AdminSection';
 import AdminSubsection from './AdminSubsection';
 import AdminTabs from './AdminTabs';
-import { buildRecentPostColumns } from './postGridColumns';
 import { buildRecentSignupColumns } from './userGridColumns';
 import { formatNumber } from './format';
 
-type AnalyticsTab = 'overview' | 'users' | 'posts' | 'social' | 'tags';
+type AnalyticsTab = 'overview' | 'users' | 'social' | 'tags';
 
 const TABS: { id: AnalyticsTab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'users', label: 'Users' },
-  { id: 'posts', label: 'Posts' },
   { id: 'social', label: 'Social' },
   { id: 'tags', label: 'Tags' },
 ];
@@ -103,7 +96,6 @@ export default function AdminAnalytics({
     metrics,
     activity,
     users,
-    posts,
     tags,
     loading,
     fetching,
@@ -164,18 +156,6 @@ export default function AdminAnalytics({
             />
           )}
 
-          {tab === 'posts' && (
-            <PostsPanel
-              metrics={metrics}
-              activity={activity}
-              posts={posts}
-              listLimit={listLimit}
-              rangeLabel={rangeLabel}
-              versionLabel={versionLabel}
-              postsPerActive={postsPerActive}
-            />
-          )}
-
           {tab === 'social' && (
             <SocialPanel
               metrics={metrics}
@@ -211,7 +191,8 @@ function OverviewPanel({
     <div className="admin-analytics-panel">
       <FilterSummary rangeLabel={rangeLabel} versionLabel={versionLabel} metrics={metrics} />
       <p className="admin-muted admin-panel-lead">
-        Headline metrics for the selected range. Open a tab above for charts and detail tables.
+        Headline metrics for the selected range. Browse and fix individual posts on{' '}
+        <Link to="/admin/posts">Posts</Link>.
       </p>
       <div className="admin-metric-grid admin-metric-grid--dense">
         <MetricCard label="Signups" value={metrics.signups} sub={`Joined ${rangeLabel}`} />
@@ -297,151 +278,6 @@ function UsersPanel({
   );
 }
 
-function formatRecalcError(err: unknown): string {
-  if (err && typeof err === 'object' && 'message' in err) {
-    const msg = String((err as { message: string }).message);
-    if (msg.includes('no_raw_samples')) return 'No raw_samples on this post.';
-    if (msg.includes('manual_post')) return 'Manual posts are skipped.';
-    if (msg.includes('post_not_found')) return 'Post not found.';
-    return msg;
-  }
-  return 'Could not recalculate sleep stages.';
-}
-
-function PostsPanel({
-  metrics,
-  activity,
-  posts,
-  listLimit,
-  rangeLabel,
-  versionLabel,
-  postsPerActive,
-}: {
-  metrics: AnalyticsMetrics;
-  activity: DailyActivityRow[];
-  posts: RecentPostRow[];
-  listLimit: number;
-  rangeLabel: string;
-  versionLabel: string;
-  postsPerActive: string;
-}) {
-  const [stageMessage, setStageMessage] = useState<string | null>(null);
-  const [actingPostId, setActingPostId] = useState<string | null>(null);
-  const recalcMutation = useRecalculateSleepPostStages();
-  const bulkMutation = useRecalculateSleepPostStagesBulk();
-
-  const wearablePosts = useMemo(
-    () => posts.filter((post) => !post.is_custom && post.source_device !== 'Custom'),
-    [posts],
-  );
-
-  const recalculatePost = useCallback(async (post: RecentPostRow) => {
-    if (!window.confirm(`Recalculate core / deep / REM for “${post.title}” from raw_samples?`)) return;
-    setStageMessage(null);
-    setActingPostId(post.id);
-    try {
-      const result = await recalcMutation.mutateAsync(post.id);
-      setStageMessage(
-        result.changed
-          ? `Updated stages for ${post.title}.`
-          : `No change for ${post.title} — values already matched raw_samples.`,
-      );
-    } catch (err: unknown) {
-      setStageMessage(formatRecalcError(err));
-    } finally {
-      setActingPostId(null);
-    }
-  }, [recalcMutation]);
-
-  const recalculateLoadedWearable = async () => {
-    const ids = wearablePosts.map((post) => post.id);
-    if (!ids.length) {
-      setStageMessage('No wearable posts loaded in this table.');
-      return;
-    }
-    if (!window.confirm(`Recalculate stages for ${ids.length} loaded wearable post(s)?`)) return;
-    setStageMessage(null);
-    try {
-      const result = await bulkMutation.mutateAsync(ids);
-      const failed = result.errors.length;
-      setStageMessage(
-        failed
-          ? `Fixed ${result.fixed}, unchanged ${result.skipped}, failed ${failed}.`
-          : `Fixed ${result.fixed} post(s)${result.skipped ? ` · ${result.skipped} already correct` : ''}.`,
-      );
-    } catch (err: unknown) {
-      setStageMessage(formatRecalcError(err));
-    }
-  };
-
-  const recalculating = recalcMutation.isPending || bulkMutation.isPending;
-
-  return (
-    <div className="admin-analytics-panel">
-      <FilterSummary rangeLabel={rangeLabel} versionLabel={versionLabel} metrics={metrics} />
-      <div className="admin-metric-grid admin-metric-grid--dense">
-        <MetricCard label="Sleep posts" value={metrics.posts} sub={rangeLabel} />
-        <MetricCard
-          label="Wearable logs"
-          value={metrics.wearable_posts}
-          sub={`${metrics.manual_posts} manual logs`}
-        />
-        <MetricCard
-          label="Dream logs"
-          value={metrics.posts_with_dreams}
-          sub="Posts with dream text"
-        />
-        <MetricCard
-          label="Active posters"
-          value={metrics.active_users}
-          sub={`${postsPerActive} posts per active user`}
-        />
-      </div>
-
-      {activity.length > 0 && (
-        <div className="admin-chart-grid admin-chart-grid--single">
-          <AdminActivityChart title="Daily posts" rows={activity} series="posts" color="var(--core)" />
-        </div>
-      )}
-
-      <AdminSubsection
-        title="Posts in range"
-        meta={metrics.posts > posts.length ? `showing ${posts.length} of ${metrics.posts}` : undefined}
-        footer={(
-          metrics.posts > listLimit
-            ? `Limited to the ${listLimit} most recent posts. `
-            : ''
-        ) + 'Use Recalc on a row, or recalculate all loaded wearable posts. Applies to the table below only.'}
-      >
-        <div className="admin-form-actions" style={{ marginBottom: 12 }}>
-          <button
-            type="button"
-            className="admin-button admin-button-ghost"
-            disabled={recalculating || wearablePosts.length === 0}
-            onClick={() => void recalculateLoadedWearable()}
-          >
-            {bulkMutation.isPending ? 'Recalculating…' : `Recalculate loaded wearable (${wearablePosts.length})`}
-          </button>
-        </div>
-        {stageMessage ? (
-          <p className={stageMessage.startsWith('Fixed') || stageMessage.startsWith('Updated') ? 'admin-muted' : 'admin-error'}>
-            {stageMessage}
-          </p>
-        ) : null}
-        {posts.length === 0 ? (
-          <p className="admin-muted">No posts match your filters.</p>
-        ) : (
-          <RecentPostsGrid
-            posts={posts}
-            actingPostId={actingPostId}
-            onRecalculate={recalculatePost}
-          />
-        )}
-      </AdminSubsection>
-    </div>
-  );
-}
-
 function SocialPanel({
   metrics,
   activity,
@@ -511,43 +347,6 @@ function TagsPanel({
         </div>
       )}
     </div>
-  );
-}
-
-function RecentPostsGrid({
-  posts,
-  actingPostId,
-  onRecalculate,
-}: {
-  posts: RecentPostRow[];
-  actingPostId?: string | null;
-  onRecalculate?: (post: RecentPostRow) => void;
-}) {
-  const columns = useMemo(
-    () => buildRecentPostColumns({ actingPostId, onRecalculate }),
-    [actingPostId, onRecalculate],
-  );
-
-  return (
-    <AdminDataGrid
-      persistKey="admin-analytics-posts"
-      rows={posts}
-      columns={columns}
-      getRowId={(row) => row.id}
-      label="Posts in range"
-      ignoreDiacritics
-      initialState={{
-        sorting: { sortModel: [{ field: 'created_at', sort: 'desc' }] },
-        columns: {
-          columnVisibilityModel: {
-            id: false,
-            user_id: false,
-            source_device: false,
-            is_custom: false,
-          },
-        },
-      }}
-    />
   );
 }
 
