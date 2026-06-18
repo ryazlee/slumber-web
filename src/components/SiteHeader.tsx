@@ -5,6 +5,7 @@ import { isNavActive, MAIN_NAV_ITEMS } from '../lib/appNav';
 import AppBottomNav, { useBottomNavItems } from './AppBottomNav';
 import HeaderMenu from './HeaderMenu';
 import HeaderProfileLink from './HeaderProfileLink';
+import HeaderSearch from './HeaderSearch';
 
 const base = import.meta.env.BASE_URL;
 
@@ -70,6 +71,7 @@ export default function SiteHeader() {
             <div className="site-header-actions">
               {isLoggedIn ? (
                 <>
+                  <HeaderSearch />
                   <HeaderProfileLink />
                   <HeaderMenu showAdmin={isModerator} adminActive={adminActive} />
                 </>

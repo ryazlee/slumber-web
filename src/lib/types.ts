@@ -152,6 +152,15 @@ export type ChallengeContributionPost = {
 export type ClubRole = 'owner' | 'admin' | 'member';
 export type ClubInviteStatus = 'pending' | 'accepted' | 'declined' | 'left';
 
+export type WebSearchUser = {
+  id: string;
+  username: string;
+  avatarUrl?: string;
+  userRoles?: string[];
+  friendStatus: 'none' | 'request_sent' | 'request_received' | 'friends';
+  isOwnProfile: boolean;
+};
+
 export type WebFriend = {
   id: string;
   username: string;

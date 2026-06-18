@@ -6,7 +6,7 @@ import { countWakes } from './wakes';
 const PROFILE_EMBED = 'profiles(username, avatar_url, user_roles)';
 export const PAGE_SIZE = 20;
 
-type PostRow = {
+export type PostRow = {
   id: string;
   user_id: string;
   title: string;
