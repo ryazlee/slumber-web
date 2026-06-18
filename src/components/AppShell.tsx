@@ -1,9 +1,14 @@
+import type { ReactNode } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useAssignableRoles, useAvatarRoleStyles, useTags } from '../hooks/useCatalog';
 import { useProfile } from '../hooks/useProfile';
 
-export default function AppShell() {
+type Props = {
+  children?: ReactNode;
+};
+
+export default function AppShell({ children }: Props) {
   const { user } = useAuth();
   const profileQuery = useProfile(user?.id ?? null);
   useTags();
@@ -15,7 +20,7 @@ export default function AppShell() {
   return (
     <div className="app-shell">
       <main className="app-main">
-        <Outlet />
+        {children ?? <Outlet />}
       </main>
 
       <footer className="app-footer content-wrap content-wrap--feed">

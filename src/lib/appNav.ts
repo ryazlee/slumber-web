@@ -9,7 +9,7 @@ export const MAIN_NAV_ITEMS: PrimaryNavItem[] = [
   { to: '/feed', label: 'Feed', end: true },
   { to: '/stats', label: 'Stats', matchPrefix: '/stats' },
   { to: '/social', label: 'Social', matchPrefix: '/social' },
-  { to: '/challenges', label: 'Challenges', end: true },
+  { to: '/challenges', label: 'Challenges', matchPrefix: '/challenge' },
 ];
 
 export const STATS_SUBNAV: { to: string; label: string; end?: boolean }[] = [

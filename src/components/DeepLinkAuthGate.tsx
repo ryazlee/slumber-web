@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 import { useAuth } from '../context/AuthContext';
+import AppShell from './AppShell';
 import ContentLandingPage from '../pages/ContentLandingPage';
 
 /** Logged-out visitors see the public app-handoff page; signed-in users get the web app view. */
@@ -19,6 +20,10 @@ export function withDeepLinkAuthGate(AppPage: ComponentType) {
       return <ContentLandingPage />;
     }
 
-    return <AppPage />;
+    return (
+      <AppShell>
+        <AppPage />
+      </AppShell>
+    );
   };
 }

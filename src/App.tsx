@@ -29,7 +29,6 @@ import Home from './pages/Home';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import InviteLandingPage from './pages/InviteLandingPage';
-import DeepLinkLayout from './components/DeepLinkLayout';
 import { withDeepLinkAuthGate } from './components/DeepLinkAuthGate';
 
 const GatedPostDetail = withDeepLinkAuthGate(PostDetail);
@@ -47,7 +46,7 @@ function ProtectedAppShell() {
 export default function App() {
   return (
     <Routes>
-      <Route element={<DeepLinkLayout />}>
+      <Route element={<SiteLayout />}>
         <Route path="invite/:token" element={<InviteLandingPage />} />
         <Route path="challenge/join/:token" element={<InviteLandingPage />} />
         <Route path="club/:clubId/invite/:token" element={<InviteLandingPage />} />
@@ -55,9 +54,7 @@ export default function App() {
         <Route path="profile/:userId" element={<GatedProfile />} />
         <Route path="challenge/:id" element={<GatedChallengeDetail />} />
         <Route path="challenges/:id" element={<GatedChallengeDetail />} />
-      </Route>
 
-      <Route element={<SiteLayout />}>
         <Route path="admin" element={<AdminLayout />}>
           <Route index element={<AdminHomePage />} />
           <Route path="analytics" element={<AdminAnalyticsPage />} />
