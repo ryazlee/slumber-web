@@ -4,6 +4,7 @@ import { type GridRowParams } from '@mui/x-data-grid';
 import type { RecentUserRow, UserSearchFilters } from '../../lib/admin';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useAdminGridPagination } from '../../hooks/useAdminGridPagination';
 import { useAdminUserSearch, useUpdateUserRoles } from '../../hooks/useAdmin';
 import { useAssignableRoles } from '../../hooks/useCatalog';
 import {
@@ -33,23 +34,43 @@ export default function AdminUsers() {
   const debouncedQuery = useDebouncedValue(query);
   const debouncedMinPosts = useDebouncedValue(minPosts);
 
+  const { paginationModel, setPaginationModel } = useAdminGridPagination([
+    debouncedQuery,
+    roleFilter,
+    premiumOnly,
+    debouncedMinPosts,
+    joinedWithin,
+    quickFilter,
+  ]);
+
   const appliedFilters = useMemo<UserSearchFilters>(() => ({
     query: debouncedQuery.trim() || undefined,
-    limit: 100,
     role: roleFilter || null,
     premiumOnly: quickFilter === 'premium' ? true : premiumOnly,
     minPosts: debouncedMinPosts === '' ? null : Number(debouncedMinPosts),
     joinedWithinDays: quickFilter === 'new'
       ? 7
       : joinedWithin === '' ? null : Number(joinedWithin),
-  }), [debouncedQuery, roleFilter, premiumOnly, debouncedMinPosts, joinedWithin, quickFilter]);
+    page: paginationModel.page,
+    pageSize: paginationModel.pageSize,
+  }), [
+    debouncedQuery,
+    roleFilter,
+    premiumOnly,
+    debouncedMinPosts,
+    joinedWithin,
+    quickFilter,
+    paginationModel.page,
+    paginationModel.pageSize,
+  ]);
 
   const rolesQuery = useAssignableRoles();
   const roleOptions = rolesQuery.data ?? getCachedRoleOptions();
   const usersQuery = useAdminUserSearch(appliedFilters);
   const updateRolesMutation = useUpdateUserRoles();
 
-  const users = usersQuery.data ?? [];
+  const users = usersQuery.data?.rows ?? [];
+  const usersTotal = usersQuery.data?.total ?? 0;
   const searching = usersQuery.isFetching;
   const error = usersQuery.error instanceof Error
     ? usersQuery.error.message
@@ -224,9 +245,9 @@ export default function AdminUsers() {
 
       <AdminListToolbar>
         <AdminTableSummary>
-          {users.length} user{users.length === 1 ? '' : 's'}
+          {usersTotal} user{usersTotal === 1 ? '' : 's'}
           {editingId ? ' · click a row or Roles to edit' : ' · click a row to edit roles'}
-          {' · sort/filter via column headers or toolbar'}
+          {' · toolbar search and column filters apply to the current page'}
           {' · '}
           <Link to="/admin/premium">Grant Premium</Link>
         </AdminTableSummary>
@@ -254,6 +275,12 @@ export default function AdminUsers() {
         label="Users"
         onRowClick={handleRowClick}
         getRowClassName={(params) => (params.id === editingId ? 'admin-grid-row-editing' : '')}
+        paginationMode="server"
+        rowCount={usersTotal}
+        paginationModel={paginationModel}
+        onPaginationModelChange={setPaginationModel}
+        pageSizeOptions={[25, 50, 100]}
+        disableColumnSorting
         initialState={{
           sorting: { sortModel: [{ field: 'created_at', sort: 'desc' }] },
         }}

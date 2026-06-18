@@ -4,9 +4,14 @@ import { groupCommentReports, groupPostReports } from '../../lib/groupReports';
 import {
   useAdminDeleteComment,
   useAdminSoftDeletePost,
+  useCommentReportsPage,
+  useCommentReportsQueue,
   useDismissCommentReports,
   useDismissPostReports,
+  usePostReportsPage,
+  usePostReportsQueue,
 } from '../../hooks/useAdmin';
+import { useAdminGridPagination } from '../../hooks/useAdminGridPagination';
 import AdminDataGrid from './AdminDataGrid';
 import AdminReportReviewQueue from './AdminReportReviewQueue';
 import AdminSection, { AdminTableSummary } from './AdminSection';
@@ -20,28 +25,49 @@ import {
 type Tab = 'posts' | 'comments';
 type View = 'queue' | 'table';
 
-type Props = {
-  postReports: PostReportRow[];
-  commentReports: CommentReportRow[];
-  loading: boolean;
-  error: string | null;
-  reportCounts: { posts: number; comments: number };
-};
-
 const postColumns = buildPostReportColumns();
 const commentColumns = buildCommentReportColumns();
 
-export default function AdminReports({
-  postReports,
-  commentReports,
-  loading,
-  error,
-  reportCounts,
-}: Props) {
+export default function AdminReports() {
   const [tab, setTab] = useState<Tab>('posts');
   const [view, setView] = useState<View>('queue');
   const [actingKey, setActingKey] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  const { paginationModel, setPaginationModel } = useAdminGridPagination([tab, view]);
+
+  const tableFilters = useMemo(() => ({
+    page: paginationModel.page,
+    pageSize: paginationModel.pageSize,
+  }), [paginationModel.page, paginationModel.pageSize]);
+
+  const postQueueQuery = usePostReportsQueue();
+  const commentQueueQuery = useCommentReportsQueue();
+  const postTableQuery = usePostReportsPage(tableFilters, view === 'table' && tab === 'posts');
+  const commentTableQuery = useCommentReportsPage(tableFilters, view === 'table' && tab === 'comments');
+
+  const postReports = postQueueQuery.data?.rows ?? [];
+  const commentReports = commentQueueQuery.data?.rows ?? [];
+  const tableRows = tab === 'posts'
+    ? (postTableQuery.data?.rows ?? [])
+    : (commentTableQuery.data?.rows ?? []);
+  const tableTotal = tab === 'posts'
+    ? (postTableQuery.data?.total ?? 0)
+    : (commentTableQuery.data?.total ?? 0);
+
+  const loading = view === 'queue'
+    ? (tab === 'posts' ? postQueueQuery.isLoading : commentQueueQuery.isLoading)
+    : (tab === 'posts' ? postTableQuery.isFetching : commentTableQuery.isFetching);
+
+  const queueError = postQueueQuery.error ?? commentQueueQuery.error;
+  const tableError = postTableQuery.error ?? commentTableQuery.error;
+  const error = view === 'queue' ? queueError : tableError;
+  const errorMessage = error instanceof Error ? error.message : error ? 'Could not load reports.' : null;
+
+  const reportCounts = useMemo(() => ({
+    posts: postQueueQuery.data?.total ?? 0,
+    comments: commentQueueQuery.data?.total ?? 0,
+  }), [postQueueQuery.data?.total, commentQueueQuery.data?.total]);
 
   const dismissPostMutation = useDismissPostReports();
   const dismissCommentMutation = useDismissCommentReports();
@@ -51,7 +77,6 @@ export default function AdminReports({
   const postGroups = useMemo(() => groupPostReports(postReports), [postReports]);
   const commentGroups = useMemo(() => groupCommentReports(commentReports), [commentReports]);
 
-  const rows = tab === 'posts' ? postReports : commentReports;
   const columns = tab === 'posts' ? postColumns : commentColumns;
   const total = tab === 'posts' ? reportCounts.posts : reportCounts.comments;
   const groupCount = tab === 'posts' ? postGroups.length : commentGroups.length;
@@ -91,7 +116,7 @@ export default function AdminReports({
   return (
     <AdminSection
       lead="Review reported posts and comments. Each card groups reports on the same item — check reporter contact info, take action if needed, then close the reports when you're done."
-      error={error}
+      error={errorMessage}
     >
       <AdminTabs
         ariaLabel="Report type"
@@ -114,7 +139,7 @@ export default function AdminReports({
         ]}
       />
 
-      {loading && <p className="admin-muted">Loading reports…</p>}
+      {loading && view === 'queue' ? <p className="admin-muted">Loading reports…</p> : null}
 
       {!loading && view === 'queue' ? (
         <>
@@ -138,22 +163,29 @@ export default function AdminReports({
         </>
       ) : null}
 
-      {!loading && view === 'table' && rows.length > 0 ? (
+      {!loading && view === 'table' && tableTotal > 0 ? (
         <AdminTableSummary>
-          {total} {tab} report{total === 1 ? '' : 's'} — sort and filter in the table toolbar
+          {tableTotal} {tab} report{tableTotal === 1 ? '' : 's'}
+          {' · toolbar search and column filters apply to the current page'}
         </AdminTableSummary>
       ) : null}
 
-      {!loading && view === 'table' && rows.length === 0 ? (
+      {!loading && view === 'table' && tableTotal === 0 ? (
         <p className="admin-muted admin-empty">No {tab} reports yet.</p>
       ) : !loading && view === 'table' ? (
         <AdminDataGrid
           persistKey={`admin-reports-${tab}`}
-          rows={rows}
+          rows={tableRows as PostReportRow[] | CommentReportRow[]}
           columns={columns}
           getRowId={(row) => row.id}
           loading={loading}
           label={`${tab} reports`}
+          paginationMode="server"
+          rowCount={tableTotal}
+          paginationModel={paginationModel}
+          onPaginationModelChange={setPaginationModel}
+          pageSizeOptions={[25, 50, 100]}
+          disableColumnSorting
           initialState={{
             sorting: { sortModel: [{ field: 'created_at', sort: 'desc' }] },
             columns: {

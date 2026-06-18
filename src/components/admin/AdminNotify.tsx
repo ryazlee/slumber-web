@@ -29,7 +29,7 @@ export default function AdminNotify() {
   );
   const sendMutation = useSendAdminNotification();
 
-  const users = usersQuery.data ?? [];
+  const users = usersQuery.data?.rows ?? [];
   const searching = usersQuery.isFetching;
   const searchError = usersQuery.error instanceof Error
     ? usersQuery.error.message

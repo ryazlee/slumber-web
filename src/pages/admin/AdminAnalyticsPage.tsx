@@ -35,7 +35,6 @@ export default function AdminAnalyticsPage() {
       onPresetChange={(next) => setFilters((prev) => ({ ...prev, preset: next }))}
       onRangeChange={(next) => setFilters((prev) => ({ ...prev, range: next }))}
       onAppVersionChange={(next) => setFilters((prev) => ({ ...prev, appVersion: next }))}
-      listLimit={50}
     />
   );
 }

@@ -1,4 +1,13 @@
 import type { PostgrestError } from '@supabase/supabase-js';
+import {
+  ADMIN_DEFAULT_PAGE_SIZE,
+  ADMIN_QUEUE_FETCH_LIMIT,
+  parsePaginatedResult,
+  resolvePageOffset,
+  resolvePageSize,
+  type PaginatedResult,
+  type PaginationFilters,
+} from './adminPagination';
 import { supabase } from './supabase';
 
 export function formatAdminRpcError(label: string, err: unknown): string {
@@ -12,13 +21,6 @@ export function formatAdminRpcError(label: string, err: unknown): string {
   }
   if (err instanceof Error) return `${label}: ${err.message}`;
   return `${label}: Could not load data.`;
-}
-
-function isMissingTagsRpc(err: PostgrestError): boolean {
-  const msg = err.message ?? '';
-  return err.code === 'PGRST202'
-    || err.code === '42883'
-    || /admin_list_tags/i.test(msg);
 }
 
 export type PostReportRow = {
@@ -99,9 +101,8 @@ export type DailyActivityRow = {
   active_users: number;
 };
 
-export type UserSearchFilters = {
+export type UserSearchFilters = PaginationFilters & {
   query?: string;
-  limit?: number;
   role?: string | null;
   premiumOnly?: boolean;
   minPosts?: number | null;
@@ -164,12 +165,17 @@ export type RecentPostRow = {
   comments_count: number;
 };
 
-export type AnalyticsFilters = {
+export type AnalyticsFilters = PaginationFilters & {
   start?: string;
   end?: string;
   appVersion?: string | null;
-  listLimit?: number;
 };
+
+export type PaginatedRecentPosts = PaginatedResult<RecentPostRow>;
+
+export type ReportListFilters = PaginationFilters;
+
+export type CatalogListFilters = PaginationFilters;
 
 export type AdminTagRow = {
   value: string;
@@ -221,26 +227,32 @@ export async function fetchDashboardMetrics(): Promise<DashboardMetrics> {
   return data as DashboardMetrics;
 }
 
-export async function fetchRecentUsers(filters: AnalyticsFilters = {}): Promise<RecentUserRow[]> {
+export async function fetchRecentUsers(filters: AnalyticsFilters = {}): Promise<PaginatedResult<RecentUserRow>> {
+  const pageSize = resolvePageSize(filters.pageSize, filters.limit, 50);
+  const page = filters.page ?? 0;
   const { data, error } = await supabase.rpc('admin_get_recent_users', {
-    p_limit: filters.listLimit ?? 50,
+    p_limit: pageSize,
+    p_offset: resolvePageOffset(page, pageSize),
     p_start: filters.start || null,
     p_end: filters.end || null,
     p_app_version: filters.appVersion || null,
   });
   if (error) throw error;
-  return (data as RecentUserRow[] | null) ?? [];
+  return parsePaginatedResult<RecentUserRow>(data);
 }
 
-export async function fetchRecentPosts(filters: AnalyticsFilters = {}): Promise<RecentPostRow[]> {
+export async function fetchRecentPosts(filters: AnalyticsFilters = {}): Promise<PaginatedRecentPosts> {
+  const pageSize = resolvePageSize(filters.pageSize, filters.limit);
+  const page = filters.page ?? 0;
   const { data, error } = await supabase.rpc('admin_get_recent_posts', {
-    p_limit: filters.listLimit ?? 50,
+    p_limit: pageSize,
+    p_offset: resolvePageOffset(page, pageSize),
     p_start: filters.start || null,
     p_end: filters.end || null,
     p_app_version: filters.appVersion || null,
   });
   if (error) throw error;
-  return (data as RecentPostRow[] | null) ?? [];
+  return parsePaginatedResult<RecentPostRow>(data);
 }
 
 export async function fetchDailyActivity(filters: AnalyticsFilters): Promise<DailyActivityRow[]> {
@@ -269,16 +281,38 @@ export async function fetchAppVersions(): Promise<AppVersionRow[]> {
   return (data as AppVersionRow[] | null) ?? [];
 }
 
-export async function fetchPostReports(): Promise<PostReportRow[]> {
-  const { data, error } = await supabase.rpc('admin_get_post_reports');
+export async function fetchPostReports(
+  filters: ReportListFilters = {},
+): Promise<PaginatedResult<PostReportRow>> {
+  const pageSize = filters.pageSize ?? filters.limit ?? ADMIN_DEFAULT_PAGE_SIZE;
+  const page = filters.page ?? 0;
+  const { data, error } = await supabase.rpc('admin_get_post_reports', {
+    p_limit: pageSize,
+    p_offset: resolvePageOffset(page, pageSize),
+  });
   if (error) throw error;
-  return (data as PostReportRow[] | null) ?? [];
+  return parsePaginatedResult<PostReportRow>(data);
 }
 
-export async function fetchCommentReports(): Promise<CommentReportRow[]> {
-  const { data, error } = await supabase.rpc('admin_get_comment_reports');
+export async function fetchCommentReports(
+  filters: ReportListFilters = {},
+): Promise<PaginatedResult<CommentReportRow>> {
+  const pageSize = filters.pageSize ?? filters.limit ?? ADMIN_DEFAULT_PAGE_SIZE;
+  const page = filters.page ?? 0;
+  const { data, error } = await supabase.rpc('admin_get_comment_reports', {
+    p_limit: pageSize,
+    p_offset: resolvePageOffset(page, pageSize),
+  });
   if (error) throw error;
-  return (data as CommentReportRow[] | null) ?? [];
+  return parsePaginatedResult<CommentReportRow>(data);
+}
+
+export async function fetchPostReportsQueue(): Promise<PaginatedResult<PostReportRow>> {
+  return fetchPostReports({ page: 0, pageSize: ADMIN_QUEUE_FETCH_LIMIT });
+}
+
+export async function fetchCommentReportsQueue(): Promise<PaginatedResult<CommentReportRow>> {
+  return fetchCommentReports({ page: 0, pageSize: ADMIN_QUEUE_FETCH_LIMIT });
 }
 
 export async function dismissPostReports(postId: string): Promise<number> {
@@ -384,18 +418,21 @@ export async function repairDoubledSleepPostStagesBulk(
   return row ?? { fixed: 0, skipped: 0, errors: [] };
 }
 
-export async function fetchAdminTags(filters?: AnalyticsFilters): Promise<AdminTagRow[]> {
+export async function fetchAdminTags(
+  filters: AnalyticsFilters & CatalogListFilters = {},
+): Promise<PaginatedResult<AdminTagRow>> {
+  const pageSize = resolvePageSize(filters.pageSize, filters.limit, 100);
+  const page = filters.page ?? 0;
   const rangedArgs = {
-    p_start: filters?.start || null,
-    p_end: filters?.end || null,
-    p_app_version: filters?.appVersion || null,
+    p_limit: pageSize,
+    p_offset: resolvePageOffset(page, pageSize),
+    p_start: filters.start || null,
+    p_end: filters.end || null,
+    p_app_version: filters.appVersion || null,
   };
-  let result = await supabase.rpc('admin_list_tags', rangedArgs);
-  if (result.error && isMissingTagsRpc(result.error)) {
-    result = await supabase.rpc('admin_list_tags');
-  }
+  const result = await supabase.rpc('admin_list_tags', rangedArgs);
   if (result.error) throw result.error;
-  return (result.data as AdminTagRow[] | null) ?? [];
+  return parsePaginatedResult<AdminTagRow>(result.data);
 }
 
 export async function upsertAdminTag(tag: TagDraft): Promise<void> {
@@ -413,17 +450,22 @@ export async function deleteAdminTag(value: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function searchAdminUsers(filters: UserSearchFilters = {}): Promise<RecentUserRow[]> {
+export async function searchAdminUsers(
+  filters: UserSearchFilters = {},
+): Promise<PaginatedResult<RecentUserRow>> {
+  const pageSize = resolvePageSize(filters.pageSize, filters.limit, 50);
+  const page = filters.page ?? 0;
   const { data, error } = await supabase.rpc('admin_search_users', {
     p_query: filters.query?.trim() || null,
-    p_limit: filters.limit ?? 50,
+    p_limit: pageSize,
+    p_offset: resolvePageOffset(page, pageSize),
     p_role: filters.role || null,
     p_premium_only: filters.premiumOnly ?? false,
     p_min_posts: filters.minPosts ?? null,
     p_joined_within_days: filters.joinedWithinDays ?? null,
   });
   if (error) throw error;
-  return (data as RecentUserRow[] | null) ?? [];
+  return parsePaginatedResult<RecentUserRow>(data);
 }
 
 export async function updateUserRoles(userId: string, roles: string[]): Promise<void> {
@@ -453,19 +495,35 @@ export async function fetchPremiumMetrics(): Promise<PremiumMetrics> {
   return data as PremiumMetrics;
 }
 
-export async function fetchPremiumUsers(filters: PremiumUserFilters = {}): Promise<PremiumUserRow[]> {
+export type PremiumUserFilters = PaginationFilters & {
+  query?: string;
+};
+
+export async function fetchPremiumUsers(
+  filters: PremiumUserFilters = {},
+): Promise<PaginatedResult<PremiumUserRow>> {
+  const pageSize = resolvePageSize(filters.pageSize, filters.limit, 25);
+  const page = filters.page ?? 0;
   const { data, error } = await supabase.rpc('admin_list_premium_users', {
     p_query: filters.query?.trim() || null,
-    p_limit: filters.limit ?? 100,
+    p_limit: pageSize,
+    p_offset: resolvePageOffset(page, pageSize),
   });
   if (error) throw error;
-  return (data as PremiumUserRow[] | null) ?? [];
+  return parsePaginatedResult<PremiumUserRow>(data);
 }
 
-export async function fetchAdminRoleDefinitions(): Promise<AdminRoleDefinitionRow[]> {
-  const { data, error } = await supabase.rpc('admin_list_role_definitions');
+export async function fetchAdminRoleDefinitions(
+  filters: CatalogListFilters = {},
+): Promise<PaginatedResult<AdminRoleDefinitionRow>> {
+  const pageSize = resolvePageSize(filters.pageSize, filters.limit, 25);
+  const page = filters.page ?? 0;
+  const { data, error } = await supabase.rpc('admin_list_role_definitions', {
+    p_limit: pageSize,
+    p_offset: resolvePageOffset(page, pageSize),
+  });
   if (error) throw error;
-  return (data as AdminRoleDefinitionRow[] | null) ?? [];
+  return parsePaginatedResult<AdminRoleDefinitionRow>(data);
 }
 
 export async function upsertAdminRoleDefinition(role: RoleDefinitionDraft): Promise<void> {
@@ -509,11 +567,6 @@ export type PremiumUserRow = {
   premium_until: string | null;
   days_remaining: number | null;
   grant_type: 'lifetime' | 'timed' | 'past_due' | string;
-};
-
-export type PremiumUserFilters = {
-  query?: string;
-  limit?: number;
 };
 
 export async function sendAdminNotification(

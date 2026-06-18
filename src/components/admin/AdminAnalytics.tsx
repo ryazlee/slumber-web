@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   type AdminTagRow,
+  type AnalyticsFilters,
   type AnalyticsMetrics,
   type DailyActivityRow,
   type RecentUserRow,
@@ -12,7 +13,8 @@ import {
 } from '../../lib/analyticsRange';
 import { Link } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext';
-import { useAdminAnalyticsBundle, useAppVersions } from '../../hooks/useAdmin';
+import { useAdminAnalyticsBundle, useAdminRecentUsers, useAppVersions } from '../../hooks/useAdmin';
+import { useAdminGridPagination } from '../../hooks/useAdminGridPagination';
 import AdminActivityChart from './AdminActivityChart';
 import AdminAnalyticsFilters from './AdminAnalyticsFilters';
 import AdminDataGrid from './AdminDataGrid';
@@ -38,7 +40,6 @@ type Props = {
   onPresetChange: (preset: RangePreset) => void;
   onRangeChange: (range: DateRange) => void;
   onAppVersionChange: (version: string) => void;
-  listLimit: number;
 };
 
 function MetricCard({ label, value, sub }: { label: string; value: number; sub?: string }) {
@@ -76,17 +77,15 @@ export default function AdminAnalytics({
   onPresetChange,
   onRangeChange,
   onAppVersionChange,
-  listLimit,
 }: Props) {
   const { refreshing } = useAdmin();
   const [tab, setTab] = useState<AnalyticsTab>('overview');
 
-  const filters = useMemo(() => ({
+  const filters = useMemo<AnalyticsFilters>(() => ({
     start: range.start,
     end: range.end,
     appVersion: appVersion || null,
-    listLimit,
-  }), [range.start, range.end, appVersion, listLimit]);
+  }), [range.start, range.end, appVersion]);
 
   const versionsQuery = useAppVersions();
   const versions = versionsQuery.data ?? [];
@@ -95,7 +94,6 @@ export default function AdminAnalytics({
   const {
     metrics,
     activity,
-    users,
     tags,
     loading,
     fetching,
@@ -148,8 +146,7 @@ export default function AdminAnalytics({
             <UsersPanel
               metrics={metrics}
               activity={activity}
-              users={users}
-              listLimit={listLimit}
+              filters={filters}
               rangeLabel={rangeLabel}
               versionLabel={versionLabel}
               showVersion={showVersion}
@@ -230,20 +227,34 @@ function OverviewPanel({
 function UsersPanel({
   metrics,
   activity,
-  users,
-  listLimit,
+  filters,
   rangeLabel,
   versionLabel,
   showVersion,
 }: {
   metrics: AnalyticsMetrics;
   activity: DailyActivityRow[];
-  users: RecentUserRow[];
-  listLimit: number;
+  filters: AnalyticsFilters;
   rangeLabel: string;
   versionLabel: string;
   showVersion: boolean;
 }) {
+  const { paginationModel, setPaginationModel } = useAdminGridPagination([
+    filters.start,
+    filters.end,
+    filters.appVersion,
+  ]);
+
+  const userFilters = useMemo<AnalyticsFilters>(() => ({
+    ...filters,
+    page: paginationModel.page,
+    pageSize: paginationModel.pageSize,
+  }), [filters, paginationModel.page, paginationModel.pageSize]);
+
+  const usersQuery = useAdminRecentUsers(userFilters);
+  const users = usersQuery.data?.rows ?? [];
+  const usersTotal = usersQuery.data?.total ?? 0;
+
   return (
     <div className="admin-analytics-panel">
       <FilterSummary rangeLabel={rangeLabel} versionLabel={versionLabel} metrics={metrics} />
@@ -261,17 +272,20 @@ function UsersPanel({
 
       <AdminSubsection
         title="Signups in range"
-        meta={metrics.signups > users.length ? `showing ${users.length} of ${metrics.signups}` : undefined}
-        footer={(
-          metrics.signups > listLimit
-            ? `Limited to the ${listLimit} most recent signups. `
-            : ''
-        ) + 'Sort and filter any column via headers or the toolbar (filters, columns, search).'}
+        meta={metrics.signups > usersTotal ? `${usersTotal} matching filters` : undefined}
+        footer="Toolbar search and column filters apply to the current page only."
       >
-        {users.length === 0 ? (
+        {usersTotal === 0 ? (
           <p className="admin-muted">No signups match your filters.</p>
         ) : (
-          <RecentSignupsGrid users={users} showVersion={showVersion} />
+          <RecentSignupsGrid
+            users={users}
+            usersTotal={usersTotal}
+            showVersion={showVersion}
+            paginationModel={paginationModel}
+            onPaginationModelChange={setPaginationModel}
+            loading={usersQuery.isFetching}
+          />
         )}
       </AdminSubsection>
     </div>
@@ -350,7 +364,21 @@ function TagsPanel({
   );
 }
 
-function RecentSignupsGrid({ users, showVersion }: { users: RecentUserRow[]; showVersion: boolean }) {
+function RecentSignupsGrid({
+  users,
+  usersTotal,
+  showVersion,
+  paginationModel,
+  onPaginationModelChange,
+  loading,
+}: {
+  users: RecentUserRow[];
+  usersTotal: number;
+  showVersion: boolean;
+  paginationModel: { page: number; pageSize: number };
+  onPaginationModelChange: (model: { page: number; pageSize: number }) => void;
+  loading: boolean;
+}) {
   const columns = useMemo(
     () => buildRecentSignupColumns({ showVersion }),
     [showVersion],
@@ -363,6 +391,13 @@ function RecentSignupsGrid({ users, showVersion }: { users: RecentUserRow[]; sho
       columns={columns}
       getRowId={(row) => row.id}
       label="Signups in range"
+      loading={loading}
+      paginationMode="server"
+      rowCount={usersTotal}
+      paginationModel={paginationModel}
+      onPaginationModelChange={onPaginationModelChange}
+      pageSizeOptions={[25, 50, 100]}
+      disableColumnSorting
       initialState={{
         sorting: { sortModel: [{ field: 'created_at', sort: 'desc' }] },
         columns: {

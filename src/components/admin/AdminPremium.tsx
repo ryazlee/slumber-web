@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { GridColDef } from '@mui/x-data-grid';
 import type { PremiumUserRow, RecentUserRow } from '../../lib/admin';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import { useAdminGridPagination } from '../../hooks/useAdminGridPagination';
 import {
   useAdminUserSearch,
   usePremiumMetrics,
@@ -47,8 +48,16 @@ export default function AdminPremium() {
   const debouncedSubscriberQuery = useDebouncedValue(subscriberQuery);
   const grantSearchActive = debouncedGrantQuery.trim().length >= 2;
 
+  const { paginationModel, setPaginationModel } = useAdminGridPagination([debouncedSubscriberQuery]);
+
+  const subscriberFilters = useMemo(() => ({
+    query: debouncedSubscriberQuery.trim() || undefined,
+    page: paginationModel.page,
+    pageSize: paginationModel.pageSize,
+  }), [debouncedSubscriberQuery, paginationModel.page, paginationModel.pageSize]);
+
   const metricsQuery = usePremiumMetrics();
-  const subscribersQuery = usePremiumUsers({ query: debouncedSubscriberQuery, limit: 100 });
+  const subscribersQuery = usePremiumUsers(subscriberFilters);
   const grantUsersQuery = useAdminUserSearch(
     grantSearchActive
       ? { query: debouncedGrantQuery.trim(), limit: 25 }
@@ -57,8 +66,9 @@ export default function AdminPremium() {
   const updatePremiumMutation = useUpdateUserPremium();
 
   const metrics = metricsQuery.data ?? null;
-  const subscribers = subscribersQuery.data ?? [];
-  const grantUsers = grantUsersQuery.data ?? [];
+  const subscribers = subscribersQuery.data?.rows ?? [];
+  const subscribersTotal = subscribersQuery.data?.total ?? 0;
+  const grantUsers = grantUsersQuery.data?.rows ?? [];
   const selectedUser = grantUsers.find((u) => u.id === selectedUserId) ?? null;
 
   const loading = metricsQuery.isLoading;
@@ -302,11 +312,14 @@ export default function AdminPremium() {
 
       <AdminSubscribersSection
         subscribers={subscribers}
+        subscribersTotal={subscribersTotal}
         subscriberQuery={subscriberQuery}
         onSubscriberQueryChange={setSubscriberQuery}
         columns={columns}
         loading={subscribersQuery.isFetching}
         rowError={rowError}
+        paginationModel={paginationModel}
+        onPaginationModelChange={setPaginationModel}
       />
     </AdminSection>
   );
@@ -314,25 +327,31 @@ export default function AdminPremium() {
 
 function AdminSubscribersSection({
   subscribers,
+  subscribersTotal,
   subscriberQuery,
   onSubscriberQueryChange,
   columns,
   loading,
   rowError,
+  paginationModel,
+  onPaginationModelChange,
 }: {
   subscribers: PremiumUserRow[];
+  subscribersTotal: number;
   subscriberQuery: string;
   onSubscriberQueryChange: (value: string) => void;
   columns: GridColDef<PremiumUserRow>[];
   loading: boolean;
   rowError: string | null;
+  paginationModel: { page: number; pageSize: number };
+  onPaginationModelChange: (model: { page: number; pageSize: number }) => void;
 }) {
   return (
     <>
       <AdminListToolbar>
         <AdminTableSummary>
-          {subscribers.length} active Premium subscriber{subscribers.length === 1 ? '' : 's'}
-          {' · sort/filter via column headers or toolbar'}
+          {subscribersTotal} active Premium subscriber{subscribersTotal === 1 ? '' : 's'}
+          {' · toolbar search and column filters apply to the current page'}
         </AdminTableSummary>
       </AdminListToolbar>
 
@@ -359,6 +378,12 @@ function AdminSubscribersSection({
         getRowId={(row) => row.id}
         loading={loading}
         label="Premium subscribers"
+        paginationMode="server"
+        rowCount={subscribersTotal}
+        paginationModel={paginationModel}
+        onPaginationModelChange={onPaginationModelChange}
+        pageSizeOptions={[25, 50, 100]}
+        disableColumnSorting
         initialState={{
           sorting: { sortModel: [{ field: 'premium_until', sort: 'asc' }] },
         }}

@@ -2,7 +2,8 @@ import { useCallback, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import type { AdminTagRow, TagDraft } from '../../lib/admin';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
-import { useDeleteAdminTag, useUpsertAdminTag } from '../../hooks/useAdmin';
+import { useAdminGridPagination } from '../../hooks/useAdminGridPagination';
+import { useAdminTagsCatalog, useDeleteAdminTag, useUpsertAdminTag } from '../../hooks/useAdmin';
 import { ADMIN_CATALOG_FORM_ID, scrollAdminPanelIntoView } from './adminScroll';
 import { buildAdminTagColumns } from './catalogGridColumns';
 import AdminDataGrid from './AdminDataGrid';
@@ -10,19 +11,30 @@ import AdminListToolbar from './AdminListToolbar';
 import AdminSection from './AdminSection';
 import AdminTagForm from './AdminTagForm';
 
-type Props = {
-  tags: AdminTagRow[];
-  loading: boolean;
-  error: string | null;
-};
-
 const EMPTY_DRAFT: TagDraft = { value: '', emoji: '', label: '', sort_order: 0 };
 
-export default function AdminTags({ tags, loading, error }: Props) {
+export default function AdminTags() {
   const [draft, setDraft] = useState<TagDraft>(EMPTY_DRAFT);
   const [editingValue, setEditingValue] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  const { paginationModel, setPaginationModel } = useAdminGridPagination();
+  const catalogFilters = useMemo(() => ({
+    page: paginationModel.page,
+    pageSize: paginationModel.pageSize,
+  }), [paginationModel.page, paginationModel.pageSize]);
+
+  const tagsQuery = useAdminTagsCatalog(catalogFilters);
+  const tags = tagsQuery.data?.rows ?? [];
+  const tagsTotal = tagsQuery.data?.total ?? 0;
+  const loading = tagsQuery.isLoading;
+  const error = tagsQuery.error instanceof Error
+    ? tagsQuery.error.message
+    : tagsQuery.error
+      ? 'Could not load tags.'
+      : null;
+
   const upsertMutation = useUpsertAdminTag();
   const deleteMutation = useDeleteAdminTag();
   const saving = upsertMutation.isPending || deleteMutation.isPending;
@@ -104,7 +116,8 @@ export default function AdminTags({ tags, loading, error }: Props) {
         ) : null}
       >
         <p className="admin-muted admin-table-summary">
-          {tags.length} tag{tags.length === 1 ? '' : 's'} — sort/filter via toolbar · click Edit to change
+          {tagsTotal} tag{tagsTotal === 1 ? '' : 's'}
+          {' · toolbar search and column filters apply to the current page · click Edit to change'}
         </p>
       </AdminListToolbar>
 
@@ -121,21 +134,30 @@ export default function AdminTags({ tags, loading, error }: Props) {
         />
       ) : null}
 
-      {!loading && (
+      {!loading && tagsTotal > 0 ? (
         <AdminDataGrid
           persistKey="admin-tags"
           rows={tags}
           columns={columns}
           getRowId={(row) => row.value}
-          loading={loading}
+          loading={tagsQuery.isFetching}
           label="Tags"
           getRowClassName={(params) => (params.id === editingValue ? 'admin-grid-row-editing' : '')}
+          paginationMode="server"
+          rowCount={tagsTotal}
+          paginationModel={paginationModel}
+          onPaginationModelChange={setPaginationModel}
+          pageSizeOptions={[25, 50, 100]}
+          disableColumnSorting
           initialState={{
             sorting: { sortModel: [{ field: 'sort_order', sort: 'asc' }] },
           }}
         />
-      )}
-      {loading && <p className="admin-muted">Loading tags…</p>}
+      ) : null}
+      {!loading && tagsTotal === 0 ? (
+        <p className="admin-muted">No tags yet.</p>
+      ) : null}
+      {loading ? <p className="admin-muted">Loading tags…</p> : null}
     </AdminSection>
   );
 }

@@ -1,4 +1,10 @@
-import type { AnalyticsFilters, PremiumUserFilters, UserSearchFilters } from '../lib/admin';
+import type {
+  AnalyticsFilters,
+  CatalogListFilters,
+  PremiumUserFilters,
+  ReportListFilters,
+  UserSearchFilters,
+} from '../lib/admin';
 
 export const queryKeys = {
   feed: ['feed'] as const,
@@ -25,10 +31,12 @@ export const queryKeys = {
   admin: {
     all: ['admin'] as const,
     dashboard: ['admin', 'dashboard'] as const,
-    postReports: ['admin', 'post-reports'] as const,
-    commentReports: ['admin', 'comment-reports'] as const,
-    tags: ['admin', 'tags'] as const,
-    roleDefinitions: ['admin', 'role-definitions'] as const,
+    postReportsQueue: ['admin', 'post-reports', 'queue'] as const,
+    commentReportsQueue: ['admin', 'comment-reports', 'queue'] as const,
+    postReportsPage: (filters: ReportListFilters) => ['admin', 'post-reports', 'page', filters] as const,
+    commentReportsPage: (filters: ReportListFilters) => ['admin', 'comment-reports', 'page', filters] as const,
+    tags: (filters: CatalogListFilters = {}) => ['admin', 'tags', filters] as const,
+    roleDefinitions: (filters: CatalogListFilters = {}) => ['admin', 'role-definitions', filters] as const,
     appVersions: ['admin', 'app-versions'] as const,
     analyticsMetrics: (filters: AnalyticsFilters) => ['admin', 'analytics', 'metrics', filters] as const,
     analyticsActivity: (filters: AnalyticsFilters) => ['admin', 'analytics', 'activity', filters] as const,

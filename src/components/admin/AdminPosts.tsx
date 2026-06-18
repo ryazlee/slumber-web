@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
-import { useCallback, useMemo, useState } from 'react';
-import type { GridColDef } from '@mui/x-data-grid';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { GridColDef, GridPaginationModel } from '@mui/x-data-grid';
 import type { RecentPostRow } from '../../lib/admin';
 import {
   formatRangeLabel,
@@ -21,7 +21,6 @@ import AdminActivityChart from './AdminActivityChart';
 import AdminAnalyticsFilters from './AdminAnalyticsFilters';
 import AdminDataGrid from './AdminDataGrid';
 import AdminGridActions from './AdminGridActions';
-import AdminFilterBar, { AdminFilterField } from './AdminFilterBar';
 import AdminListToolbar from './AdminListToolbar';
 import AdminSection, { AdminTableSummary } from './AdminSection';
 import { gridActionsColumn } from './gridColumnHelpers';
@@ -32,11 +31,9 @@ type Props = {
   range: DateRange;
   preset: RangePreset;
   appVersion: string;
-  listLimit: number;
   onPresetChange: (preset: RangePreset) => void;
   onRangeChange: (range: DateRange) => void;
   onAppVersionChange: (version: string) => void;
-  onListLimitChange: (limit: number) => void;
 };
 
 function MetricCard({ label, value, sub }: { label: string; value: number; sub?: string }) {
@@ -53,28 +50,35 @@ export default function AdminPosts({
   range,
   preset,
   appVersion,
-  listLimit,
   onPresetChange,
   onRangeChange,
   onAppVersionChange,
-  onListLimitChange,
 }: Props) {
   const { refreshing } = useAdmin();
   const [stageMessage, setStageMessage] = useState<string | null>(null);
   const [actingPostId, setActingPostId] = useState<string | null>(null);
+  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
+    page: 0,
+    pageSize: 25,
+  });
 
   const filters = useMemo(() => ({
     start: range.start,
     end: range.end,
     appVersion: appVersion || null,
-    listLimit,
-  }), [range.start, range.end, appVersion, listLimit]);
+    page: paginationModel.page,
+    pageSize: paginationModel.pageSize,
+  }), [range.start, range.end, appVersion, paginationModel.page, paginationModel.pageSize]);
+
+  useEffect(() => {
+    setPaginationModel((current) => (current.page === 0 ? current : { ...current, page: 0 }));
+  }, [range.start, range.end, appVersion]);
 
   const versionsQuery = useAppVersions();
   const versions = versionsQuery.data ?? [];
   const versionsLoading = versionsQuery.isLoading;
 
-  const { metrics, activity, posts, loading, fetching, error } = useAdminPostsPageData(filters);
+  const { metrics, activity, posts, postsTotal, loading, fetching, error } = useAdminPostsPageData(filters);
   const recalcMutation = useRecalculateSleepPostStages();
   const bulkMutation = useRecalculateSleepPostStagesBulk();
   const repairMutation = useRepairDoubledSleepPostStages();
@@ -211,7 +215,7 @@ export default function AdminPosts({
   return (
     <AdminSection
       className="admin-posts"
-      lead="Browse sleep posts in a date range, sort and filter the table, repair inflated stage minutes, recalculate from raw_samples, or open a post in the app. Reported posts are handled under Reports."
+      lead="Browse sleep posts in the selected date range (paginated). Repair inflated stage minutes, recalculate from raw_samples, or open a post in the app. Bulk actions apply to the current page. Reported posts are under Reports."
       error={error}
     >
       <AdminAnalyticsFilters
@@ -226,26 +230,15 @@ export default function AdminPosts({
         onAppVersionChange={onAppVersionChange}
       />
 
-      <AdminFilterBar nested>
-        <AdminFilterField label="List size" htmlFor="admin-posts-limit">
-          <select
-            id="admin-posts-limit"
-            className="admin-input admin-input-select"
-            value={listLimit}
-            onChange={(e) => onListLimitChange(Number(e.target.value))}
-          >
-            <option value={50}>50 posts</option>
-            <option value={100}>100 posts</option>
-            <option value={200}>200 posts</option>
-          </select>
-        </AdminFilterField>
-      </AdminFilterBar>
-
       {!loading && metrics ? (
         <>
           <AdminTableSummary>
             {rangeLabel} · {versionLabel}
-            {metrics.posts > posts.length ? ` · showing ${posts.length} of ${metrics.posts}` : ''}
+            {postsTotal > 0
+              ? ` · ${postsTotal} post${postsTotal === 1 ? '' : 's'}`
+              + ` · page ${paginationModel.page + 1}`
+              + ` (${posts.length} shown)`
+              : ''}
           </AdminTableSummary>
 
           <div className="admin-metric-grid admin-metric-grid--dense">
@@ -284,7 +277,7 @@ export default function AdminPosts({
                 >
                   {repairBulkMutation.isPending
                     ? 'Repairing…'
-                    : `Repair inflated (${inflatedWearablePosts.length})`}
+                    : `Repair inflated on page (${inflatedWearablePosts.length})`}
                 </button>
                 <button
                   type="button"
@@ -292,13 +285,13 @@ export default function AdminPosts({
                   disabled={recalculating || wearablePosts.length === 0}
                   onClick={() => void recalculateLoadedWearable()}
                 >
-                  {bulkMutation.isPending ? 'Recalculating…' : `Recalc loaded wearable (${wearablePosts.length})`}
+                  {bulkMutation.isPending ? 'Recalculating…' : `Recalc page wearable (${wearablePosts.length})`}
                 </button>
               </>
             )}
           >
             <AdminTableSummary>
-              Sort and filter via column headers or the toolbar.
+              Toolbar search and column filters apply to the current page only.
               {' · '}
               <Link to="/admin/reports">Post reports</Link>
             </AdminTableSummary>
@@ -316,7 +309,7 @@ export default function AdminPosts({
             </p>
           ) : null}
 
-          {posts.length === 0 ? (
+          {postsTotal === 0 ? (
             <p className="admin-muted">No posts match your filters.</p>
           ) : (
             <AdminDataGrid
@@ -327,8 +320,13 @@ export default function AdminPosts({
               loading={fetching || refreshing}
               label="Sleep posts"
               ignoreDiacritics
+              paginationMode="server"
+              rowCount={postsTotal}
+              paginationModel={paginationModel}
+              onPaginationModelChange={setPaginationModel}
+              pageSizeOptions={[25, 50, 100]}
+              disableColumnSorting
               initialState={{
-                sorting: { sortModel: [{ field: 'created_at', sort: 'desc' }] },
                 columns: {
                   columnVisibilityModel: {
                     id: false,

@@ -1,5 +1,5 @@
 import { useIsFetching, useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   deleteAdminRoleDefinition,
   deleteAdminTag,
@@ -8,9 +8,11 @@ import {
   fetchAnalyticsMetrics,
   fetchAppVersions,
   fetchCommentReports,
+  fetchCommentReportsQueue,
   fetchDailyActivity,
   fetchDashboardMetrics,
   fetchPostReports,
+  fetchPostReportsQueue,
   fetchPremiumMetrics,
   fetchPremiumUsers,
   fetchRecentPosts,
@@ -35,7 +37,9 @@ import {
   type TagDraft,
   type RoleDefinitionDraft,
   type PremiumUserFilters,
+  type ReportListFilters,
   type UserSearchFilters,
+  type CatalogListFilters,
 } from '../lib/admin';
 import {
   ADMIN_CATALOG_STALE_MS,
@@ -95,27 +99,49 @@ export function useAdminRefresh() {
   return { triggerRefresh, refreshMetrics, refreshing };
 }
 
-export function usePostReports() {
+export function usePostReportsQueue() {
   return useQuery({
-    queryKey: queryKeys.admin.postReports,
-    queryFn: fetchPostReports,
+    queryKey: queryKeys.admin.postReportsQueue,
+    queryFn: fetchPostReportsQueue,
     staleTime: ADMIN_REPORTS_STALE_MS,
     gcTime: ADMIN_QUERY_GC_MS,
   });
 }
 
-export function useCommentReports() {
+export function useCommentReportsQueue() {
   return useQuery({
-    queryKey: queryKeys.admin.commentReports,
-    queryFn: fetchCommentReports,
+    queryKey: queryKeys.admin.commentReportsQueue,
+    queryFn: fetchCommentReportsQueue,
+    staleTime: ADMIN_REPORTS_STALE_MS,
+    gcTime: ADMIN_QUERY_GC_MS,
+  });
+}
+
+export function usePostReportsPage(filters: ReportListFilters, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.admin.postReportsPage(filters),
+    queryFn: () => fetchPostReports(filters),
+    enabled,
+    placeholderData: (previous) => previous,
+    staleTime: ADMIN_REPORTS_STALE_MS,
+    gcTime: ADMIN_QUERY_GC_MS,
+  });
+}
+
+export function useCommentReportsPage(filters: ReportListFilters, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.admin.commentReportsPage(filters),
+    queryFn: () => fetchCommentReports(filters),
+    enabled,
+    placeholderData: (previous) => previous,
     staleTime: ADMIN_REPORTS_STALE_MS,
     gcTime: ADMIN_QUERY_GC_MS,
   });
 }
 
 function invalidateReportQueries(qc: ReturnType<typeof useQueryClient>) {
-  void qc.invalidateQueries({ queryKey: queryKeys.admin.postReports });
-  void qc.invalidateQueries({ queryKey: queryKeys.admin.commentReports });
+  void qc.invalidateQueries({ queryKey: ['admin', 'post-reports'] });
+  void qc.invalidateQueries({ queryKey: ['admin', 'comment-reports'] });
   void qc.invalidateQueries({ queryKey: queryKeys.admin.dashboard });
 }
 
@@ -151,18 +177,18 @@ export function useAdminDeleteComment() {
   });
 }
 
-export function useAdminTagsCatalog() {
+export function useAdminTagsCatalog(filters: CatalogListFilters = {}) {
   return useQuery({
-    queryKey: queryKeys.admin.tags,
-    queryFn: () => fetchAdminTags(),
+    queryKey: queryKeys.admin.tags(filters),
+    queryFn: () => fetchAdminTags(filters),
     ...catalogQueryOptions,
   });
 }
 
-export function useAdminRoleDefinitions() {
+export function useAdminRoleDefinitions(filters: CatalogListFilters = {}) {
   return useQuery({
-    queryKey: queryKeys.admin.roleDefinitions,
-    queryFn: fetchAdminRoleDefinitions,
+    queryKey: queryKeys.admin.roleDefinitions(filters),
+    queryFn: () => fetchAdminRoleDefinitions(filters),
     ...catalogQueryOptions,
   });
 }
@@ -185,10 +211,11 @@ export function useAdminUserSearch(filters: UserSearchFilters, enabled = true) {
   });
 }
 
-export function useAdminRecentPosts(filters: AnalyticsFilters) {
+export function useAdminRecentUsers(filters: AnalyticsFilters) {
   return useQuery({
-    queryKey: queryKeys.admin.recentPosts(filters),
-    queryFn: () => fetchRecentPosts(filters),
+    queryKey: queryKeys.admin.analyticsUsers(filters),
+    queryFn: () => fetchRecentUsers(filters),
+    placeholderData: (previous) => previous,
     ...adminQueryOptions,
   });
 }
@@ -230,7 +257,8 @@ export function useAdminPostsPageData(filters: AnalyticsFilters) {
   return {
     metrics: metricsQ.data ?? null,
     activity: activityQ.data ?? [],
-    posts: postsQ.data ?? [],
+    posts: postsQ.data?.rows ?? [],
+    postsTotal: postsQ.data?.total ?? 0,
     loading,
     fetching,
     error,
@@ -238,6 +266,11 @@ export function useAdminPostsPageData(filters: AnalyticsFilters) {
 }
 
 export function useAdminAnalyticsBundle(filters: AnalyticsFilters) {
+  const tagFilters = useMemo(
+    () => ({ ...filters, page: 0, pageSize: 100 }),
+    [filters],
+  );
+
   const results = useQueries({
     queries: [
       {
@@ -251,44 +284,34 @@ export function useAdminAnalyticsBundle(filters: AnalyticsFilters) {
         ...adminQueryOptions,
       },
       {
-        queryKey: queryKeys.admin.analyticsUsers(filters),
-        queryFn: () => fetchRecentUsers(filters),
-        ...adminQueryOptions,
-      },
-      {
-        queryKey: queryKeys.admin.analyticsTags(filters),
-        queryFn: () => fetchAdminTags(filters),
+        queryKey: queryKeys.admin.analyticsTags(tagFilters),
+        queryFn: () => fetchAdminTags(tagFilters),
         ...catalogQueryOptions,
       },
     ],
   });
 
-  const [metricsQ, activityQ, usersQ, tagsQ] = results;
+  const [metricsQ, activityQ, tagsQ] = results;
 
   const loading = results.some((r) => r.isLoading);
   const fetching = results.some((r) => r.isFetching);
 
   let error: string | null = null;
-  const warnings: string[] = [];
-
   if (metricsQ.isError) {
     error = formatAdminRpcError('Metrics', metricsQ.error);
   } else if (activityQ.isError) {
     error = formatAdminRpcError('Daily activity', activityQ.error);
-  } else {
-    if (usersQ.isError) warnings.push(formatAdminRpcError('Users', usersQ.error));
-    if (tagsQ.isError) warnings.push(formatAdminRpcError('Tags', tagsQ.error));
-    if (warnings.length > 0) error = warnings.join(' · ');
+  } else if (tagsQ.isError) {
+    error = formatAdminRpcError('Tags', tagsQ.error);
   }
 
-  const tags = tagsQ.data
-    ? [...tagsQ.data].sort((a, b) => b.usage_count - a.usage_count)
+  const tags = tagsQ.data?.rows
+    ? [...tagsQ.data.rows].sort((a, b) => b.usage_count - a.usage_count)
     : [];
 
   return {
     metrics: metricsQ.data ?? null,
     activity: activityQ.data ?? [],
-    users: usersQ.data ?? [],
     tags,
     loading,
     fetching,
@@ -302,7 +325,7 @@ export function useUpsertAdminTag() {
     mutationFn: (tag: TagDraft) => upsertAdminTag(tag),
     onSuccess: () => {
       clearTagsCache();
-      void qc.invalidateQueries({ queryKey: queryKeys.admin.tags });
+      void qc.invalidateQueries({ queryKey: ['admin', 'tags'] });
       void qc.invalidateQueries({ queryKey: ['admin', 'analytics', 'tags'] });
       void qc.invalidateQueries({ queryKey: queryKeys.tags });
     },
@@ -315,7 +338,7 @@ export function useDeleteAdminTag() {
     mutationFn: (value: string) => deleteAdminTag(value),
     onSuccess: () => {
       clearTagsCache();
-      void qc.invalidateQueries({ queryKey: queryKeys.admin.tags });
+      void qc.invalidateQueries({ queryKey: ['admin', 'tags'] });
       void qc.invalidateQueries({ queryKey: ['admin', 'analytics', 'tags'] });
       void qc.invalidateQueries({ queryKey: queryKeys.tags });
     },
@@ -328,7 +351,7 @@ export function useUpsertAdminRole() {
     mutationFn: (role: RoleDefinitionDraft) => upsertAdminRoleDefinition(role),
     onSuccess: () => {
       clearRoleDefinitionCache();
-      void qc.invalidateQueries({ queryKey: queryKeys.admin.roleDefinitions });
+      void qc.invalidateQueries({ queryKey: ['admin', 'role-definitions'] });
       void qc.invalidateQueries({ queryKey: queryKeys.assignableRoles });
       void qc.invalidateQueries({ queryKey: queryKeys.avatarRoleStyles });
     },
@@ -341,7 +364,7 @@ export function useDeleteAdminRole() {
     mutationFn: (key: string) => deleteAdminRoleDefinition(key),
     onSuccess: () => {
       clearRoleDefinitionCache();
-      void qc.invalidateQueries({ queryKey: queryKeys.admin.roleDefinitions });
+      void qc.invalidateQueries({ queryKey: ['admin', 'role-definitions'] });
       void qc.invalidateQueries({ queryKey: queryKeys.assignableRoles });
       void qc.invalidateQueries({ queryKey: queryKeys.avatarRoleStyles });
     },
