@@ -30,7 +30,14 @@ npm install && npm run dev
 | `/home` | No | Marketing / product overview |
 | `/privacy` | No | Privacy policy (App Store link) |
 | `/terms` | No | Terms of service |
+| `/invite/:token` | Partial | Friend invite landing — `@username` preview; opens app to connect |
+| `/post/:id` | Partial | Post landing + app handoff |
+| `/profile/:userId` | Partial | Profile landing + app handoff |
+| `/challenge/join/:token` | Partial | Open challenge join landing |
+| `/club/:clubId/invite/:token` | Partial | Club invite landing |
 | `/admin` | OTP + admin role | Moderation dashboard |
+
+**Partial auth:** deep-link landings show preview when logged out; signed-in users get full in-app views where applicable. Friend invite links are generated in the iOS app (**People → Share invite link**); URL shape matches `buildFriendInviteUrl()` in the main repo.
 
 ## Local setup
 
