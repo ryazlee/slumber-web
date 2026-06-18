@@ -29,6 +29,8 @@ import {
   formatAdminRpcError,
   recalculateSleepPostStages,
   recalculateSleepPostStagesBulk,
+  repairDoubledSleepPostStages,
+  repairDoubledSleepPostStagesBulk,
   type AnalyticsFilters,
   type TagDraft,
   type RoleDefinitionDraft,
@@ -420,6 +422,26 @@ export function useRecalculateSleepPostStagesBulk() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (postIds: string[]) => recalculateSleepPostStagesBulk(postIds),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'posts'] });
+    },
+  });
+}
+
+export function useRepairDoubledSleepPostStages() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (postId: string) => repairDoubledSleepPostStages(postId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'posts'] });
+    },
+  });
+}
+
+export function useRepairDoubledSleepPostStagesBulk() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (postIds: string[]) => repairDoubledSleepPostStagesBulk(postIds),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['admin', 'posts'] });
     },

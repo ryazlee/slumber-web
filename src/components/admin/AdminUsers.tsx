@@ -12,6 +12,7 @@ import {
 import AdminDataGrid from './AdminDataGrid';
 import AdminFilterBar, { AdminFilterField } from './AdminFilterBar';
 import AdminGridAction from './AdminGridAction';
+import AdminGridActions from './AdminGridActions';
 import AdminListToolbar from './AdminListToolbar';
 import AdminSection, { AdminTableSummary } from './AdminSection';
 import AdminUserRoleEditor from './AdminUserRoleEditor';
@@ -115,19 +116,21 @@ export default function AdminUsers() {
   const columns = useMemo(
     () => buildAdminUserSearchColumns({
       renderActions: ({ row }) => (
-        <AdminGridAction
-          active={editingId === row.id}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (editingId === row.id) {
-              cancelEdit();
-            } else {
-              startEdit(row);
-            }
-          }}
-        >
-          {editingId === row.id ? 'Editing' : 'Roles'}
-        </AdminGridAction>
+        <AdminGridActions>
+          <AdminGridAction
+            active={editingId === row.id}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (editingId === row.id) {
+                cancelEdit();
+              } else {
+                startEdit(row);
+              }
+            }}
+          >
+            {editingId === row.id ? 'Editing' : 'Roles'}
+          </AdminGridAction>
+        </AdminGridActions>
       ),
     }),
     [startEdit, editingId, cancelEdit],

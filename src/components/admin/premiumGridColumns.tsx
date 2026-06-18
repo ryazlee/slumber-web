@@ -1,6 +1,7 @@
 import type { GridColDef } from '@mui/x-data-grid';
 import type { PremiumUserRow } from '../../lib/admin';
 import AdminGridAction from './AdminGridAction';
+import AdminGridActions from './AdminGridActions';
 import { emailColumn, usernameColumn } from './gridColumnHelpers';
 import { formatDaysRemaining, formatPremiumExpiry } from './premiumDateUtils';
 
@@ -59,13 +60,14 @@ export function buildPremiumSubscriberColumns({
       sortable: false,
       filterable: false,
       disableColumnMenu: true,
-      width: 200,
+      width: 212,
       renderCell: ({ row }) => {
         const busy = actingUserId === row.id && saving;
         return (
-          <span style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          <AdminGridActions>
             <AdminGridAction
               disabled={busy}
+              title="Extend premium by one year"
               onClick={(e) => {
                 e.stopPropagation();
                 onExtendYear(row);
@@ -75,6 +77,7 @@ export function buildPremiumSubscriberColumns({
             </AdminGridAction>
             <AdminGridAction
               disabled={busy}
+              title="Grant lifetime premium"
               onClick={(e) => {
                 e.stopPropagation();
                 onLifetime(row);
@@ -83,7 +86,9 @@ export function buildPremiumSubscriberColumns({
               Lifetime
             </AdminGridAction>
             <AdminGridAction
+              variant="danger"
               disabled={busy}
+              title="Revoke premium"
               onClick={(e) => {
                 e.stopPropagation();
                 onRevoke(row);
@@ -91,7 +96,7 @@ export function buildPremiumSubscriberColumns({
             >
               Revoke
             </AdminGridAction>
-          </span>
+          </AdminGridActions>
         );
       },
     },

@@ -37,6 +37,12 @@ const GRID_CONTAINMENT_SX = {
     wordBreak: 'normal',
     maxWidth: '100%',
   },
+  '& .MuiDataGrid-cell:has(.admin-grid-actions)': {
+    display: 'flex',
+    alignItems: 'center',
+    overflow: 'visible',
+    whiteSpace: 'normal',
+  },
 } as const;
 
 type AdminDataGridProps = DataGridProps & {

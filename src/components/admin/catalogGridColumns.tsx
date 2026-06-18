@@ -1,6 +1,7 @@
 import type { GridColDef } from '@mui/x-data-grid';
 import type { AdminRoleDefinitionRow, AdminTagRow } from '../../lib/admin';
 import AdminGridAction from './AdminGridAction';
+import AdminGridActions from './AdminGridActions';
 import { gridActionsColumn, idCodeColumn } from './gridColumnHelpers';
 
 function RoleSwatch({ color }: { color: string }) {
@@ -48,7 +49,7 @@ export function buildAdminTagColumns(handlers: {
       ...gridActionsColumn,
       width: 140,
       renderCell: ({ row }) => (
-        <div className="admin-grid-actions">
+        <AdminGridActions>
           <AdminGridAction
             active={handlers.editingValue === row.value}
             onClick={(e) => {
@@ -63,7 +64,7 @@ export function buildAdminTagColumns(handlers: {
             {handlers.editingValue === row.value ? 'Editing' : 'Edit'}
           </AdminGridAction>
           <AdminGridAction
-            danger
+            variant="danger"
             onClick={(e) => {
               e.stopPropagation();
               handlers.onDelete(row);
@@ -71,7 +72,7 @@ export function buildAdminTagColumns(handlers: {
           >
             Delete
           </AdminGridAction>
-        </div>
+        </AdminGridActions>
       ),
     },
   ];
@@ -144,7 +145,7 @@ export function buildAdminRoleColumns(handlers: {
       ...gridActionsColumn,
       width: 140,
       renderCell: ({ row }) => (
-        <div className="admin-grid-actions">
+        <AdminGridActions>
           <AdminGridAction
             active={handlers.editingKey === row.key}
             onClick={(e) => {
@@ -159,7 +160,7 @@ export function buildAdminRoleColumns(handlers: {
             {handlers.editingKey === row.key ? 'Editing' : 'Edit'}
           </AdminGridAction>
           <AdminGridAction
-            danger
+            variant="danger"
             onClick={(e) => {
               e.stopPropagation();
               handlers.onDelete(row);
@@ -167,7 +168,7 @@ export function buildAdminRoleColumns(handlers: {
           >
             Delete
           </AdminGridAction>
-        </div>
+        </AdminGridActions>
       ),
     },
   ];

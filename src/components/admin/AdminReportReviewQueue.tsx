@@ -185,11 +185,11 @@ function PostReportCard({
         <Link to={`/post/${group.postId}`} className="admin-action-btn admin-action-btn--ghost">
           View post
         </Link>
-        <AdminGridAction onClick={onDismiss} disabled={acting}>
+        <AdminGridAction variant="ghost" onClick={onDismiss} disabled={acting}>
           Close reports
         </AdminGridAction>
         {!group.postDeleted ? (
-          <AdminGridAction danger onClick={onRemove} disabled={acting}>
+          <AdminGridAction variant="danger" onClick={onRemove} disabled={acting}>
             Remove post
           </AdminGridAction>
         ) : null}
@@ -246,10 +246,10 @@ function CommentReportCard({
         <Link to={`/post/${group.postId}`} className="admin-action-btn admin-action-btn--ghost">
           View post
         </Link>
-        <AdminGridAction onClick={onDismiss} disabled={acting}>
+        <AdminGridAction variant="ghost" onClick={onDismiss} disabled={acting}>
           Close reports
         </AdminGridAction>
-        <AdminGridAction danger onClick={onRemove} disabled={acting}>
+        <AdminGridAction variant="danger" onClick={onRemove} disabled={acting}>
           Remove comment
         </AdminGridAction>
       </div>

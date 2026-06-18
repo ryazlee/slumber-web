@@ -1,16 +1,24 @@
 import type { GridColDef } from '@mui/x-data-grid';
 import type { RecentPostRow } from '../../lib/admin';
 import AdminGridAction from './AdminGridAction';
+import AdminGridActions from './AdminGridActions';
 import { dateColumn } from './dateColumn';
 import { gridActionsColumn, idCodeColumn } from './gridColumnHelpers';
 
 export type RecentPostColumnOptions = {
   actingPostId?: string | null;
   onRecalculate?: (post: RecentPostRow) => void;
+  onRepair?: (post: RecentPostRow) => void;
 };
 
 function isWearablePost(row: RecentPostRow): boolean {
   return !row.is_custom && row.source_device !== 'Custom';
+}
+
+function needsStageRepair(row: RecentPostRow): boolean {
+  return isWearablePost(row)
+    && row.in_bed_minutes > 0
+    && row.asleep_minutes > row.in_bed_minutes + 5;
 }
 
 function formatSleepMinutes(minutes: number): string {
@@ -46,7 +54,7 @@ function postSourceLabel(row: RecentPostRow): string {
 export function buildRecentPostColumns(
   options: RecentPostColumnOptions = {},
 ): GridColDef<RecentPostRow>[] {
-  const { actingPostId = null, onRecalculate } = options;
+  const { actingPostId = null, onRecalculate, onRepair } = options;
 
   const cols: GridColDef<RecentPostRow>[] = [
     idCodeColumn<RecentPostRow>('id', 'Post ID'),
@@ -135,25 +143,44 @@ export function buildRecentPostColumns(
     dateColumn('created_at', 'Logged'),
   ];
 
-  if (onRecalculate) {
+  if (onRecalculate || onRepair) {
     cols.push({
       field: 'recalculate_stages',
       headerName: 'Stages',
       ...gridActionsColumn,
-      width: 120,
+      width: onRepair ? 156 : 120,
       renderCell: ({ row }) => {
         const wearable = isWearablePost(row);
         const busy = actingPostId === row.id;
+        const inflated = needsStageRepair(row);
         return (
-          <AdminGridAction
-            disabled={!wearable || busy}
-            onClick={(e) => {
-              e.stopPropagation();
-              onRecalculate(row);
-            }}
-          >
-            {busy ? '…' : 'Recalc'}
-          </AdminGridAction>
+          <AdminGridActions>
+            {onRepair && inflated ? (
+              <AdminGridAction
+                variant="accent"
+                disabled={!wearable || busy}
+                title="Collapse duplicate stage segments"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRepair(row);
+                }}
+              >
+                {busy ? '…' : 'Repair'}
+              </AdminGridAction>
+            ) : null}
+            {onRecalculate ? (
+              <AdminGridAction
+                disabled={!wearable || busy}
+                title="Sum stage minutes from raw_samples"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRecalculate(row);
+                }}
+              >
+                {busy ? '…' : 'Recalc'}
+              </AdminGridAction>
+            ) : null}
+          </AdminGridActions>
         );
       },
     });

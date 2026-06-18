@@ -358,6 +358,32 @@ export async function recalculateSleepPostStagesBulk(
   return row ?? { fixed: 0, skipped: 0, errors: [] };
 }
 
+export type RepairDoubledSleepStagesResult = RecalculateSleepStagesResult & {
+  before: RecalculateSleepStagesResult['before'] & { segment_count?: number };
+  after: RecalculateSleepStagesResult['after'] & { segment_count?: number };
+};
+
+export async function repairDoubledSleepPostStages(
+  postId: string,
+): Promise<RepairDoubledSleepStagesResult> {
+  const { data, error } = await supabase.rpc('admin_repair_doubled_sleep_post_stages', {
+    p_post_id: postId,
+  });
+  if (error) throw error;
+  return data as RepairDoubledSleepStagesResult;
+}
+
+export async function repairDoubledSleepPostStagesBulk(
+  postIds: string[],
+): Promise<RecalculateSleepStagesBulkResult> {
+  const { data, error } = await supabase.rpc('admin_repair_doubled_sleep_post_stages_bulk', {
+    p_post_ids: postIds,
+  });
+  if (error) throw error;
+  const row = data as RecalculateSleepStagesBulkResult | null;
+  return row ?? { fixed: 0, skipped: 0, errors: [] };
+}
+
 export async function fetchAdminTags(filters?: AnalyticsFilters): Promise<AdminTagRow[]> {
   const rangedArgs = {
     p_start: filters?.start || null,

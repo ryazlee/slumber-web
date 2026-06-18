@@ -14,10 +14,13 @@ import {
   useAppVersions,
   useRecalculateSleepPostStages,
   useRecalculateSleepPostStagesBulk,
+  useRepairDoubledSleepPostStages,
+  useRepairDoubledSleepPostStagesBulk,
 } from '../../hooks/useAdmin';
 import AdminActivityChart from './AdminActivityChart';
 import AdminAnalyticsFilters from './AdminAnalyticsFilters';
 import AdminDataGrid from './AdminDataGrid';
+import AdminGridActions from './AdminGridActions';
 import AdminFilterBar, { AdminFilterField } from './AdminFilterBar';
 import AdminListToolbar from './AdminListToolbar';
 import AdminSection, { AdminTableSummary } from './AdminSection';
@@ -74,6 +77,8 @@ export default function AdminPosts({
   const { metrics, activity, posts, loading, fetching, error } = useAdminPostsPageData(filters);
   const recalcMutation = useRecalculateSleepPostStages();
   const bulkMutation = useRecalculateSleepPostStagesBulk();
+  const repairMutation = useRepairDoubledSleepPostStages();
+  const repairBulkMutation = useRepairDoubledSleepPostStagesBulk();
 
   const rangeLabel = formatRangeLabel(range);
   const versionLabel = appVersion ? `v${appVersion}` : 'all versions';
@@ -84,6 +89,13 @@ export default function AdminPosts({
   const wearablePosts = useMemo(
     () => posts.filter((post) => !post.is_custom && post.source_device !== 'Custom'),
     [posts],
+  );
+
+  const inflatedWearablePosts = useMemo(
+    () => wearablePosts.filter(
+      (post) => post.in_bed_minutes > 0 && post.asleep_minutes > post.in_bed_minutes + 5,
+    ),
+    [wearablePosts],
   );
 
   const recalculatePost = useCallback(async (post: RecentPostRow) => {
@@ -103,6 +115,28 @@ export default function AdminPosts({
       setActingPostId(null);
     }
   }, [recalcMutation]);
+
+  const repairPost = useCallback(async (post: RecentPostRow) => {
+    if (!window.confirm(
+      `Repair doubled stage minutes for “${post.title}”? `
+      + `(${post.asleep_minutes}m asleep vs ${post.in_bed_minutes}m in bed)`,
+    )) return;
+    setStageMessage(null);
+    setActingPostId(post.id);
+    try {
+      const result = await repairMutation.mutateAsync(post.id);
+      const after = result.after;
+      setStageMessage(
+        result.changed
+          ? `Repaired ${post.title}: asleep ${result.before.asleep_minutes}m → ${after.asleep_minutes}m.`
+          : `No change for ${post.title}.`,
+      );
+    } catch (err: unknown) {
+      setStageMessage(formatRecalcStagesError(err));
+    } finally {
+      setActingPostId(null);
+    }
+  }, [repairMutation]);
 
   const recalculateLoadedWearable = async () => {
     const ids = wearablePosts.map((post) => post.id);
@@ -125,27 +159,59 @@ export default function AdminPosts({
     }
   };
 
-  const recalculating = recalcMutation.isPending || bulkMutation.isPending;
+  const repairLoadedInflated = async () => {
+    const ids = inflatedWearablePosts.map((post) => post.id);
+    if (!ids.length) {
+      setStageMessage('No inflated wearable posts in this table (asleep > in bed).');
+      return;
+    }
+    if (!window.confirm(`Repair ${ids.length} inflated wearable post(s)?`)) return;
+    setStageMessage(null);
+    try {
+      const result = await repairBulkMutation.mutateAsync(ids);
+      const failed = result.errors.length;
+      setStageMessage(
+        failed
+          ? `Repaired ${result.fixed}, unchanged ${result.skipped}, failed ${failed}.`
+          : `Repaired ${result.fixed} post(s)${result.skipped ? ` · ${result.skipped} unchanged` : ''}.`,
+      );
+    } catch (err: unknown) {
+      setStageMessage(formatRecalcStagesError(err));
+    }
+  };
+
+  const recalculating = recalcMutation.isPending || bulkMutation.isPending
+    || repairMutation.isPending || repairBulkMutation.isPending;
 
   const columns = useMemo<GridColDef<RecentPostRow>[]>(() => [
-    ...buildRecentPostColumns({ actingPostId, onRecalculate: recalculatePost }),
+    ...buildRecentPostColumns({
+      actingPostId,
+      onRecalculate: recalculatePost,
+      onRepair: repairPost,
+    }),
     {
       field: 'open',
       headerName: '',
       ...gridActionsColumn,
-      width: 64,
+      width: 72,
       renderCell: ({ row }) => (
-        <Link to={`/post/${row.id}`} className="admin-report-link" onClick={(e) => e.stopPropagation()}>
-          Open
-        </Link>
+        <AdminGridActions>
+          <Link
+            to={`/post/${row.id}`}
+            className="admin-action-btn admin-action-btn--link"
+            onClick={(e) => e.stopPropagation()}
+          >
+            Open
+          </Link>
+        </AdminGridActions>
       ),
     },
-  ], [actingPostId, recalculatePost]);
+  ], [actingPostId, recalculatePost, repairPost]);
 
   return (
     <AdminSection
       className="admin-posts"
-      lead="Browse sleep posts in a date range, sort and filter the table, recalculate stage minutes from raw_samples, or open a post in the app. Reported posts are handled under Reports."
+      lead="Browse sleep posts in a date range, sort and filter the table, repair inflated stage minutes, recalculate from raw_samples, or open a post in the app. Reported posts are handled under Reports."
       error={error}
     >
       <AdminAnalyticsFilters
@@ -209,14 +275,26 @@ export default function AdminPosts({
 
           <AdminListToolbar
             actions={(
-              <button
-                type="button"
-                className="admin-button admin-button-ghost"
-                disabled={recalculating || wearablePosts.length === 0}
-                onClick={() => void recalculateLoadedWearable()}
-              >
-                {bulkMutation.isPending ? 'Recalculating…' : `Recalc loaded wearable (${wearablePosts.length})`}
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="admin-button admin-button-ghost"
+                  disabled={recalculating || inflatedWearablePosts.length === 0}
+                  onClick={() => void repairLoadedInflated()}
+                >
+                  {repairBulkMutation.isPending
+                    ? 'Repairing…'
+                    : `Repair inflated (${inflatedWearablePosts.length})`}
+                </button>
+                <button
+                  type="button"
+                  className="admin-button admin-button-ghost"
+                  disabled={recalculating || wearablePosts.length === 0}
+                  onClick={() => void recalculateLoadedWearable()}
+                >
+                  {bulkMutation.isPending ? 'Recalculating…' : `Recalc loaded wearable (${wearablePosts.length})`}
+                </button>
+              </>
             )}
           >
             <AdminTableSummary>
@@ -229,6 +307,7 @@ export default function AdminPosts({
           {stageMessage ? (
             <p className={
               stageMessage.startsWith('Fixed') || stageMessage.startsWith('Updated')
+                || stageMessage.startsWith('Repaired')
                 ? 'admin-muted'
                 : 'admin-error'
             }
