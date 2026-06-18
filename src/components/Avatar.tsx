@@ -3,7 +3,33 @@ import CachedAvatar from './CachedAvatar';
 import { resolveAvatarRole } from '../lib/avatarRoles';
 import { avatarColorFromName } from '../lib/format';
 
-const BORDER_WIDTH = 3;
+/** Keep in sync with `lib/avatarLayout.ts` in the mobile app. */
+export const AVATAR_SIZE = {
+  compact: 28,
+  tab: 32,
+  inline: 36,
+  row: 40,
+  featured: 48,
+  large: 56,
+  hero: 80,
+} as const;
+
+export type AvatarSizeName = keyof typeof AVATAR_SIZE;
+
+const SLOT_PX: Record<NonNullable<AvatarProps['size']>, number> = {
+  sm: AVATAR_SIZE.tab,
+  md: AVATAR_SIZE.row,
+  lg: AVATAR_SIZE.hero,
+};
+
+function avatarLayoutMetrics(outerSize: number) {
+  const ringWidth = Math.min(4, Math.max(2, Math.round(outerSize * 0.075)));
+  const badgeSize = Math.round(outerSize * 0.32);
+  const badgeBorderWidth = Math.min(2, Math.max(1, Math.round(badgeSize * 0.12)));
+  const badgeEmojiSize = Math.round(badgeSize * 0.54);
+  const badgeCornerInset = Math.round(badgeSize * 0.04);
+  return { ringWidth, badgeSize, badgeBorderWidth, badgeEmojiSize, badgeCornerInset };
+}
 
 type AvatarProps = {
   userId: string;
@@ -32,6 +58,8 @@ export default function Avatar({
   const slotClass = `${SLOT_CLASS[size]} ${className}`.trim();
   const initials = username.slice(0, 2).toUpperCase();
   const faceStyle: CSSProperties = { background: avatarColorFromName(userId || username) };
+  const slotPx = SLOT_PX[size];
+  const layout = avatarLayoutMetrics(slotPx);
 
   const face = (
     <CachedAvatar
@@ -51,16 +79,15 @@ export default function Avatar({
     );
   }
 
-  const badgeSize = size === 'lg' ? 26 : size === 'sm' ? 13 : 15;
-  const badgeInset = size === 'lg' ? 4 : 2;
-
   return (
     <span className={slotClass} aria-hidden="true">
       <span
         className="avatar-ring avatar-ring--styled"
         style={{
           borderColor: role.color,
+          borderWidth: layout.ringWidth,
           boxShadow: `0 0 3px ${role.color}73`,
+          ['--avatar-ring-width' as string]: `${layout.ringWidth * 2}px`,
         }}
       >
         {face}
@@ -69,20 +96,23 @@ export default function Avatar({
         <span
           className="avatar-role-badge"
           style={{
-            width: badgeSize,
-            height: badgeSize,
-            fontSize: Math.max(8, badgeSize - 5),
-            lineHeight: `${badgeSize - 2}px`,
-            bottom: -badgeInset,
-            right: -badgeInset,
-            backgroundColor: role.badgeColor ?? role.color,
+            width: layout.badgeSize,
+            height: layout.badgeSize,
+            fontSize: layout.badgeEmojiSize,
+            bottom: layout.badgeCornerInset,
+            right: layout.badgeCornerInset,
+            borderWidth: layout.badgeBorderWidth,
+            borderColor: role.color,
           }}
         >
-          {role.badge}
+          <span className="avatar-role-badge-emoji" aria-hidden="true">
+            {role.badge}
+          </span>
         </span>
       ) : null}
     </span>
   );
 }
 
+export const BORDER_WIDTH = 3;
 export { BORDER_WIDTH as AVATAR_RING_WIDTH };
