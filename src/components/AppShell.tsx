@@ -30,7 +30,7 @@ export default function AppShell({ children }: Props) {
               @{username}
             </NavLink>
           ) : null}
-          <span className="app-footer-note">Read-only web view</span>
+          <span className="app-footer-note">Browse on web · log sleep in the iOS app</span>
           <NavLink to="/home">About</NavLink>
           <NavLink to="/privacy">Privacy</NavLink>
           <NavLink to="/terms">Terms</NavLink>

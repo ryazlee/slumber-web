@@ -123,6 +123,23 @@
   letter-spacing: -0.02em;
 }
 
+.challenges-page-note {
+  margin: 8px 0 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.challenges-pending-banner {
+  margin: 0 0 var(--page-section-gap);
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
 .app-tab-bar {
   display: inline-flex;
   flex-wrap: wrap;
@@ -627,6 +644,13 @@
 
 .user-link-name {
   font-weight: 600;
+}
+
+.user-link-streak {
+  font-size: 0.82em;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .post-author-link {

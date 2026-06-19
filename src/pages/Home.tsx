@@ -71,6 +71,11 @@ export default function Home() {
               accountability without turning it into a competition about who sleeps least.
             </li>
             <li>
+              <strong>Sleep clubs</strong>
+              Named groups for roommates, crews, or households—filter your feed, compare,
+              and run club races together without everyone being friends first.
+            </li>
+            <li>
               <strong>Privacy controls</strong>
               Friends are mutual—you both accept. Posts can be private. Dreams can be blurred.
               Block and report are built in.

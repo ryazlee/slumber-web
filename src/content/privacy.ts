@@ -7,7 +7,7 @@ export const privacySections = [
   {
     heading: 'Overview',
     body: [
-      'Slumber is a social sleep-tracking app for iOS. You log nights from Apple Health or manually, add context (notes, dreams, photos, tags), and share with friends you mutually approve. An optional read-only web companion lets signed-in users browse their feed, profile, and challenges in a browser.',
+      'Slumber is a social sleep-tracking app for iOS. You log nights from Apple Health or manually, add context (notes, dreams, photos, tags), and share with friends you mutually approve. An optional web companion lets signed-in users browse their feed, profile, stats, and challenges in a browser—and leave kudos and comments. Sleep logging, HealthKit sync, and most account management stay in the mobile app.',
       'This policy describes what we collect through the Slumber mobile app and website, how we use it, and the choices you have.',
     ],
   },
@@ -50,7 +50,7 @@ export const privacySections = [
       'Post visibility: posts default to visible to friends. You can mark an individual post private (visible only to you).',
       'Dream privacy: you can blur a dream entry so friends see that you logged a dream without reading the text. Mentioned friends may see a minimal indicator when they are @mentioned in a private dream.',
       'Challenges: participants in a challenge you join can see challenge-related sleep contributions according to challenge rules.',
-      'Web companion: when you sign in on the website, you can view the same friend-visible content your account can access in the app (read-only). The website does not sync HealthKit data.',
+      'Web companion: when you sign in on the website, you can view the same friend-visible content your account can access in the app and interact with kudos and comments. The website does not sync HealthKit data or support sleep logging.',
       'Service providers: we use infrastructure providers (e.g. Supabase) to host authentication, database, and file storage under contractual safeguards.',
       'Legal requirements: we may disclose information when required by law or to protect the safety of users and the service.',
     ],

@@ -140,7 +140,7 @@ function ClubDetail({
       ) : null}
 
       <p className="social-footnote app-muted">
-        Create clubs, invite people, and filter your feed in the Slumber iOS app.
+        Create clubs, invite people, and browse as a club (feed, races, compare) in the Slumber iOS app.
       </p>
     </section>
   );
