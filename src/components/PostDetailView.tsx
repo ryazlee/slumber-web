@@ -12,6 +12,7 @@ import PostDreamBlock from './post/PostDreamBlock';
 import PostStageMetrics from './post/PostStageMetrics';
 import PostSocial, { type PostSocialPatch } from './PostSocial';
 import PostTagList from './PostTagList';
+import SleepBuddiesRow from './SleepBuddiesRow';
 import SleepTimelineBar from './SleepTimelineBar';
 import StageBreakdown from './StageBreakdown';
 import UserLink from './UserLink';
@@ -210,6 +211,15 @@ export default function PostDetailView({
           <PostDetailSectionHeader title="Photos" />
           <div className="post-detail-panel post-detail-photos">
             <PostPhotoGallery post={post} variant="detail" />
+          </div>
+        </>
+      ) : null}
+
+      {(post.sleepBuddies?.length ?? 0) > 0 ? (
+        <>
+          <PostDetailSectionHeader title="Sleep buddies" />
+          <div className="post-detail-panel post-detail-sleep-buddies">
+            <SleepBuddiesRow buddies={post.sleepBuddies!} variant="detail" />
           </div>
         </>
       ) : null}

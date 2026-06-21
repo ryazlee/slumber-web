@@ -18,6 +18,13 @@ export type SleepSessionData = {
   segments: StageSegment[];
 };
 
+export type SleepBuddyProfile = {
+  userId: string;
+  username: string;
+  avatarUrl?: string;
+  userRoles?: string[];
+};
+
 export type SleepPost = {
   id: string;
   userId: string;
@@ -55,6 +62,8 @@ export type SleepPost = {
   createdAt: string;
   sourceDevice: string;
   isCustom?: boolean;
+  /** Accepted sleep buddies — visible on feed/detail. */
+  sleepBuddies?: SleepBuddyProfile[];
 };
 
 export type WebProfile = {

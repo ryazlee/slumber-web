@@ -11,6 +11,7 @@ import PostStageMetrics from './post/PostStageMetrics';
 import PostSocial, { type PostSocialPatch } from './PostSocial';
 import SleepTimelineBar from './SleepTimelineBar';
 import PostTagList from './PostTagList';
+import SleepBuddiesRow from './SleepBuddiesRow';
 import UserLink from './UserLink';
 
 type SleepPostCardProps = {
@@ -128,6 +129,10 @@ export default function SleepPostCard({
         <div data-post-interactive>
           <PostPhotoGallery post={post} variant="feed" />
         </div>
+      ) : null}
+
+      {(post.sleepBuddies?.length ?? 0) > 0 ? (
+        <SleepBuddiesRow buddies={post.sleepBuddies!} variant="card" />
       ) : null}
 
       <PostTagList tags={post.tags} />

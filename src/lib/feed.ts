@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { SleepPost, SleepSessionData, StageSegment, Vibe } from './types';
+import type { SleepBuddyProfile, SleepPost, SleepSessionData, StageSegment, Vibe } from './types';
 import { avatarColorFromName } from './format';
 import { countWakes } from './wakes';
 
@@ -138,15 +138,68 @@ export async function enrichSleepPostRows(rows: PostRow[]): Promise<SleepPost[]>
     map.set(r.post_id, arr);
   }
 
-  return rows.map((row) => mapPostRow(
-    row,
-    authorProfileMap.get(row.user_id),
-    kudosCountMap,
-    myKudoPostIds,
-    commentCountMap,
-    prAllTimeMap,
-    prMonthlyMap,
-  ));
+  type BuddyRow = { post_id: string; user_id: string; status: string };
+  let buddyRows: BuddyRow[] = [];
+  if (postIds.length > 0) {
+    const rpcRes = await supabase.rpc('get_post_sleep_buddies_batch', { p_post_ids: postIds });
+    if (!rpcRes.error && rpcRes.data) {
+      buddyRows = rpcRes.data as BuddyRow[];
+    } else {
+      const tableRes = await supabase
+        .from('post_sleep_buddies')
+        .select('post_id, user_id, status')
+        .in('post_id', postIds);
+      if (!tableRes.error && tableRes.data) {
+        buddyRows = tableRes.data as BuddyRow[];
+      }
+    }
+  }
+
+  const profileMap = new Map<string, AuthorProfile>(authorProfileMap);
+  const buddyUserIds = [...new Set(buddyRows.map((r) => r.user_id))].filter((id) => !profileMap.has(id));
+  if (buddyUserIds.length > 0) {
+    const { data: buddyProfiles } = await supabase
+      .from('profiles')
+      .select('id, username, avatar_url, user_roles')
+      .in('id', buddyUserIds);
+    for (const p of buddyProfiles ?? []) {
+      profileMap.set(p.id, p);
+    }
+  }
+
+  const buddiesByPost = new Map<string, BuddyRow[]>();
+  for (const buddyRow of buddyRows) {
+    const arr = buddiesByPost.get(buddyRow.post_id) ?? [];
+    arr.push(buddyRow);
+    buddiesByPost.set(buddyRow.post_id, arr);
+  }
+
+  function buddyProfile(userId: string): SleepBuddyProfile {
+    const profile = profileMap.get(userId);
+    return {
+      userId,
+      username: profile?.username ?? 'unknown',
+      avatarUrl: profile?.avatar_url ?? undefined,
+      userRoles: profile?.user_roles ?? undefined,
+    };
+  }
+
+  return rows.map((row) => {
+    const post = mapPostRow(
+      row,
+      authorProfileMap.get(row.user_id),
+      kudosCountMap,
+      myKudoPostIds,
+      commentCountMap,
+      prAllTimeMap,
+      prMonthlyMap,
+    );
+    const accepted = (buddiesByPost.get(row.id) ?? [])
+      .filter((r) => r.status === 'accepted')
+      .map((r) => buddyProfile(r.user_id));
+    if (accepted.length > 0) post.sleepBuddies = accepted;
+    return post;
+  });
 }
 
 export async function fetchFeed(cursor?: string): Promise<SleepPost[]> {
