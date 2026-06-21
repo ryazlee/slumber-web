@@ -2,7 +2,7 @@ import { extractMentionUsernames } from './mentions';
 import { supabase } from './supabase';
 import type { Comment, KudosUser } from './types';
 
-const PROFILE_EMBED = 'profiles(username, avatar_url, user_roles)';
+const PROFILE_EMBED = 'profiles!user_id(username, avatar_url, user_roles)';
 
 type MentionField = 'comment';
 

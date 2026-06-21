@@ -2,8 +2,6 @@ import { enrichSleepPostRows, type PostRow } from './feed';
 import { supabase } from './supabase';
 import type { SleepPost, WebSearchUser } from './types';
 
-const PROFILE_EMBED = 'profiles(username, avatar_url, user_roles)';
-
 function isAcceptedFriendStatus(status: string | null | undefined): boolean {
   return status === 'accepted' || status === 'friends';
 }
@@ -93,7 +91,7 @@ export async function searchPostsByUserOrTitle(
   const [titleRes, usersRes] = await Promise.all([
     supabase
       .from('sleep_posts')
-      .select(`*, ${PROFILE_EMBED}`)
+      .select('*')
       .is('deleted_at', null)
       .ilike('title', `%${q}%`)
       .order('sleep_date', { ascending: false })
@@ -115,7 +113,7 @@ export async function searchPostsByUserOrTitle(
   if (userIds.length > 0) {
     const byUserRes = await supabase
       .from('sleep_posts')
-      .select(`*, ${PROFILE_EMBED}`)
+      .select('*')
       .is('deleted_at', null)
       .in('user_id', userIds)
       .order('sleep_date', { ascending: false })

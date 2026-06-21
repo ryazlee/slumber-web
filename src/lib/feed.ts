@@ -3,8 +3,9 @@ import type { SleepPost, SleepSessionData, StageSegment, Vibe } from './types';
 import { avatarColorFromName } from './format';
 import { countWakes } from './wakes';
 
-const PROFILE_EMBED = 'profiles(username, avatar_url, user_roles)';
 export const PAGE_SIZE = 20;
+
+type AuthorProfile = { username: string; avatar_url: string | null; user_roles?: string[] | null };
 
 export type PostRow = {
   id: string;
@@ -34,7 +35,6 @@ export type PostRow = {
   created_at: string;
   source_device: string | null;
   is_custom?: boolean | null;
-  profiles?: { username: string; avatar_url: string | null; user_roles?: string[] | null } | null;
 };
 
 async function getBlockedUserIds(): Promise<Set<string>> {
@@ -45,21 +45,22 @@ async function getBlockedUserIds(): Promise<Set<string>> {
 
 function mapPostRow(
   row: PostRow,
+  authorProfile: AuthorProfile | undefined,
   kudosCountMap: Record<string, number>,
   myKudoPostIds: Set<string>,
   commentCountMap: Record<string, number>,
   prAllTimeMap: Map<string, string[]>,
   prMonthlyMap: Map<string, string[]>,
 ): SleepPost {
-  const username = row.profiles?.username ?? 'unknown';
+  const username = authorProfile?.username ?? 'unknown';
   const prTypes = prAllTimeMap.get(row.id);
   const monthlyPrTypes = prMonthlyMap.get(row.id);
   return {
     id: row.id,
     userId: row.user_id,
     username,
-    avatarUrl: row.profiles?.avatar_url ?? undefined,
-    userRoles: row.profiles?.user_roles ?? undefined,
+    avatarUrl: authorProfile?.avatar_url ?? undefined,
+    userRoles: authorProfile?.user_roles ?? undefined,
     title: row.title,
     sleepDate: row.sleep_date,
     bedtime: row.bedtime ?? '—',
@@ -97,10 +98,11 @@ function mapPostRow(
 export async function enrichSleepPostRows(rows: PostRow[]): Promise<SleepPost[]> {
   if (rows.length === 0) return [];
   const postIds = rows.map((r) => r.id);
+  const authorUserIds = [...new Set(rows.map((r) => r.user_id))];
   const { data: { user } } = await supabase.auth.getUser();
   const currentUserId = user?.id ?? null;
 
-  const [kudosRes, commentsRes, prRes] = await Promise.all([
+  const [kudosRes, commentsRes, prRes, authorProfilesRes] = await Promise.all([
     supabase.from('kudos').select('post_id, user_id').in('post_id', postIds),
     supabase.from('comments').select('post_id').in('post_id', postIds),
     supabase
@@ -108,7 +110,13 @@ export async function enrichSleepPostRows(rows: PostRow[]): Promise<SleepPost[]>
       .select('post_id, record_type, scope')
       .in('post_id', postIds)
       .not('post_id', 'is', null),
+    supabase.from('profiles').select('id, username, avatar_url, user_roles').in('id', authorUserIds),
   ]);
+
+  const authorProfileMap = new Map<string, AuthorProfile>();
+  for (const p of authorProfilesRes.data ?? []) {
+    authorProfileMap.set(p.id, p);
+  }
 
   const kudosCountMap: Record<string, number> = {};
   const myKudoPostIds = new Set<string>();
@@ -132,6 +140,7 @@ export async function enrichSleepPostRows(rows: PostRow[]): Promise<SleepPost[]>
 
   return rows.map((row) => mapPostRow(
     row,
+    authorProfileMap.get(row.user_id),
     kudosCountMap,
     myKudoPostIds,
     commentCountMap,
@@ -156,7 +165,7 @@ export async function fetchFeed(cursor?: string): Promise<SleepPost[]> {
 
   let query = supabase
     .from('sleep_posts')
-    .select(`*, ${PROFILE_EMBED}`)
+    .select('*')
     .is('deleted_at', null)
     .in('user_id', feedIds)
     .order('sleep_date', { ascending: false })
@@ -173,7 +182,7 @@ export async function fetchFeed(cursor?: string): Promise<SleepPost[]> {
 export async function fetchPost(postId: string): Promise<SleepPost | null> {
   const { data, error } = await supabase
     .from('sleep_posts')
-    .select(`*, ${PROFILE_EMBED}`)
+    .select('*')
     .eq('id', postId)
     .is('deleted_at', null)
     .maybeSingle();
@@ -188,7 +197,7 @@ export async function fetchPost(postId: string): Promise<SleepPost | null> {
 export async function fetchUserPosts(userId: string, cursor?: string): Promise<SleepPost[]> {
   let query = supabase
     .from('sleep_posts')
-    .select(`*, ${PROFILE_EMBED}`)
+    .select('*')
     .eq('user_id', userId)
     .is('deleted_at', null)
     .order('sleep_date', { ascending: false })

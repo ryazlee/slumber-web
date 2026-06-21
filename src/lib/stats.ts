@@ -61,7 +61,7 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
   const [streakRes, prsRes, recentRes] = await Promise.all([
     supabase.from('streaks').select('current_streak, longest_streak').eq('user_id', userId).maybeSingle(),
     supabase.from('personal_records').select('record_type, value, achieved_at, post_id, scope').eq('user_id', userId),
-    supabase.from('sleep_posts').select('*, profiles(username, avatar_url, user_roles)')
+    supabase.from('sleep_posts').select('*')
       .eq('user_id', userId)
       .is('deleted_at', null)
       .gte('sleep_date', sevenDaysAgo)
