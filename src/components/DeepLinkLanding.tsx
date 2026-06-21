@@ -1,6 +1,12 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { APP_STORE_URL, buildSchemeUrl, scheduleAppOpen, tryOpenInApp } from '../lib/deepLinks';
+import {
+  APP_STORE_URL,
+  buildSchemeUrl,
+  isRestrictedInAppBrowser,
+  scheduleAppOpen,
+  tryOpenInApp,
+} from '../lib/deepLinks';
 
 export type DeepLinkIntent =
   | 'friend-invite'
@@ -60,9 +66,11 @@ export default function DeepLinkLanding({
   }, [schemeUrl]);
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || isRestrictedInAppBrowser()) return;
     tryOpenInApp(schemeUrl);
   }, [loading, schemeUrl]);
+
+  const inAppBrowser = isRestrictedInAppBrowser();
 
   return (
     <main className="deeplink-page">
@@ -120,7 +128,14 @@ export default function DeepLinkLanding({
           Get Slumber on the App Store
         </a>
         <p className="deeplink-cta-hint">
-          If nothing happens, tap <strong>Open in Slumber</strong>.
+          {inAppBrowser ? (
+            <>
+              In Instagram, tap <strong>⋯</strong> → <strong>Open in browser</strong>, then tap{' '}
+              <strong>Open in Slumber</strong>.
+            </>
+          ) : (
+            <>If nothing happens, tap <strong>Open in Slumber</strong>.</>
+          )}
         </p>
       </div>
 

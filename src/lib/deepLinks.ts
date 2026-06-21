@@ -110,6 +110,16 @@ export function buildSchemeUrl(path: string): string {
   return `slumber:///${normalized}`;
 }
 
+/**
+ * Instagram / Facebook / etc. in-app browsers load the landing page fine but treat
+ * `slumber://` navigation as a failed page load — skip auto-open and location.replace.
+ */
+export function isRestrictedInAppBrowser(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  return /Instagram|FBAN|FBAV|FB_IAB|Messenger|Line\/|Twitter|LinkedInApp|TikTok|Snapchat/i.test(ua);
+}
+
 function openWithHiddenAnchor(schemeUrl: string): void {
   const anchor = document.createElement('a');
   anchor.href = schemeUrl;
@@ -122,6 +132,7 @@ function openWithHiddenAnchor(schemeUrl: string): void {
 /** Best-effort handoff to the native app (Safari often blocks silent redirects). */
 export function tryOpenInApp(schemeUrl: string): void {
   openWithHiddenAnchor(schemeUrl);
+  if (isRestrictedInAppBrowser()) return;
   window.setTimeout(() => {
     window.location.replace(schemeUrl);
   }, 50);
@@ -129,6 +140,7 @@ export function tryOpenInApp(schemeUrl: string): void {
 
 /** Retry a few times — helps when the landing page mounts before Safari allows navigation. */
 export function scheduleAppOpen(schemeUrl: string): () => void {
+  if (isRestrictedInAppBrowser()) return () => {};
   tryOpenInApp(schemeUrl);
   const retry1 = window.setTimeout(() => tryOpenInApp(schemeUrl), 400);
   const retry2 = window.setTimeout(() => tryOpenInApp(schemeUrl), 1200);
