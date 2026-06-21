@@ -1,4 +1,11 @@
 import { normalizeWebAppPath } from './siteUrl';
+import {
+  escapeToSystemBrowser,
+  httpsUrlFromSpaRedirect,
+  isRestrictedInAppBrowser,
+} from './inAppBrowserEscape';
+
+export { isRestrictedInAppBrowser } from './inAppBrowserEscape';
 
 export const APP_STORE_URL = 'https://apps.apple.com/app/id6772449516';
 
@@ -111,15 +118,9 @@ export function buildSchemeUrl(path: string): string {
 }
 
 /**
- * Instagram / Facebook / etc. in-app browsers load the landing page fine but treat
+ * Instagram / Facebook in-app browsers load the landing page fine but treat
  * `slumber://` navigation as a failed page load — skip auto-open and location.replace.
  */
-export function isRestrictedInAppBrowser(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  const ua = navigator.userAgent || '';
-  return /Instagram|FBAN|FBAV|FB_IAB|Messenger|Line\/|Twitter|LinkedInApp|TikTok|Snapchat/i.test(ua);
-}
-
 function openWithHiddenAnchor(schemeUrl: string): void {
   const anchor = document.createElement('a');
   anchor.href = schemeUrl;
@@ -131,8 +132,11 @@ function openWithHiddenAnchor(schemeUrl: string): void {
 
 /** Best-effort handoff to the native app (Safari often blocks silent redirects). */
 export function tryOpenInApp(schemeUrl: string): void {
+  if (isRestrictedInAppBrowser()) {
+    escapeToSystemBrowser(httpsUrlFromSpaRedirect(window.location));
+    return;
+  }
   openWithHiddenAnchor(schemeUrl);
-  if (isRestrictedInAppBrowser()) return;
   window.setTimeout(() => {
     window.location.replace(schemeUrl);
   }, 50);

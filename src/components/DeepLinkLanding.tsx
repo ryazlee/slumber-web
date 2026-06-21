@@ -7,6 +7,7 @@ import {
   scheduleAppOpen,
   tryOpenInApp,
 } from '../lib/deepLinks';
+import { detectInAppBrowser } from '../lib/inAppBrowserEscape';
 
 export type DeepLinkIntent =
   | 'friend-invite'
@@ -71,6 +72,7 @@ export default function DeepLinkLanding({
   }, [loading, schemeUrl]);
 
   const inAppBrowser = isRestrictedInAppBrowser();
+  const captiveApp = detectInAppBrowser();
 
   return (
     <main className="deeplink-page">
@@ -117,7 +119,7 @@ export default function DeepLinkLanding({
           className="deeplink-cta-primary"
           onClick={() => tryOpenInApp(schemeUrl)}
         >
-          Open in Slumber
+          {captiveApp ? 'Continue in Safari' : 'Open in Slumber'}
         </button>
         <a
           href={APP_STORE_URL}
@@ -128,11 +130,10 @@ export default function DeepLinkLanding({
           Get Slumber on the App Store
         </a>
         <p className="deeplink-cta-hint">
-          {inAppBrowser ? (
-            <>
-              In Instagram, tap <strong>⋯</strong> → <strong>Open in browser</strong>, then tap{' '}
-              <strong>Open in Slumber</strong>.
-            </>
+          {captiveApp === 'instagram' ? (
+            <>Opening in Safari… If nothing happens, tap <strong>Continue in Safari</strong>.</>
+          ) : inAppBrowser ? (
+            <>Tap <strong>Continue in Safari</strong> to view this link in your browser.</>
           ) : (
             <>If nothing happens, tap <strong>Open in Slumber</strong>.</>
           )}

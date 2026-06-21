@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+import { build404Html, buildIndexRestoreScript } from './lib/spaShellScripts';
 
 const DEFAULT_SITE_URL = 'https://ryazlee.github.io/slumber-web';
 const IOS_APP_ID = 'L57M37HLYR.com.ryan.slumber';
@@ -24,38 +25,7 @@ function spaGithubPagesPlugin(basePath: string): Plugin {
   const segments = pathSegmentsToKeep(basePath);
 
   const restoreScript = `
-    <script type="text/javascript">
-      (function(l) {
-        if (l.search[1] === '/') {
-          var decoded = l.search.slice(1).split('&').map(function(s) {
-            return s.replace(/~and~/g, '&');
-          }).join('?');
-          window.history.replaceState(null, null,
-            l.pathname.slice(0, -1) + decoded + l.hash
-          );
-        }
-      }(window.location));
-    </script>`;
-
-  const redirect404 = `<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>Redirecting…</title>
-    <script type="text/javascript">
-      var pathSegmentsToKeep = ${segments};
-      var l = window.location;
-      l.replace(
-        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-        l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
-        l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
-        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
-        l.hash
-      );
-    </script>
-  </head>
-  <body></body>
-</html>`;
+    <script type="text/javascript">${buildIndexRestoreScript()}</script>`;
 
   return {
     name: 'spa-github-pages',
@@ -66,7 +36,7 @@ function spaGithubPagesPlugin(basePath: string): Plugin {
       this.emitFile({
         type: 'asset',
         fileName: '404.html',
-        source: redirect404,
+        source: build404Html(segments),
       });
     },
   };
