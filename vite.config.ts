@@ -88,9 +88,10 @@ function appleAppSiteAssociationPlugin(basePath: string): Plugin {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const base = env.VITE_BASE_PATH ?? '/slumber-web/';
+  const base = env.VITE_BASE_PATH ?? '/';
   const basePath = base.replace(/\/$/, '');
-  const siteUrl = (env.VITE_SITE_URL ?? DEFAULT_SITE_URL).replace(/\/$/, '');
+  const rawSiteUrl = env.VITE_SITE_URL ?? DEFAULT_SITE_URL;
+  const siteUrl = rawSiteUrl.replace(/\/$/, '').replace(/^http:\/\//i, 'https://');
 
   return {
     base,
