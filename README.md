@@ -8,14 +8,15 @@ The main Slumber app repo only tracks this README; all other `website/*` files a
 
 | | |
 |---|---|
-| **Repo name** | `slumber-web` (rename from `slumber-home` when ready) |
+| **Repo** | [`ryazlee/slumber-web`](https://github.com/ryazlee/slumber-web) |
 | **Visibility** | Public |
-| **Deploy target** | GitHub Pages (GitHub Actions on push to `main`) |
-| **Live URL** | `https://<your-user>.github.io/slumber-web/` |
+| **Deploy** | GitHub Actions on push to `main` → GitHub Pages |
+| **Live URL** | `https://useslumber.com` |
+| **Legacy** | `https://ryazlee.github.io/slumber-web` (redirects to custom domain) |
 
 ```bash
 cd website
-git remote set-url origin git@github.com:<your-user>/slumber-web.git
+git remote set-url origin git@github.com:ryazlee/slumber-web.git
 npm install && npm run dev
 ```
 
@@ -23,7 +24,8 @@ npm install && npm run dev
 
 | Route | Auth | Purpose |
 |-------|------|---------|
-| `/` | Login | App entry — email OTP, redirects to `/feed` when signed in |
+| `/` | Login | App entry — email OTP, Google, magic link; redirects to `/feed` when signed in |
+| `/login-callback` | — | Supabase auth return (magic link + Google OAuth) |
 | `/feed` | Yes | Friends feed — kudos + comments |
 | `/profile` | Yes | Your profile and recent posts |
 | `/challenges` | Yes | Active and completed challenges |
@@ -35,7 +37,7 @@ npm install && npm run dev
 | `/profile/:userId` | Partial | Profile landing + app handoff |
 | `/challenge/join/:token` | Partial | Open challenge join landing |
 | `/club/:clubId/invite/:token` | Partial | Club invite landing |
-| `/admin` | OTP + admin role | Moderation dashboard |
+| `/admin` | OTP / Google + admin role | Moderation dashboard |
 
 **Partial auth:** deep-link landings show preview when logged out; signed-in users get full in-app views where applicable. Friend invite links are generated in the iOS app (**People → Share invite link**); URL shape matches `buildFriendInviteUrl()` in the main repo.
 
@@ -44,11 +46,14 @@ npm install && npm run dev
 ```bash
 cp .env.example .env.local
 # VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY — same publishable key as the app
+# VITE_SITE_URL=https://useslumber.com  VITE_BASE_PATH=/  (production mirror)
 ```
 
-For GitHub Pages, add repo secrets `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SITE_URL`, and `VITE_BASE_PATH` (e.g. `/slumber-web`).
+**Production deploy:** `VITE_SITE_URL` and `VITE_BASE_PATH` are set in `.github/workflows/deploy.yml` (`https://useslumber.com`, `/`). Repo secrets: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
 
-**Changing the public domain later:** update `VITE_SITE_URL` + `VITE_BASE_PATH` on the website, and `EXPO_PUBLIC_WEB_BASE_URL` in the app (see repo root `.env.example`). Rebuild/redeploy both; the app needs a new iOS build for `associatedDomains`.
+**Supabase redirect URLs** must include `https://useslumber.com/login-callback` (and `slumber://login-callback` for the app).
+
+**App mirror:** `EXPO_PUBLIC_WEB_BASE_URL=https://useslumber.com` (+ optional `EXPO_PUBLIC_WEB_LEGACY_BASE_URL`); new iOS build required for universal links on the custom domain. See repo root `.env.example` and `docs/feature-plans/completed/DEEP-LINKING.md`.
 
 ## Admin
 
@@ -57,8 +62,8 @@ Requires `developer` or `founder` (or any role with `is_admin` in `role_definiti
 ## App config
 
 ```
-EXPO_PUBLIC_PRIVACY_POLICY_URL=https://<your-user>.github.io/slumber-web/privacy
-EXPO_PUBLIC_TERMS_OF_SERVICE_URL=https://<your-user>.github.io/slumber-web/terms
+EXPO_PUBLIC_PRIVACY_POLICY_URL=https://useslumber.com/privacy
+EXPO_PUBLIC_TERMS_OF_SERVICE_URL=https://useslumber.com/terms
 ```
 
-Until the GitHub repo is renamed from `slumber-home`, keep existing URLs or add redirects.
+Defaults derive from `EXPO_PUBLIC_WEB_BASE_URL` when omitted (`lib/legal.ts`).
