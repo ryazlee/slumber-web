@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from 'react';
+import { getAuthCallbackUrl } from '../lib/authRedirect';
+import { signInWithGoogle } from '../lib/auth/oauthSignIn';
 import { formatAuthError } from '../lib/authErrors';
 import { supabase } from '../lib/supabase';
 
@@ -23,6 +25,17 @@ export default function LoginForm({
   const [authError, setAuthError] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
 
+  const handleGoogleSignIn = async () => {
+    setAuthError(null);
+    setAuthLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (err: unknown) {
+      setAuthError(formatAuthError(err));
+      setAuthLoading(false);
+    }
+  };
+
   const handleSendOtp = async (e: FormEvent) => {
     e.preventDefault();
     setAuthError(null);
@@ -31,7 +44,10 @@ export default function LoginForm({
       const normalizedEmail = email.trim().toLowerCase();
       const { error } = await supabase.auth.signInWithOtp({
         email: normalizedEmail,
-        options: { shouldCreateUser: false },
+        options: {
+          shouldCreateUser: false,
+          emailRedirectTo: getAuthCallbackUrl(),
+        },
       });
       if (error) throw error;
       setEmail(normalizedEmail);
@@ -69,7 +85,19 @@ export default function LoginForm({
       <p className="lead admin-lead">{description}</p>
 
       {authStep === 'email' ? (
-        <form className="admin-form" onSubmit={handleSendOtp}>
+        <>
+          <button
+            className="admin-button admin-button-google"
+            type="button"
+            onClick={() => void handleGoogleSignIn()}
+            disabled={authLoading}
+          >
+            {authLoading ? 'Redirecting…' : 'Continue with Google'}
+          </button>
+          <div className="login-divider" aria-hidden="true">
+            <span>or</span>
+          </div>
+          <form className="admin-form" onSubmit={handleSendOtp}>
           <label className="admin-label" htmlFor="login-email">Email</label>
           <input
             id="login-email"
@@ -85,9 +113,12 @@ export default function LoginForm({
             {authLoading ? 'Sending…' : 'Send code'}
           </button>
         </form>
+        </>
       ) : (
         <form className="admin-form" onSubmit={handleVerifyOtp}>
-          <p className="admin-muted">Code sent to {email}</p>
+          <p className="admin-muted">
+            Code sent to {email}. Enter the 6-digit code below, or tap the sign-in link in the email.
+          </p>
           <label className="admin-label" htmlFor="login-otp">Verification code</label>
           <input
             id="login-otp"

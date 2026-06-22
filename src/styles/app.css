@@ -105,6 +105,34 @@
   width: 100%;
 }
 
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+  color: var(--text-dim, #888);
+  font-size: 0.85rem;
+  text-transform: lowercase;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border, rgba(255, 255, 255, 0.12));
+}
+
+.admin-button-google {
+  width: 100%;
+  background: var(--surface-muted, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+}
+
+.admin-button-google:hover:not(:disabled) {
+  background: var(--surface-elevated, rgba(255, 255, 255, 0.1));
+}
+
 .app-page-header h1 {
   font-size: 1.75rem;
   margin: 0;

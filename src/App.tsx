@@ -29,6 +29,7 @@ import Home from './pages/Home';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import InviteLandingPage from './pages/InviteLandingPage';
+import LoginCallback from './pages/LoginCallback';
 import { withDeepLinkAuthGate } from './components/DeepLinkAuthGate';
 
 const GatedPostDetail = withDeepLinkAuthGate(PostDetail);
@@ -69,6 +70,7 @@ export default function App() {
             <Route path="roles" element={<AdminRolesPage />} />
           </Route>
         </Route>
+        <Route path="login-callback" element={<LoginCallback />} />
         <Route index element={<AppEntry />} />
         <Route element={<ProtectedAppShell />}>
           <Route path="feed" element={<Feed />} />
