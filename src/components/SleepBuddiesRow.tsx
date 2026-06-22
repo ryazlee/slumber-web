@@ -17,7 +17,7 @@ export default function SleepBuddiesRow({ buddies, variant = 'card' }: Props) {
       data-post-interactive
     >
       <p className={`post-sleep-buddies-line${isDetail ? ' post-sleep-buddies-line--detail' : ''}`}>
-        <span className="post-sleep-buddies-lead">with </span>
+        <span className="post-sleep-buddies-lead">Slept with </span>
         {buddies.map((buddy, index) => (
           <span key={buddy.userId} className="post-sleep-buddies-mention-wrap">
             {index > 0 ? <span className="post-sleep-buddies-sep"> · </span> : null}

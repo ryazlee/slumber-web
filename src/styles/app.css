@@ -854,10 +854,17 @@
 }
 
 .post-sleep-buddies {
-  margin: 0 0 12px;
+  margin: 12px 0 0;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  min-width: 0;
+}
+
+.post-sleep-buddies--detail {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 12px 14px;
 }
 
 .post-sleep-buddies::-webkit-scrollbar {
@@ -866,19 +873,18 @@
 
 .post-sleep-buddies-line {
   margin: 0;
-  display: flex;
+  display: inline-flex;
   flex-wrap: nowrap;
   align-items: baseline;
   white-space: nowrap;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 18px;
+  padding-right: 8px;
 }
 
 .post-sleep-buddies-line--detail {
   font-size: 15px;
-  line-height: 1.45;
-  white-space: normal;
-  flex-wrap: wrap;
+  line-height: 22px;
 }
 
 .post-sleep-buddies-lead {
@@ -901,11 +907,7 @@
 }
 
 .post-sleep-buddies-mention:hover {
-  text-decoration: underline;
-}
-
-.post-detail-sleep-buddies {
-  padding-block: 12px;
+  opacity: 0.85;
 }
 
 .post-schedule-meta {

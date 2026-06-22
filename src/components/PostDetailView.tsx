@@ -218,9 +218,7 @@ export default function PostDetailView({
       {(post.sleepBuddies?.length ?? 0) > 0 ? (
         <>
           <PostDetailSectionHeader title="Sleep buddies" />
-          <div className="post-detail-panel post-detail-sleep-buddies">
-            <SleepBuddiesRow buddies={post.sleepBuddies!} variant="detail" />
-          </div>
+          <SleepBuddiesRow buddies={post.sleepBuddies!} variant="detail" />
         </>
       ) : null}
 

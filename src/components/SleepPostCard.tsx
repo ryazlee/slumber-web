@@ -125,16 +125,6 @@ export default function SleepPostCard({
         </div>
       ) : null}
 
-      {(post.photoUrls?.length ?? 0) > 0 ? (
-        <div data-post-interactive>
-          <PostPhotoGallery post={post} variant="feed" />
-        </div>
-      ) : null}
-
-      {(post.sleepBuddies?.length ?? 0) > 0 ? (
-        <SleepBuddiesRow buddies={post.sleepBuddies!} variant="card" />
-      ) : null}
-
       <PostTagList tags={post.tags} />
 
       {post.notes && <p className="post-notes">{post.notes}</p>}
@@ -145,6 +135,16 @@ export default function SleepPostCard({
         blurDream={post.blurDream}
         isOwnPost={isOwnPost}
       />
+
+      {(post.photoUrls?.length ?? 0) > 0 ? (
+        <div data-post-interactive>
+          <PostPhotoGallery post={post} variant="feed" />
+        </div>
+      ) : null}
+
+      {(post.sleepBuddies?.length ?? 0) > 0 ? (
+        <SleepBuddiesRow buddies={post.sleepBuddies!} variant="card" />
+      ) : null}
 
       <div data-post-interactive>
         <PostSocial
