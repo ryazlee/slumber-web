@@ -1,5 +1,5 @@
 /** Default public site URL — keep in sync with `lib/webBaseUrl.ts` `DEFAULT_WEB_BASE_URL`. */
-export const DEFAULT_SITE_URL = 'https://ryazlee.github.io/slumber-web';
+export const DEFAULT_SITE_URL = 'https://useslumber.com';
 
 function trimTrailingSlash(url: string): string {
   return url.replace(/\/$/, '');

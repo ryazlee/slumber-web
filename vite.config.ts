@@ -2,7 +2,7 @@ import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { build404Html, buildIndexRestoreScript } from './lib/spaShellScripts';
 
-const DEFAULT_SITE_URL = 'https://ryazlee.github.io/slumber-web';
+const DEFAULT_SITE_URL = 'https://useslumber.com';
 const IOS_APP_ID = 'L57M37HLYR.com.ryan.slumber';
 
 function appLinkPath(basePath: string, route: string): string {
