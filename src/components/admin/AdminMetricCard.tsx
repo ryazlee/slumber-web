@@ -1,9 +1,10 @@
+import type { ReactNode } from 'react';
 import { formatNumber } from './format';
 
 type Props = {
   label: string;
   value: number | string;
-  sub?: string;
+  sub?: ReactNode;
 };
 
 export default function AdminMetricCard({ label, value, sub }: Props) {

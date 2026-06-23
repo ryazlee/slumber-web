@@ -1,10 +1,13 @@
 import type {
   AnalyticsFilters,
   CatalogListFilters,
+  ChallengeListFilters,
+  DataIssueFilters,
   PremiumUserFilters,
   ReportListFilters,
   UserSearchFilters,
 } from '../lib/admin';
+import type { PaginationFilters } from '../lib/adminPagination';
 
 export const queryKeys = {
   feed: ['feed'] as const,
@@ -50,5 +53,13 @@ export const queryKeys = {
     userSearch: (filters: UserSearchFilters) => ['admin', 'user-search', filters] as const,
     premiumMetrics: ['admin', 'premium', 'metrics'] as const,
     premiumUsers: (filters: PremiumUserFilters) => ['admin', 'premium', 'users', filters] as const,
+    healthMetrics: (days: number) => ['admin', 'health', days] as const,
+    cohortRetention: (weeks: number) => ['admin', 'cohort', weeks] as const,
+    communityMetrics: ['admin', 'community', 'metrics'] as const,
+    challenges: (filters: ChallengeListFilters) => ['admin', 'community', 'challenges', filters] as const,
+    clubs: (filters: PaginationFilters) => ['admin', 'community', 'clubs', filters] as const,
+    dataIssues: (filters: DataIssueFilters) => ['admin', 'data-issues', filters] as const,
+    userDetail: (userId: string) => ['admin', 'user-detail', userId] as const,
+    userPosts: (filters: AnalyticsFilters) => ['admin', 'user-posts', filters] as const,
   },
 };

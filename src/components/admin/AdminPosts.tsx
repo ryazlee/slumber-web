@@ -13,6 +13,8 @@ import {
   useRecalculateSleepPostStagesBulk,
   useRepairDoubledSleepPostStages,
   useRepairDoubledSleepPostStagesBulk,
+  useAdminSoftDeletePostFromGrid,
+  useRepairInflatedStages,
 } from '../../hooks/useAdmin';
 import type { AdminAnalyticsScreenProps } from './adminAnalyticsTypes';
 import AdminActivityChart from './AdminActivityChart';
@@ -26,7 +28,9 @@ import AdminSection, { AdminTableSummary } from './AdminSection';
 import { gridActionsColumn } from './gridColumnHelpers';
 import { buildRecentPostColumns } from './postGridColumns';
 
-type Props = AdminAnalyticsScreenProps;
+type Props = AdminAnalyticsScreenProps & {
+  userId?: string | null;
+};
 
 export default function AdminPosts({
   range,
@@ -35,6 +39,7 @@ export default function AdminPosts({
   onPresetChange,
   onRangeChange,
   onAppVersionChange,
+  userId = null,
 }: Props) {
   const { refreshing } = useAdmin();
   const [stageMessage, setStageMessage] = useState<string | null>(null);
@@ -44,7 +49,8 @@ export default function AdminPosts({
     start: range.start,
     end: range.end,
     appVersion: appVersion || null,
-  }), [range.start, range.end, appVersion]);
+    userId,
+  }), [range.start, range.end, appVersion, userId]);
 
   const { paginationModel, setPaginationModel, filters } = usePaginatedFilters(
     baseFilters,
@@ -60,6 +66,8 @@ export default function AdminPosts({
   const bulkMutation = useRecalculateSleepPostStagesBulk();
   const repairMutation = useRepairDoubledSleepPostStages();
   const repairBulkMutation = useRepairDoubledSleepPostStagesBulk();
+  const softDeleteMutation = useAdminSoftDeletePostFromGrid();
+  const repairAllMutation = useRepairInflatedStages();
 
   const rangeLabel = formatRangeLabel(range);
   const versionLabel = appVersion ? `v${appVersion}` : 'all versions';
@@ -119,6 +127,20 @@ export default function AdminPosts({
     }
   }, [repairMutation]);
 
+  const softDeletePost = useCallback(async (post: RecentPostRow) => {
+    if (!window.confirm(`Soft-delete “${post.title}”? Reports will be dismissed.`)) return;
+    setStageMessage(null);
+    setActingPostId(post.id);
+    try {
+      await softDeleteMutation.mutateAsync(post.id);
+      setStageMessage(`Removed ${post.title}.`);
+    } catch (err: unknown) {
+      setStageMessage(err instanceof Error ? err.message : 'Could not delete post.');
+    } finally {
+      setActingPostId(null);
+    }
+  }, [softDeleteMutation]);
+
   const recalculateLoadedWearable = async () => {
     const ids = wearablePosts.map((post) => post.id);
     if (!ids.length) {
@@ -161,14 +183,35 @@ export default function AdminPosts({
     }
   };
 
+  const repairAllInflated = async () => {
+    if (!window.confirm('Repair up to 50 inflated wearable posts in the current date filter?')) return;
+    setStageMessage(null);
+    try {
+      const daySpan = range.start && range.end
+        ? Math.ceil((new Date(range.end).getTime() - new Date(range.start).getTime()) / 86400000) + 1
+        : null;
+      const result = await repairAllMutation.mutateAsync({ limit: 50, days: daySpan });
+      const failed = result.errors.length;
+      setStageMessage(
+        failed
+          ? `Repaired ${result.fixed}, unchanged ${result.skipped}, failed ${failed}.`
+          : `Repaired ${result.fixed} post(s)${result.skipped ? ` · ${result.skipped} unchanged` : ''}.`,
+      );
+    } catch (err: unknown) {
+      setStageMessage(formatRecalcStagesError(err));
+    }
+  };
+
   const recalculating = recalcMutation.isPending || bulkMutation.isPending
-    || repairMutation.isPending || repairBulkMutation.isPending;
+    || repairMutation.isPending || repairBulkMutation.isPending
+    || softDeleteMutation.isPending || repairAllMutation.isPending;
 
   const columns = useMemo<GridColDef<RecentPostRow>[]>(() => [
     ...buildRecentPostColumns({
       actingPostId,
       onRecalculate: recalculatePost,
       onRepair: repairPost,
+      onSoftDelete: softDeletePost,
     }),
     {
       field: 'open',
@@ -187,12 +230,14 @@ export default function AdminPosts({
         </AdminGridActions>
       ),
     },
-  ], [actingPostId, recalculatePost, repairPost]);
+  ], [actingPostId, recalculatePost, repairPost, softDeletePost]);
 
   return (
     <AdminSection
       className="admin-posts"
-      lead="Browse sleep posts in the selected date range (paginated). Repair inflated stage minutes, recalculate from raw_samples, or open a post in the app. Bulk actions apply to the current page. Reported posts are under Reports."
+      lead={userId
+        ? 'Posts for one user in the selected date range.'
+        : 'Browse sleep posts in the selected date range (paginated). Repair inflated stage minutes, recalculate from raw_samples, soft-delete, or open a post. Bulk actions apply to the current page.'}
       error={error}
     >
       <AdminAnalyticsFilters
@@ -246,6 +291,14 @@ export default function AdminPosts({
           <AdminListToolbar
             actions={(
               <>
+                <button
+                  type="button"
+                  className="admin-button admin-button-ghost"
+                  disabled={recalculating}
+                  onClick={() => void repairAllInflated()}
+                >
+                  {repairAllMutation.isPending ? 'Repairing…' : 'Repair inflated (50)'}
+                </button>
                 <button
                   type="button"
                   className="admin-button admin-button-ghost"

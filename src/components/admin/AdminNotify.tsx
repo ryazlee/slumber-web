@@ -1,45 +1,86 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { SendNotificationResult } from '../../lib/admin';
 import { getOptionalQueryErrorMessage } from '../../lib/queryError';
 import { useAdminDebouncedSearch } from '../../hooks/useAdminDebouncedSearch';
 import { useAdminUserPickerSearch } from '../../hooks/useAdminUserPickerSearch';
-import { useSendAdminNotification } from '../../hooks/useAdmin';
+import {
+  useAdminUserDetail,
+  useBroadcastAdminNotification,
+  useSendAdminNotification,
+} from '../../hooks/useAdmin';
+import { useAssignableRoles } from '../../hooks/useCatalog';
+import { getCachedRoleOptions } from '../../lib/userRoles';
 import { AdminUserPickerList, AdminUserPickerSearchField } from './AdminUserPicker';
+import AdminFieldGroup from './AdminFieldGroup';
+import AdminFilterBar, { AdminFilterField } from './AdminFilterBar';
 import AdminPanel from './AdminPanel';
 import AdminSection from './AdminSection';
 import { formatWhen } from './format';
 
 const MESSAGE_MAX = 500;
+const BROADCAST_MAX = 2000;
 
 export default function AdminNotify() {
+  const [searchParams] = useSearchParams();
+  const preselectedUserId = searchParams.get('user');
+
   const {
     query,
     setQuery,
     trimmedDebounced: debouncedQuery,
     isActive: searchActive,
   } = useAdminDebouncedSearch();
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(preselectedUserId);
   const [message, setMessage] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<SendNotificationResult | null>(null);
   const messageRef = useRef<HTMLTextAreaElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [broadcastRole, setBroadcastRole] = useState('');
+  const [broadcastJoinedDays, setBroadcastJoinedDays] = useState('');
+  const [broadcastLimit, setBroadcastLimit] = useState('500');
+  const [broadcastError, setBroadcastError] = useState<string | null>(null);
+  const [broadcastResult, setBroadcastResult] = useState<{ sent: number; device_tokens: number } | null>(null);
+
   const usersQuery = useAdminUserPickerSearch(debouncedQuery, searchActive);
+  const preselectedQuery = useAdminUserDetail(preselectedUserId);
   const sendMutation = useSendAdminNotification();
+  const broadcastMutation = useBroadcastAdminNotification();
+  const rolesQuery = useAssignableRoles();
+  const roleOptions = rolesQuery.data ?? getCachedRoleOptions();
 
   const users = usersQuery.data?.rows ?? [];
   const searching = usersQuery.isFetching;
   const searchError = getOptionalQueryErrorMessage(usersQuery.error, 'Could not load users.');
 
-  const selectedUser = users.find((u) => u.id === selectedUserId) ?? null;
+  const selectedUser = users.find((u) => u.id === selectedUserId)
+    ?? (preselectedQuery.data && selectedUserId === preselectedQuery.data.id
+      ? {
+        id: preselectedQuery.data.id,
+        username: preselectedQuery.data.username,
+        email: preselectedQuery.data.email,
+        created_at: preselectedQuery.data.created_at,
+        user_roles: preselectedQuery.data.user_roles,
+        is_premium: preselectedQuery.data.is_premium,
+        posts_count: preselectedQuery.data.posts_count,
+      }
+      : null);
   const trimmedMessage = message.trim();
   const canSend = Boolean(selectedUserId && trimmedMessage && !sendMutation.isPending);
 
   useEffect(() => {
     searchRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    if (preselectedUserId) {
+      setSelectedUserId(preselectedUserId);
+    }
+  }, [preselectedUserId]);
 
   useEffect(() => {
     if (selectedUserId) {
@@ -77,6 +118,38 @@ export default function AdminNotify() {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && canSend) {
       e.preventDefault();
       void sendNotification();
+    }
+  };
+
+  const sendBroadcast = async (e: FormEvent) => {
+    e.preventDefault();
+    const trimmed = broadcastMessage.trim();
+    if (!trimmed) {
+      setBroadcastError('Enter a message.');
+      return;
+    }
+    const limit = Number(broadcastLimit) || 500;
+    const joinedDays = broadcastJoinedDays === '' ? null : Number(broadcastJoinedDays);
+    const audience = [
+      broadcastRole ? `role:${broadcastRole}` : null,
+      joinedDays ? `joined ≤${joinedDays}d` : null,
+      `max ${limit}`,
+    ].filter(Boolean).join(' · ');
+    if (!window.confirm(`Send announcement to up to ${limit} users (${audience || 'all users'})?`)) return;
+
+    setBroadcastError(null);
+    setBroadcastResult(null);
+    try {
+      const result = await broadcastMutation.mutateAsync({
+        message: trimmed,
+        role: broadcastRole || null,
+        joinedWithinDays: joinedDays,
+        limit,
+      });
+      setBroadcastResult(result);
+      setBroadcastMessage('');
+    } catch (err: unknown) {
+      setBroadcastError(err instanceof Error ? err.message : 'Could not broadcast.');
     }
   };
 
@@ -184,6 +257,86 @@ export default function AdminNotify() {
           </form>
         </AdminPanel>
       </div>
+
+      <AdminPanel
+        title="Broadcast announcement"
+        description="Sends an in-app announcement (and push when tokens exist) to a filtered audience. Rate-limited server-side."
+        className="admin-notify-broadcast"
+      >
+        <form className="admin-compose-form" onSubmit={sendBroadcast}>
+          <AdminFilterBar nested>
+            <AdminFilterField label="Role filter" htmlFor="broadcast-role">
+              <select
+                id="broadcast-role"
+                className="admin-input admin-input-select"
+                value={broadcastRole}
+                onChange={(e) => setBroadcastRole(e.target.value)}
+              >
+                <option value="">All users</option>
+                {roleOptions.map((opt) => (
+                  <option key={opt.key} value={opt.key}>{opt.label}</option>
+                ))}
+              </select>
+            </AdminFilterField>
+            <AdminFilterField label="Joined within" htmlFor="broadcast-joined">
+              <select
+                id="broadcast-joined"
+                className="admin-input admin-input-select"
+                value={broadcastJoinedDays}
+                onChange={(e) => setBroadcastJoinedDays(e.target.value)}
+              >
+                <option value="">Any time</option>
+                <option value="7">Last 7 days</option>
+                <option value="30">Last 30 days</option>
+                <option value="90">Last 90 days</option>
+              </select>
+            </AdminFilterField>
+            <AdminFilterField label="Max recipients" htmlFor="broadcast-limit">
+              <input
+                id="broadcast-limit"
+                className="admin-input"
+                type="number"
+                min={1}
+                max={BROADCAST_MAX}
+                value={broadcastLimit}
+                onChange={(e) => setBroadcastLimit(e.target.value)}
+              />
+            </AdminFilterField>
+          </AdminFilterBar>
+
+          <AdminFieldGroup title="Message">
+            <textarea
+              id="broadcast-message"
+              className="admin-input admin-textarea"
+              rows={4}
+              maxLength={MESSAGE_MAX}
+              value={broadcastMessage}
+              onChange={(e) => setBroadcastMessage(e.target.value)}
+              placeholder="Announcement for selected audience…"
+              disabled={broadcastMutation.isPending}
+            />
+          </AdminFieldGroup>
+
+          {broadcastError ? <p className="admin-error">{broadcastError}</p> : null}
+          {broadcastResult ? (
+            <p className="admin-success-banner">
+              Sent to {broadcastResult.sent} user{broadcastResult.sent === 1 ? '' : 's'}
+              {' · '}
+              {broadcastResult.device_tokens} push token{broadcastResult.device_tokens === 1 ? '' : 's'}
+            </p>
+          ) : null}
+
+          <div className="admin-form-actions">
+            <button
+              className="admin-button"
+              type="submit"
+              disabled={!broadcastMessage.trim() || broadcastMutation.isPending}
+            >
+              {broadcastMutation.isPending ? 'Sending…' : 'Broadcast'}
+            </button>
+          </div>
+        </form>
+      </AdminPanel>
     </AdminSection>
   );
 }

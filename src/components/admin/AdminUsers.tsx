@@ -1,37 +1,36 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { type GridRowParams } from '@mui/x-data-grid';
 import type { RecentUserRow, UserSearchFilters } from '../../lib/admin';
 import { getOptionalQueryErrorMessage } from '../../lib/queryError';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { usePaginatedFilters } from '../../hooks/usePaginatedFilters';
-import { useAdminUserSearch, useUpdateUserRoles } from '../../hooks/useAdmin';
+import { useAdminUserSearch } from '../../hooks/useAdmin';
 import { useAssignableRoles } from '../../hooks/useCatalog';
-import {
-  getCachedRoleOptions,
-} from '../../lib/userRoles';
+import { getCachedRoleOptions } from '../../lib/userRoles';
 import AdminDataGrid from './AdminDataGrid';
 import AdminFilterBar, { AdminFilterField } from './AdminFilterBar';
-import AdminGridAction from './AdminGridAction';
-import AdminGridActions from './AdminGridActions';
 import AdminGridClientFilterHint from './AdminGridClientFilterHint';
 import AdminListToolbar from './AdminListToolbar';
 import AdminSection, { AdminTableSummary } from './AdminSection';
-import AdminUserRoleEditor from './AdminUserRoleEditor';
+import AdminUserDetailPanel from './AdminUserDetailPanel';
 import { pluralCount } from './format';
 import { ADMIN_CATALOG_FORM_ID, scrollAdminPanelIntoView } from './adminScroll';
 import { buildAdminUserSearchColumns } from './userGridColumns';
 
-type QuickFilter = 'new' | 'premium' | null;
+type QuickFilter = 'new' | 'premium' | 'never-posted' | 'inactive' | null;
 
 export default function AdminUsers() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlFilter = searchParams.get('filter') as QuickFilter;
+
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [premiumOnly, setPremiumOnly] = useState(false);
   const [minPosts, setMinPosts] = useState('');
   const [joinedWithin, setJoinedWithin] = useState('');
-  const [quickFilter, setQuickFilter] = useState<QuickFilter>(null);
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>(urlFilter);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const debouncedQuery = useDebouncedValue(query);
@@ -41,10 +40,14 @@ export default function AdminUsers() {
     query: debouncedQuery.trim() || undefined,
     role: roleFilter || null,
     premiumOnly: quickFilter === 'premium' ? true : premiumOnly,
-    minPosts: debouncedMinPosts === '' ? null : Number(debouncedMinPosts),
+    minPosts: quickFilter === 'never-posted'
+      ? null
+      : debouncedMinPosts === '' ? null : Number(debouncedMinPosts),
+    maxPosts: quickFilter === 'never-posted' ? 0 : null,
     joinedWithinDays: quickFilter === 'new'
       ? 7
       : joinedWithin === '' ? null : Number(joinedWithin),
+    inactiveDays: quickFilter === 'inactive' ? 14 : null,
   }), [debouncedQuery, roleFilter, premiumOnly, debouncedMinPosts, joinedWithin, quickFilter]);
 
   const { paginationModel, setPaginationModel, filters: appliedFilters } = usePaginatedFilters(
@@ -55,23 +58,25 @@ export default function AdminUsers() {
   const rolesQuery = useAssignableRoles();
   const roleOptions = rolesQuery.data ?? getCachedRoleOptions();
   const usersQuery = useAdminUserSearch(appliedFilters);
-  const updateRolesMutation = useUpdateUserRoles();
 
   const users = usersQuery.data?.rows ?? [];
   const usersTotal = usersQuery.data?.total ?? 0;
   const searching = usersQuery.isFetching;
   const error = getOptionalQueryErrorMessage(usersQuery.error, 'Could not load users.');
 
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingUser, setEditingUser] = useState<RecentUserRow | null>(null);
-  const [draftRoles, setDraftRoles] = useState<string[]>([]);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<RecentUserRow | null>(null);
 
   const hasFilters = Boolean(query || roleFilter || premiumOnly || minPosts || joinedWithin || quickFilter);
 
   useEffect(() => {
     searchRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    if (urlFilter && urlFilter !== quickFilter) {
+      setQuickFilter(urlFilter);
+    }
+  }, [urlFilter, quickFilter]);
 
   const resetFilters = () => {
     setQuery('');
@@ -80,72 +85,40 @@ export default function AdminUsers() {
     setMinPosts('');
     setJoinedWithin('');
     setQuickFilter(null);
+    setSearchParams({});
   };
 
-  const cancelEdit = useCallback(() => {
-    setEditingId(null);
-    setEditingUser(null);
-    setDraftRoles([]);
-    setFormError(null);
-  }, []);
+  const closeDetail = () => {
+    setSelectedUser(null);
+  };
 
-  useEscapeKey(Boolean(editingId), cancelEdit);
+  useEscapeKey(Boolean(selectedUser), closeDetail);
 
-  const startEdit = useCallback((user: RecentUserRow) => {
-    setEditingId(user.id);
-    setEditingUser(user);
-    setFormError(null);
-    const knownKeys = new Set(roleOptions.map((opt) => opt.key));
-    const known = (user.user_roles ?? []).filter((r) => knownKeys.has(r));
-    setDraftRoles(known);
+  const openDetail = (user: RecentUserRow) => {
+    setSelectedUser(user);
     scrollAdminPanelIntoView(ADMIN_CATALOG_FORM_ID);
-  }, [roleOptions]);
+  };
 
-  const saveRoles = async () => {
-    if (!editingId) return;
-    setFormError(null);
-    try {
-      await updateRolesMutation.mutateAsync({ userId: editingId, roles: draftRoles });
-      cancelEdit();
-    } catch (e: unknown) {
-      setFormError(e instanceof Error ? e.message : 'Could not save roles.');
+  const toggleQuickFilter = (next: QuickFilter) => {
+    const value = quickFilter === next ? null : next;
+    setQuickFilter(value);
+    if (value) {
+      setSearchParams({ filter: value });
+    } else {
+      setSearchParams({});
     }
   };
 
-  const saving = updateRolesMutation.isPending;
-
-  const toggleQuickFilter = (next: QuickFilter) => {
-    setQuickFilter((current) => (current === next ? null : next));
-  };
-
   const columns = useMemo(
-    () => buildAdminUserSearchColumns({
-      renderActions: ({ row }) => (
-        <AdminGridActions>
-          <AdminGridAction
-            active={editingId === row.id}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (editingId === row.id) {
-                cancelEdit();
-              } else {
-                startEdit(row);
-              }
-            }}
-          >
-            {editingId === row.id ? 'Editing' : 'Roles'}
-          </AdminGridAction>
-        </AdminGridActions>
-      ),
-    }),
-    [startEdit, editingId, cancelEdit],
+    () => buildAdminUserSearchColumns({}),
+    [],
   );
 
   const handleRowClick = (params: GridRowParams<RecentUserRow>) => {
-    if (editingId === params.id) {
-      cancelEdit();
+    if (selectedUser?.id === params.id) {
+      closeDetail();
     } else {
-      startEdit(params.row);
+      openDetail(params.row);
     }
   };
 
@@ -188,6 +161,7 @@ export default function AdminUsers() {
             value={quickFilter === 'new' ? '7' : joinedWithin}
             onChange={(e) => {
               setQuickFilter(null);
+              setSearchParams({});
               setJoinedWithin(e.target.value);
             }}
           >
@@ -206,31 +180,33 @@ export default function AdminUsers() {
             placeholder="0"
             value={minPosts}
             onChange={(e) => setMinPosts(e.target.value)}
+            disabled={quickFilter === 'never-posted'}
           />
         </AdminFilterField>
       </AdminFilterBar>
 
       <div className="admin-quick-chips" role="group" aria-label="Quick filters">
-        <button
-          type="button"
-          className={`admin-tab${quickFilter === 'new' ? ' active' : ''}`}
-          onClick={() => toggleQuickFilter('new')}
-        >
-          New this week
-        </button>
-        <button
-          type="button"
-          className={`admin-tab${quickFilter === 'premium' ? ' active' : ''}`}
-          onClick={() => toggleQuickFilter('premium')}
-        >
-          Premium
-        </button>
+        {([
+          ['new', 'New this week'],
+          ['premium', 'Premium'],
+          ['never-posted', 'Never posted'],
+          ['inactive', 'Inactive 14d'],
+        ] as const).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            className={`admin-tab${quickFilter === id ? ' active' : ''}`}
+            onClick={() => toggleQuickFilter(id)}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       <AdminListToolbar>
         <AdminTableSummary>
           {pluralCount(usersTotal, 'user')}
-          {editingId ? ' · click a row or Roles to edit' : ' · click a row to edit roles'}
+          {selectedUser ? ' · click a row to close detail' : ' · click a row for user detail'}
           {' · '}
           <AdminGridClientFilterHint />
           {' · '}
@@ -238,17 +214,8 @@ export default function AdminUsers() {
         </AdminTableSummary>
       </AdminListToolbar>
 
-      {editingUser && editingId ? (
-        <AdminUserRoleEditor
-          user={editingUser}
-          roleOptions={roleOptions}
-          draftRoles={draftRoles}
-          saving={saving}
-          error={formError}
-          onChange={setDraftRoles}
-          onSave={saveRoles}
-          onCancel={cancelEdit}
-        />
+      {selectedUser ? (
+        <AdminUserDetailPanel user={selectedUser} onClose={closeDetail} />
       ) : null}
 
       <AdminDataGrid
@@ -259,7 +226,7 @@ export default function AdminUsers() {
         loading={searching}
         label="Users"
         onRowClick={handleRowClick}
-        getRowClassName={(params) => (params.id === editingId ? 'admin-grid-row-editing' : '')}
+        getRowClassName={(params) => (params.id === selectedUser?.id ? 'admin-grid-row-editing' : '')}
         serverPagination={{
           rowCount: usersTotal,
           paginationModel,
@@ -269,7 +236,6 @@ export default function AdminUsers() {
           sorting: { sortModel: [{ field: 'created_at', sort: 'desc' }] },
         }}
       />
-
     </AdminSection>
   );
 }

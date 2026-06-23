@@ -15,7 +15,7 @@ type SignupOptions = {
 };
 
 type UserSearchOptions = {
-  renderActions: GridColDef<RecentUserRow>['renderCell'];
+  renderActions?: GridColDef<RecentUserRow>['renderCell'];
 };
 
 function rolesLabel(row: RecentUserRow): string {
@@ -70,9 +70,9 @@ export function buildRecentSignupColumns(
 }
 
 export function buildAdminUserSearchColumns(
-  { renderActions }: UserSearchOptions,
+  { renderActions }: UserSearchOptions = {},
 ): GridColDef<RecentUserRow>[] {
-  return [
+  const cols: GridColDef<RecentUserRow>[] = [
     usernameColumn<RecentUserRow>('Username', { minWidth: 140 }),
     emailColumn<RecentUserRow>(),
     loggedAtColumn<RecentUserRow>('created_at', 'Joined'),
@@ -110,7 +110,10 @@ export function buildAdminUserSearchColumns(
         </span>
       ),
     },
-    {
+  ];
+
+  if (renderActions) {
+    cols.push({
       field: 'actions',
       headerName: '',
       sortable: false,
@@ -118,6 +121,8 @@ export function buildAdminUserSearchColumns(
       disableColumnMenu: true,
       width: 110,
       renderCell: renderActions,
-    },
-  ];
+    });
+  }
+
+  return cols;
 }

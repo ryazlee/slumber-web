@@ -5,11 +5,12 @@ type Props = {
   meta?: string;
   footer?: ReactNode;
   children: ReactNode;
+  className?: string;
 };
 
-export default function AdminSubsection({ title, meta, footer, children }: Props) {
+export default function AdminSubsection({ title, meta, footer, children, className = '' }: Props) {
   return (
-    <div className="admin-subsection">
+    <div className={`admin-subsection${className ? ` ${className}` : ''}`}>
       <h2 className="admin-subsection-title">
         {title}
         {meta ? <span className="admin-subsection-meta"> · {meta}</span> : null}

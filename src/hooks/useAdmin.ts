@@ -33,8 +33,22 @@ import {
   recalculateSleepPostStagesBulk,
   repairDoubledSleepPostStages,
   repairDoubledSleepPostStagesBulk,
+  broadcastAdminNotification,
+  adminCancelChallenge,
+  fetchAdminChallenges,
+  fetchAdminClubs,
+  fetchAdminUserDetail,
+  fetchCohortRetention,
+  fetchCommunityMetrics,
+  fetchDataIssues,
+  fetchHealthMetrics,
+  repairInflatedStages,
+  resetUserStreak,
+  setUserSuspended,
   type AnalyticsFilters,
   type TagDraft,
+  type ChallengeListFilters,
+  type DataIssueFilters,
   type RoleDefinitionDraft,
   type PremiumUserFilters,
   type ReportListFilters,
@@ -47,6 +61,7 @@ import {
   ADMIN_QUERY_STALE_MS,
   ADMIN_REPORTS_STALE_MS,
 } from '../lib/adminQueryCache';
+import type { PaginationFilters } from '../lib/adminPagination';
 import { clearTagsCache } from '../lib/tags';
 import { clearRoleDefinitionCache } from '../lib/userRoles';
 import { queryKeys } from './queryKeys';
@@ -467,6 +482,156 @@ export function useRepairDoubledSleepPostStagesBulk() {
     mutationFn: (postIds: string[]) => repairDoubledSleepPostStagesBulk(postIds),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['admin', 'posts'] });
+      void qc.invalidateQueries({ queryKey: ['admin', 'data-issues'] });
+      void qc.invalidateQueries({ queryKey: queryKeys.admin.healthMetrics(7) });
+    },
+  });
+}
+
+export function useHealthMetrics(days = 7, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.admin.healthMetrics(days),
+    queryFn: () => fetchHealthMetrics(days),
+    enabled,
+    ...adminQueryOptions,
+  });
+}
+
+export function useCohortRetention(weeks = 8, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.admin.cohortRetention(weeks),
+    queryFn: () => fetchCohortRetention(weeks),
+    enabled,
+    ...adminQueryOptions,
+  });
+}
+
+export function useCommunityMetrics(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.admin.communityMetrics,
+    queryFn: fetchCommunityMetrics,
+    enabled,
+    ...adminQueryOptions,
+  });
+}
+
+export function useAdminChallenges(filters: ChallengeListFilters, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.admin.challenges(filters),
+    queryFn: () => fetchAdminChallenges(filters),
+    enabled,
+    placeholderData: (previous) => previous,
+    ...adminQueryOptions,
+  });
+}
+
+export function useAdminClubs(filters: PaginationFilters, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.admin.clubs(filters),
+    queryFn: () => fetchAdminClubs(filters),
+    enabled,
+    placeholderData: (previous) => previous,
+    ...adminQueryOptions,
+  });
+}
+
+export function useDataIssues(filters: DataIssueFilters, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.admin.dataIssues(filters),
+    queryFn: () => fetchDataIssues(filters),
+    enabled,
+    placeholderData: (previous) => previous,
+    ...adminQueryOptions,
+  });
+}
+
+export function useAdminUserDetail(userId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.admin.userDetail(userId ?? ''),
+    queryFn: () => fetchAdminUserDetail(userId!),
+    enabled: Boolean(userId),
+    ...adminQueryOptions,
+  });
+}
+
+export function useAdminUserPosts(filters: AnalyticsFilters, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.admin.userPosts(filters),
+    queryFn: () => fetchRecentPosts(filters),
+    enabled,
+    ...adminQueryOptions,
+  });
+}
+
+export function useResetUserStreak() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => resetUserStreak(userId),
+    onSuccess: (_data, userId) => {
+      void qc.invalidateQueries({ queryKey: queryKeys.admin.userDetail(userId) });
+    },
+  });
+}
+
+export function useSetUserSuspended() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, suspended }: { userId: string; suspended: boolean }) =>
+      setUserSuspended(userId, suspended),
+    onSuccess: (_data, { userId }) => {
+      void qc.invalidateQueries({ queryKey: queryKeys.admin.userDetail(userId) });
+      void qc.invalidateQueries({ queryKey: ['admin', 'user-search'] });
+    },
+  });
+}
+
+export function useRepairInflatedStages() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ limit, days }: { limit?: number; days?: number | null }) =>
+      repairInflatedStages(limit, days),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'posts'] });
+      void qc.invalidateQueries({ queryKey: ['admin', 'data-issues'] });
+      void qc.invalidateQueries({ queryKey: ['admin', 'health'] });
+    },
+  });
+}
+
+export function useAdminCancelChallenge() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (challengeId: string) => adminCancelChallenge(challengeId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'community'] });
+      void qc.invalidateQueries({ queryKey: queryKeys.admin.dashboard });
+    },
+  });
+}
+
+export function useBroadcastAdminNotification() {
+  return useMutation({
+    mutationFn: ({
+      message,
+      role,
+      joinedWithinDays,
+      limit,
+    }: {
+      message: string;
+      role?: string | null;
+      joinedWithinDays?: number | null;
+      limit?: number;
+    }) => broadcastAdminNotification(message, { role, joinedWithinDays, limit }),
+  });
+}
+
+export function useAdminSoftDeletePostFromGrid() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (postId: string) => adminSoftDeletePost(postId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'posts'] });
+      void qc.invalidateQueries({ queryKey: queryKeys.admin.dashboard });
     },
   });
 }

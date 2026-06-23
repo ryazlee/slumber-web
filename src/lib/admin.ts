@@ -109,7 +109,9 @@ export type UserSearchFilters = PaginationFilters & {
   role?: string | null;
   premiumOnly?: boolean;
   minPosts?: number | null;
+  maxPosts?: number | null;
   joinedWithinDays?: number | null;
+  inactiveDays?: number | null;
 };
 
 export type RecentUserRow = {
@@ -122,6 +124,120 @@ export type RecentUserRow = {
   premium_until?: string | null;
   posts_count: number;
   last_app_version?: string | null;
+  is_suspended?: boolean;
+  last_post_at?: string | null;
+};
+
+export type HealthMetrics = {
+  days: number;
+  activation: {
+    signups: number;
+    first_time_posters: number;
+    never_posted_in_window: number;
+    never_posted_total: number;
+    inactive_posters: number;
+  };
+  engagement: {
+    posts: number;
+    wearable_posts: number;
+    manual_posts: number;
+    posts_with_dreams: number;
+    active_posters: number;
+    comments: number;
+    kudos: number;
+    users_with_push: number;
+  };
+  retention: {
+    wau: number;
+    mau: number;
+  };
+  data_quality: {
+    inflated_stage_posts_window: number;
+    inflated_stage_posts_total: number;
+  };
+};
+
+export type CohortRetentionRow = {
+  week_start: string;
+  signups: number;
+  posted_week_0: number;
+  posted_week_2: number;
+  retention_week_2_pct: number;
+};
+
+export type CommunityMetrics = {
+  active_challenges: number;
+  pending_challenges: number;
+  completed_challenges_30d: number;
+  total_clubs: number;
+  club_members_accepted: number;
+  pending_club_invites: number;
+};
+
+export type AdminChallengeRow = {
+  id: string;
+  status: string;
+  goal_minutes: number;
+  creator_username: string;
+  creator_id: string;
+  participant_count: number;
+  created_at: string;
+  started_at: string | null;
+  expires_at: string | null;
+};
+
+export type AdminClubRow = {
+  id: string;
+  name: string;
+  emoji: string | null;
+  owner_username: string;
+  owner_id: string;
+  member_count: number;
+  pending_invites: number;
+  created_at: string;
+};
+
+export type DataIssueRow = {
+  id: string;
+  issue_type: string;
+  user_id: string;
+  username: string;
+  sleep_date: string;
+  title: string;
+  asleep_minutes: number;
+  in_bed_minutes: number;
+  created_at: string;
+};
+
+export type AdminUserDetail = {
+  id: string;
+  username: string;
+  email?: string | null;
+  created_at: string;
+  user_roles: string[] | null;
+  is_premium: boolean;
+  premium_until: string | null;
+  last_app_version: string | null;
+  is_suspended: boolean;
+  posts_count: number;
+  friends_count: number;
+  current_streak: number;
+  longest_streak: number;
+  last_post_at: string | null;
+  device_tokens: number;
+};
+
+export type AdminUserOpResult = {
+  ok: boolean;
+  user_id: string;
+  changed: boolean;
+  before: Record<string, unknown>;
+  after: Record<string, unknown>;
+};
+
+export type BroadcastNotificationResult = {
+  sent: number;
+  device_tokens: number;
 };
 
 export type AppVersionRow = {
@@ -172,6 +288,15 @@ export type AnalyticsFilters = PaginationFilters & {
   start?: string;
   end?: string;
   appVersion?: string | null;
+  userId?: string | null;
+};
+
+export type DataIssueFilters = PaginationFilters & {
+  days?: number | null;
+};
+
+export type ChallengeListFilters = PaginationFilters & {
+  status?: string | null;
 };
 
 export type PaginatedRecentPosts = PaginatedResult<RecentPostRow>;
@@ -254,6 +379,7 @@ export async function fetchRecentPosts(filters: AnalyticsFilters = {}): Promise<
     p_start: filters.start || null,
     p_end: filters.end || null,
     p_app_version: filters.appVersion || null,
+    p_user_id: filters.userId || null,
   };
 
   let result = await supabase.rpc('admin_get_recent_posts', rpcArgs);
@@ -515,6 +641,8 @@ export async function searchAdminUsers(
     p_premium_only: filters.premiumOnly ?? false,
     p_min_posts: filters.minPosts ?? null,
     p_joined_within_days: filters.joinedWithinDays ?? null,
+    p_max_posts: filters.maxPosts ?? null,
+    p_inactive_days: filters.inactiveDays ?? null,
   });
   if (error) throw error;
   return parsePaginatedResult<RecentUserRow>(data);
@@ -638,4 +766,130 @@ export async function sendAdminNotification(
     notification_id: row.notification_id,
     device_tokens: row.device_tokens ?? 0,
   };
+}
+
+export async function fetchHealthMetrics(days = 7): Promise<HealthMetrics> {
+  const { data, error } = await supabase.rpc('admin_get_health_metrics', { p_days: days });
+  if (error) throw error;
+  return data as HealthMetrics;
+}
+
+export async function fetchCohortRetention(weeks = 8): Promise<CohortRetentionRow[]> {
+  const { data, error } = await supabase.rpc('admin_get_cohort_retention', { p_weeks: weeks });
+  if (error) throw error;
+  return (data as CohortRetentionRow[] | null) ?? [];
+}
+
+export async function fetchCommunityMetrics(): Promise<CommunityMetrics> {
+  const { data, error } = await supabase.rpc('admin_get_community_metrics');
+  if (error) throw error;
+  return data as CommunityMetrics;
+}
+
+export async function fetchAdminChallenges(
+  filters: ChallengeListFilters = {},
+): Promise<PaginatedResult<AdminChallengeRow>> {
+  const pageSize = resolvePageSize(filters.pageSize, filters.limit, 25);
+  const page = filters.page ?? 0;
+  const { data, error } = await supabase.rpc('admin_list_challenges', {
+    p_limit: pageSize,
+    p_offset: resolvePageOffset(page, pageSize),
+    p_status: filters.status || null,
+  });
+  if (error) throw error;
+  return parsePaginatedResult<AdminChallengeRow>(data);
+}
+
+export async function fetchAdminClubs(
+  filters: PaginationFilters = {},
+): Promise<PaginatedResult<AdminClubRow>> {
+  const pageSize = resolvePageSize(filters.pageSize, filters.limit, 25);
+  const page = filters.page ?? 0;
+  const { data, error } = await supabase.rpc('admin_list_clubs', {
+    p_limit: pageSize,
+    p_offset: resolvePageOffset(page, pageSize),
+  });
+  if (error) throw error;
+  return parsePaginatedResult<AdminClubRow>(data);
+}
+
+export async function adminCancelChallenge(challengeId: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_cancel_challenge', {
+    p_challenge_id: challengeId,
+  });
+  if (error) throw error;
+}
+
+export async function fetchDataIssues(
+  filters: DataIssueFilters = {},
+): Promise<PaginatedResult<DataIssueRow>> {
+  const pageSize = resolvePageSize(filters.pageSize, filters.limit, 25);
+  const page = filters.page ?? 0;
+  const { data, error } = await supabase.rpc('admin_list_data_issues', {
+    p_limit: pageSize,
+    p_offset: resolvePageOffset(page, pageSize),
+    p_days: filters.days ?? null,
+  });
+  if (error) throw error;
+  return parsePaginatedResult<DataIssueRow>(data);
+}
+
+export async function repairInflatedStages(
+  limit = 50,
+  days?: number | null,
+): Promise<RecalculateSleepStagesBulkResult> {
+  const { data, error } = await supabase.rpc('admin_repair_inflated_stages', {
+    p_limit: limit,
+    p_days: days ?? null,
+  });
+  if (error) throw error;
+  const row = data as RecalculateSleepStagesBulkResult | null;
+  return row ?? { fixed: 0, skipped: 0, errors: [] };
+}
+
+export async function fetchAdminUserDetail(userId: string): Promise<AdminUserDetail> {
+  const { data, error } = await supabase.rpc('admin_get_user_detail', {
+    p_user_id: userId,
+  });
+  if (error) throw error;
+  return data as AdminUserDetail;
+}
+
+export async function resetUserStreak(userId: string): Promise<AdminUserOpResult> {
+  const { data, error } = await supabase.rpc('admin_reset_user_streak', {
+    p_user_id: userId,
+  });
+  if (error) throw error;
+  return data as AdminUserOpResult;
+}
+
+export async function setUserSuspended(
+  userId: string,
+  suspended: boolean,
+): Promise<AdminUserOpResult> {
+  const { data, error } = await supabase.rpc('admin_set_user_suspended', {
+    p_user_id: userId,
+    p_suspended: suspended,
+  });
+  if (error) throw error;
+  return data as AdminUserOpResult;
+}
+
+export async function broadcastAdminNotification(
+  message: string,
+  options: {
+    role?: string | null;
+    joinedWithinDays?: number | null;
+    limit?: number;
+  } = {},
+): Promise<BroadcastNotificationResult> {
+  const { data, error } = await supabase.rpc('admin_broadcast_notification', {
+    p_message: message,
+    p_role: options.role || null,
+    p_joined_within_days: options.joinedWithinDays ?? null,
+    p_limit: options.limit ?? 500,
+  });
+  if (error) throw error;
+  const row = data as BroadcastNotificationResult | null;
+  return row ?? { sent: 0, device_tokens: 0 };
 }

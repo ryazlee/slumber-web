@@ -25,6 +25,7 @@ import AdminReportsPage from './pages/admin/AdminReportsPage';
 import AdminRolesPage from './pages/admin/AdminRolesPage';
 import AdminTagsPage from './pages/admin/AdminTagsPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
+import AdminCommunityPage from './pages/admin/AdminCommunityPage';
 import Home from './pages/Home';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
@@ -62,6 +63,7 @@ export default function App() {
           <Route path="posts" element={<AdminPostsPage />} />
           <Route path="reports" element={<AdminReportsPage />} />
           <Route path="users" element={<AdminUsersPage />} />
+          <Route path="community" element={<AdminCommunityPage />} />
           <Route path="premium" element={<AdminPremiumPage />} />
           <Route path="notify" element={<AdminNotifyPage />} />
           <Route path="configure">

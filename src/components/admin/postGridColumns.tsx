@@ -9,6 +9,7 @@ export type RecentPostColumnOptions = {
   actingPostId?: string | null;
   onRecalculate?: (post: RecentPostRow) => void;
   onRepair?: (post: RecentPostRow) => void;
+  onSoftDelete?: (post: RecentPostRow) => void;
 };
 
 function isWearablePost(row: RecentPostRow): boolean {
@@ -54,7 +55,7 @@ function postSourceLabel(row: RecentPostRow): string {
 export function buildRecentPostColumns(
   options: RecentPostColumnOptions = {},
 ): GridColDef<RecentPostRow>[] {
-  const { actingPostId = null, onRecalculate, onRepair } = options;
+  const { actingPostId = null, onRecalculate, onRepair, onSoftDelete } = options;
 
   const cols: GridColDef<RecentPostRow>[] = [
     idCodeColumn<RecentPostRow>('id', 'Post ID'),
@@ -143,18 +144,31 @@ export function buildRecentPostColumns(
     dateColumn('created_at', 'Logged'),
   ];
 
-  if (onRecalculate || onRepair) {
+  if (onRecalculate || onRepair || onSoftDelete) {
     cols.push({
       field: 'recalculate_stages',
-      headerName: 'Stages',
+      headerName: 'Actions',
       ...gridActionsColumn,
-      width: onRepair ? 156 : 120,
+      width: onSoftDelete ? (onRepair ? 196 : 156) : (onRepair ? 156 : 120),
       renderCell: ({ row }) => {
         const wearable = isWearablePost(row);
         const busy = actingPostId === row.id;
         const inflated = needsStageRepair(row);
         return (
           <AdminGridActions>
+            {onSoftDelete ? (
+              <AdminGridAction
+                variant="danger"
+                disabled={busy}
+                title="Soft-delete post"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSoftDelete(row);
+                }}
+              >
+                {busy ? '…' : 'Delete'}
+              </AdminGridAction>
+            ) : null}
             {onRepair && inflated ? (
               <AdminGridAction
                 variant="accent"

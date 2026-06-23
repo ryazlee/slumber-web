@@ -15,6 +15,7 @@ type Props = {
   onChange: (roles: string[]) => void;
   onSave: () => void;
   onCancel: () => void;
+  embedded?: boolean;
 };
 
 function RolePreview({ roleKey, roleStyles }: { roleKey: string | undefined; roleStyles: Map<string, { color: string; badge: string; label: string }> }) {
@@ -53,6 +54,7 @@ export default function AdminUserRoleEditor({
   onChange,
   onSave,
   onCancel,
+  embedded = false,
 }: Props) {
   const stylesQuery = useAvatarRoleStyles();
   const roleStyles = stylesQuery.data ?? new Map();
@@ -84,19 +86,8 @@ export default function AdminUserRoleEditor({
     hasChanges ? 'Unsaved changes' : null,
   ].filter(Boolean);
 
-  return (
-    <AdminPanel
-      id={ADMIN_CATALOG_FORM_ID}
-      title={`@${user.username}`}
-      meta={metaParts.length ? metaParts.join(' · ') : undefined}
-      description={<>Tap roles to assign or remove. The <strong>first</strong> role sets the avatar ring in the app.</>}
-      highlighted
-      headerAction={(
-        <button type="button" className="admin-button admin-button-ghost" onClick={onCancel} disabled={saving}>
-          Cancel
-        </button>
-      )}
-    >
+  const body = (
+    <>
       <RolePreview roleKey={primaryKey} roleStyles={roleStyles} />
 
       {draftRoles.length > 0 ? (
@@ -167,6 +158,27 @@ export default function AdminUserRoleEditor({
           Cancel
         </button>
       </div>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="admin-role-editor-embedded">{body}</div>;
+  }
+
+  return (
+    <AdminPanel
+      id={ADMIN_CATALOG_FORM_ID}
+      title={`@${user.username}`}
+      meta={metaParts.length ? metaParts.join(' · ') : undefined}
+      description={<>Tap roles to assign or remove. The <strong>first</strong> role sets the avatar ring in the app.</>}
+      highlighted
+      headerAction={(
+        <button type="button" className="admin-button admin-button-ghost" onClick={onCancel} disabled={saving}>
+          Cancel
+        </button>
+      )}
+    >
+      {body}
     </AdminPanel>
   );
 }
