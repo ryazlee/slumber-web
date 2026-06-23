@@ -69,3 +69,15 @@ EXPO_PUBLIC_TERMS_OF_SERVICE_URL=https://useslumber.com/terms
 ```
 
 Defaults derive from `EXPO_PUBLIC_WEB_BASE_URL` when omitted (`lib/legal.ts`).
+
+## Link previews (iMessage, Messenger, etc.)
+
+Crawlers do not run React. Open Graph tags are injected at build time into `index.html` and `404.html` via `lib/spaShellScripts.ts` (`og-image.png`, `apple-touch-icon.png`, etc. in `public/`).
+
+**GitHub Pages quirk:** paths like `/invite/:token` are served from `404.html` with **HTTP 404**. Some apps (especially iMessage) skip rich previews on non-200 responses even when meta tags are present.
+
+**Fix (pick one):**
+
+1. **Cloudflare Pages** (recommended) — deploy `dist/` with `public/_redirects` (`/* /index.html 200`). Previews use `index.html` meta + logo.
+2. **Cloudflare Worker** (keep GitHub Pages) — deploy `cloudflare/link-preview-worker.mjs` on `useslumber.com/*` to re-serve `404.html` with status **200** for deep-link paths. See `cloudflare/README.md`.
+3. **Verify after deploy** — `curl -sI https://useslumber.com/invite/TOKEN` should be `200` for reliable previews; `og-image.png` must return `200`.

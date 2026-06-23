@@ -1,0 +1,3 @@
+# Cloudflare Pages / Netlify — SPA fallback with HTTP 200 (required for iMessage / Messenger link previews).
+# GitHub Pages ignores this file; use cloudflare/link-preview-worker.mjs if you stay on GitHub Pages.
+/*    /index.html   200

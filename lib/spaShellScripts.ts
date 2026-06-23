@@ -6,35 +6,71 @@
  * Pages those paths return 404.html — so OG/Twitter meta must live here too, not only index.html.
  */
 
-const OG_TITLE = 'Slumber';
-const OG_DESCRIPTION =
+export type SocialMetaVariant = 'site' | 'deeplink';
+
+const SITE_TITLE = 'Slumber';
+const SITE_DESCRIPTION =
   'Social sleep tracking for iOS. Log from Apple Health, share with friends, and join sleep challenges.';
+
+const DEEPLINK_TITLE = 'Join on Slumber';
+const DEEPLINK_DESCRIPTION =
+  "You're invited — social sleep tracking for iOS. Log sleep with friends, compare stats, and join challenges.";
+
 const OG_IMAGE_WIDTH = 1200;
 const OG_IMAGE_HEIGHT = 630;
 
-/** Static Open Graph + Twitter Card tags (crawlers do not run React). */
-export function buildSocialMetaHead(siteUrl: string): string {
-  const imageUrl = `${siteUrl}/og-image.png`;
-  return `
-    <meta name="description" content="${OG_DESCRIPTION}" />
-    <title>${OG_TITLE}</title>
+function assetUrl(siteUrl: string, path: string): string {
+  const base = siteUrl.replace(/\/$/, '');
+  const asset = path.startsWith('/') ? path : `/${path}`;
+  return `${base}${asset}`;
+}
 
-    <link rel="icon" type="image/png" href="/moon.png" />
-    <link rel="apple-touch-icon" href="/moon.png" />
+/** Static Open Graph + Twitter Card tags (crawlers do not run React). */
+export function buildSocialMetaHead(
+  siteUrl: string,
+  variant: SocialMetaVariant = 'site',
+): string {
+  const title = variant === 'deeplink' ? DEEPLINK_TITLE : SITE_TITLE;
+  const description = variant === 'deeplink' ? DEEPLINK_DESCRIPTION : SITE_DESCRIPTION;
+  const imageUrl = assetUrl(siteUrl, '/og-image.png');
+  const touchIconUrl = assetUrl(siteUrl, '/apple-touch-icon.png');
+  const icon512Url = assetUrl(siteUrl, '/icon-512.png');
+  const faviconUrl = assetUrl(siteUrl, '/favicon-32.png');
+
+  return `
+    <meta name="description" content="${description}" />
+    <title>${title}</title>
+
+    <link rel="icon" type="image/png" sizes="32x32" href="${faviconUrl}" />
+    <link rel="icon" type="image/png" href="${assetUrl(siteUrl, '/moon.png')}" />
+    <link rel="apple-touch-icon" sizes="180x180" href="${touchIconUrl}" />
+    <link rel="apple-touch-icon" href="${touchIconUrl}" />
+
+    <meta name="apple-mobile-web-app-title" content="Slumber" />
+    <meta name="application-name" content="Slumber" />
+    <meta name="theme-color" content="#0f0f14" />
 
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="${OG_TITLE}" />
-    <meta property="og:title" content="${OG_TITLE}" />
-    <meta property="og:description" content="${OG_DESCRIPTION}" />
+    <meta property="og:site_name" content="Slumber" />
+    <meta property="og:title" content="${title}" />
+    <meta property="og:description" content="${description}" />
+    <meta property="og:url" content="${siteUrl.replace(/\/$/, '')}/" />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:image" content="${imageUrl}" />
+    <meta property="og:image:secure_url" content="${imageUrl}" />
+    <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="${OG_IMAGE_WIDTH}" />
     <meta property="og:image:height" content="${OG_IMAGE_HEIGHT}" />
     <meta property="og:image:alt" content="Slumber — social sleep tracking for iOS" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="${OG_TITLE}" />
-    <meta name="twitter:description" content="${OG_DESCRIPTION}" />
-    <meta name="twitter:image" content="${imageUrl}" />`;
+    <meta name="twitter:title" content="${title}" />
+    <meta name="twitter:description" content="${description}" />
+    <meta name="twitter:image" content="${imageUrl}" />
+
+    <link rel="image_src" href="${imageUrl}" />
+    <meta itemprop="image" content="${imageUrl}" />
+    <link rel="manifest" href="${assetUrl(siteUrl, '/manifest.webmanifest')}" />`;
 }
 
 function escapeToSystemBrowserSnippet(): string {
@@ -110,7 +146,7 @@ export function build404Html(pathSegmentsToKeep: number, siteUrl: string): strin
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    ${buildSocialMetaHead(siteUrl)}
+    ${buildSocialMetaHead(siteUrl, 'deeplink')}
     <script type="text/javascript">${build404RedirectScript(pathSegmentsToKeep)}</script>
   </head>
   <body></body>
