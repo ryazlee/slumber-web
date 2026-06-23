@@ -2,11 +2,16 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useAuth } from '../context/AuthContext';
 import {
   useAddComment,
+  useCommentLikes,
+  useDeleteComment,
   usePostComments,
   usePostKudos,
+  useToggleCommentLike,
   useToggleKudos,
+  useUpdateComment,
 } from '../hooks/usePostSocial';
 import { timeAgo } from '../lib/format';
+import type { Comment } from '../lib/types';
 import CommentRow from './CommentRow';
 import Popup from './Popup';
 import UserLink from './UserLink';
@@ -43,14 +48,22 @@ export default function PostSocial({
   const [commentCount, setCommentCount] = useState(initialCommentCount);
 
   const [kudosOpen, setKudosOpen] = useState(false);
+  const [commentLikesId, setCommentLikesId] = useState<string | null>(null);
   const [commentsOpen, setCommentsOpen] = useState(defaultCommentsOpen);
   const [commentText, setCommentText] = useState('');
   const [sendError, setSendError] = useState<string | null>(null);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+  const [likePendingId, setLikePendingId] = useState<string | null>(null);
 
   const kudosQuery = usePostKudos(postId, kudosOpen);
   const commentsQuery = usePostComments(postId, commentsOpen);
+  const commentLikesQuery = useCommentLikes(commentLikesId, !!commentLikesId);
   const toggleKudosMutation = useToggleKudos(postId);
   const addCommentMutation = useAddComment(postId);
+  const toggleCommentLikeMutation = useToggleCommentLike(postId);
+  const updateCommentMutation = useUpdateComment(postId);
+  const deleteCommentMutation = useDeleteComment(postId);
 
   const patchParent = useCallback((patch: PostSocialPatch) => {
     onPatch?.(patch);
@@ -66,9 +79,12 @@ export default function PostSocial({
 
   useEffect(() => {
     setKudosOpen(false);
+    setCommentLikesId(null);
     setCommentsOpen(defaultCommentsOpen);
     setSendError(null);
     setCommentText('');
+    setEditingCommentId(null);
+    setEditText('');
     syncedCommentCount.current = null;
   }, [postId, defaultCommentsOpen]);
 
@@ -133,10 +149,77 @@ export default function PostSocial({
 
   const toggleComments = () => setCommentsOpen((v) => !v);
 
+  const handleLikeComment = async (comment: Comment) => {
+    if (!user || likePendingId) return;
+
+    setLikePendingId(comment.id);
+    try {
+      await toggleCommentLikeMutation.mutateAsync({
+        commentId: comment.id,
+        userId: user.id,
+        likeCount: comment.likeCount,
+        hasLiked: comment.hasLiked,
+      });
+    } catch {
+      void commentsQuery.refetch();
+    } finally {
+      setLikePendingId(null);
+    }
+  };
+
+  const handleStartEdit = (comment: Comment) => {
+    setEditingCommentId(comment.id);
+    setEditText(comment.text);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditText('');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!user || !editingCommentId || !editText.trim() || updateCommentMutation.isPending) return;
+    try {
+      await updateCommentMutation.mutateAsync({
+        commentId: editingCommentId,
+        userId: user.id,
+        text: editText,
+      });
+      handleCancelEdit();
+    } catch (err: unknown) {
+      setSendError(err instanceof Error ? err.message : 'Could not update comment.');
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!user || deleteCommentMutation.isPending) return;
+    if (!window.confirm('Delete this comment?')) return;
+
+    setSendError(null);
+    try {
+      await deleteCommentMutation.mutateAsync({ commentId, userId: user.id });
+      if (editingCommentId === commentId) handleCancelEdit();
+      setCommentCount((n) => {
+        const next = Math.max(0, n - 1);
+        patchParent({ commentCount: next });
+        return next;
+      });
+    } catch (err: unknown) {
+      setSendError(err instanceof Error ? err.message : 'Could not delete comment.');
+    }
+  };
+
+  const openCommentLikes = (commentId: string, likeCount: number) => {
+    if (likeCount <= 0) return;
+    setCommentLikesId(commentId);
+  };
+
   const kudos = kudosQuery.data ?? [];
   const comments = commentsQuery.data ?? [];
+  const commentLikes = commentLikesQuery.data ?? [];
   const kudosError = kudosQuery.error instanceof Error ? kudosQuery.error.message : null;
   const commentsError = commentsQuery.error instanceof Error ? commentsQuery.error.message : null;
+  const commentLikesError = commentLikesQuery.error instanceof Error ? commentLikesQuery.error.message : null;
 
   return (
     <div className={`post-social${commentsOpen ? ' post-social--comments-open' : ''}`}>
@@ -212,7 +295,23 @@ export default function PostSocial({
           {commentsQuery.isSuccess && comments.length > 0 && (
             <ul className="comment-thread">
               {comments.map((comment) => (
-                <CommentRow key={comment.id} comment={comment} />
+                <CommentRow
+                  key={comment.id}
+                  comment={comment}
+                  currentUserId={user?.id}
+                  canInteract={!!user}
+                  isEditing={editingCommentId === comment.id}
+                  editText={editingCommentId === comment.id ? editText : undefined}
+                  onEditTextChange={setEditText}
+                  onSaveEdit={handleSaveEdit}
+                  onCancelEdit={handleCancelEdit}
+                  editSaving={updateCommentMutation.isPending}
+                  likeLoading={likePendingId === comment.id}
+                  onLike={() => void handleLikeComment(comment)}
+                  onOpenLikes={() => openCommentLikes(comment.id, comment.likeCount)}
+                  onStartEdit={() => handleStartEdit(comment)}
+                  onDelete={() => void handleDeleteComment(comment.id)}
+                />
               ))}
             </ul>
           )}
@@ -261,6 +360,32 @@ export default function PostSocial({
                 />
                 <span className="kudos-row-meta">
                   gave kudos {timeAgo(kudosUser.createdAt)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Popup>
+
+      <Popup open={!!commentLikesId} onClose={() => setCommentLikesId(null)} title="Likes">
+        {commentLikesQuery.isLoading && <p className="popup-status">Loading…</p>}
+        {commentLikesError && <p className="admin-error">{commentLikesError}</p>}
+        {commentLikesQuery.isSuccess && commentLikes.length === 0 && (
+          <p className="popup-status">No likes yet.</p>
+        )}
+        {commentLikesQuery.isSuccess && commentLikes.length > 0 && (
+          <ul className="kudos-list">
+            {commentLikes.map((likeUser) => (
+              <li key={`${likeUser.id}-${likeUser.createdAt}`} className="kudos-row">
+                <UserLink
+                  userId={likeUser.id}
+                  username={likeUser.username}
+                  avatarUrl={likeUser.avatarUrl}
+                  userRoles={likeUser.userRoles}
+                  showAvatar
+                />
+                <span className="kudos-row-meta">
+                  liked {timeAgo(likeUser.createdAt)}
                 </span>
               </li>
             ))}

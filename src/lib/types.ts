@@ -108,6 +108,9 @@ export type Comment = {
   userRoles?: string[];
   text: string;
   createdAt: string;
+  likeCount: number;
+  hasLiked: boolean;
+  isEdited: boolean;
 };
 
 export type KudosUser = {

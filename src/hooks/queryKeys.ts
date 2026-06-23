@@ -28,6 +28,7 @@ export const queryKeys = {
   challengeContributions: (id: string) => ['challenge-contributions', id] as const,
   postKudos: (postId: string) => ['post-kudos', postId] as const,
   postComments: (postId: string) => ['post-comments', postId] as const,
+  postCommentLikes: (commentId: string) => ['post-comment-likes', commentId] as const,
   tags: ['tags'] as const,
   avatarRoleStyles: ['avatar-role-styles'] as const,
   assignableRoles: ['assignable-roles'] as const,

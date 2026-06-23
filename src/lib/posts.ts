@@ -83,14 +83,22 @@ async function syncMentions(params: {
   if (error) console.warn('[syncMentions]', error.message);
 }
 
-function mapCommentRow(row: {
+type CommentDbRow = {
   id: string;
   post_id: string;
   user_id: string;
   text: string;
   created_at: string;
+  updated_at?: string | null;
   profiles?: { username: string; avatar_url: string | null; user_roles?: string[] | null } | null;
-}): Comment {
+};
+
+function isCommentEdited(row: Pick<CommentDbRow, 'created_at' | 'updated_at'>): boolean {
+  if (!row.updated_at) return false;
+  return new Date(row.updated_at).getTime() > new Date(row.created_at).getTime() + 1000;
+}
+
+function mapCommentRow(row: CommentDbRow, likeCount = 0, hasLiked = false): Comment {
   const username = row.profiles?.username ?? 'unknown';
   return {
     id: row.id,
@@ -101,7 +109,36 @@ function mapCommentRow(row: {
     userRoles: row.profiles?.user_roles ?? undefined,
     text: row.text,
     createdAt: row.created_at,
+    likeCount,
+    hasLiked,
+    isEdited: isCommentEdited(row),
   };
+}
+
+async function fetchCommentLikeMeta(
+  commentIds: string[],
+  currentUserId: string | null,
+): Promise<{ likeCountMap: Record<string, number>; myLikedIds: Set<string> }> {
+  const likeCountMap: Record<string, number> = {};
+  const myLikedIds = new Set<string>();
+  if (commentIds.length === 0) {
+    return { likeCountMap, myLikedIds };
+  }
+
+  const { data: likes, error } = await supabase
+    .from('comment_likes')
+    .select('comment_id, user_id')
+    .in('comment_id', commentIds);
+  if (error) throw error;
+
+  for (const like of likes ?? []) {
+    likeCountMap[like.comment_id] = (likeCountMap[like.comment_id] ?? 0) + 1;
+    if (currentUserId && like.user_id === currentUserId) {
+      myLikedIds.add(like.comment_id);
+    }
+  }
+
+  return { likeCountMap, myLikedIds };
 }
 
 export async function fetchKudosUsers(postId: string): Promise<KudosUser[]> {
@@ -145,6 +182,9 @@ export async function fetchKudosUsers(postId: string): Promise<KudosUser[]> {
 }
 
 export async function fetchComments(postId: string): Promise<Comment[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  const currentUserId = user?.id ?? null;
+
   const { data, error } = await supabase
     .from('comments')
     .select(`*, ${PROFILE_EMBED}`)
@@ -153,7 +193,13 @@ export async function fetchComments(postId: string): Promise<Comment[]> {
 
   if (error) throw error;
 
-  return (data ?? []).map(mapCommentRow);
+  const rows = data ?? [];
+  const commentIds = rows.map((r) => r.id);
+  const { likeCountMap, myLikedIds } = await fetchCommentLikeMeta(commentIds, currentUserId);
+
+  return rows.map((row) =>
+    mapCommentRow(row, likeCountMap[row.id] ?? 0, myLikedIds.has(row.id)),
+  );
 }
 
 export async function toggleKudos(
@@ -198,5 +244,119 @@ export async function addComment(postId: string, userId: string, text: string): 
     friendUsernameToId: friendMap,
   });
 
-  return mapCommentRow(data);
+  return mapCommentRow(data, 0, false);
+}
+
+export async function updateComment(
+  commentId: string,
+  userId: string,
+  text: string,
+): Promise<Comment> {
+  const trimmed = text.trim();
+  if (!trimmed) throw new Error('Comment cannot be empty');
+
+  const { data: existing, error: existingError } = await supabase
+    .from('comments')
+    .select('post_id')
+    .eq('id', commentId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (existingError) throw existingError;
+  if (!existing) throw new Error('Comment not found');
+
+  const postId = existing.post_id as string;
+
+  const { data, error } = await supabase
+    .from('comments')
+    .update({ text: trimmed, updated_at: new Date().toISOString() })
+    .eq('id', commentId)
+    .eq('user_id', userId)
+    .select(`*, ${PROFILE_EMBED}`)
+    .single();
+  if (error) throw error;
+
+  const friendMap = await fetchFriendsForMentions(userId);
+  await syncMentions({
+    postId,
+    mentionerId: userId,
+    field: 'comment',
+    text: trimmed,
+    commentId,
+    friendUsernameToId: friendMap,
+  });
+
+  const { likeCountMap, myLikedIds } = await fetchCommentLikeMeta([commentId], userId);
+  return mapCommentRow(data, likeCountMap[commentId] ?? 0, myLikedIds.has(commentId));
+}
+
+export async function deleteComment(commentId: string, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('comments')
+    .delete()
+    .eq('id', commentId)
+    .eq('user_id', userId);
+  if (error) throw error;
+}
+
+export async function toggleCommentLike(
+  commentId: string,
+  userId: string,
+  currentCount: number,
+  currentlyLiked: boolean,
+): Promise<{ likeCount: number; hasLiked: boolean }> {
+  if (currentlyLiked) {
+    const { error } = await supabase
+      .from('comment_likes')
+      .delete()
+      .eq('comment_id', commentId)
+      .eq('user_id', userId);
+    if (error) throw error;
+    return { likeCount: Math.max(0, currentCount - 1), hasLiked: false };
+  }
+
+  const { error } = await supabase
+    .from('comment_likes')
+    .insert({ comment_id: commentId, user_id: userId });
+  if (error) throw error;
+  return { likeCount: currentCount + 1, hasLiked: true };
+}
+
+export async function fetchCommentLikeUsers(commentId: string): Promise<KudosUser[]> {
+  const { data: likeRows, error: likesError } = await supabase
+    .from('comment_likes')
+    .select('user_id, created_at')
+    .eq('comment_id', commentId)
+    .order('created_at', { ascending: false });
+
+  if (likesError) throw likesError;
+  if (!likeRows?.length) return [];
+
+  const ordered = likeRows
+    .map((r) => ({ userId: r.user_id as string, createdAt: r.created_at as string }))
+    .filter((r) => Boolean(r.userId));
+
+  const uniqueIds = Array.from(new Set(ordered.map((r) => r.userId)));
+  if (!uniqueIds.length) return [];
+
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, username, avatar_url, user_roles')
+    .in('id', uniqueIds);
+
+  if (profilesError) throw profilesError;
+
+  const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
+  return ordered
+    .map((like) => {
+      const p = profileMap.get(like.userId);
+      if (!p) return null;
+      return {
+        id: p.id,
+        username: p.username,
+        avatarUrl: p.avatar_url ?? undefined,
+        userRoles: p.user_roles ?? undefined,
+        createdAt: like.createdAt,
+      };
+    })
+    .filter(Boolean) as KudosUser[];
 }
