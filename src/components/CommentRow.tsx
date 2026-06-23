@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import Avatar from './Avatar';
 import CommentContextMenu from './CommentContextMenu';
@@ -44,38 +44,18 @@ export default function CommentRow({
   const showLikeRail = canInteract && !isEditing && !!onLike;
   const showMenu = canInteract && !isEditing && !!(onLike || (isOwnComment && (onStartEdit || onDelete)));
 
-  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const openMenuAt = useCallback((clientX: number, clientY: number) => {
-    if (!showMenu) return;
-    setMenu({ x: clientX, y: clientY });
-  }, [showMenu]);
-
-  const handleContextMenu = (e: React.MouseEvent) => {
-    if (!showMenu) return;
-    e.preventDefault();
-    openMenuAt(e.clientX, e.clientY);
-  };
-
-  const clearLongPress = () => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  };
-
-  const handlePointerDown = (e: React.PointerEvent) => {
-    if (!showMenu || e.button !== 0) return;
-    clearLongPress();
-    longPressTimer.current = setTimeout(() => {
-      openMenuAt(e.clientX, e.clientY);
-    }, 400);
-  };
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const handleSave = (e?: FormEvent) => {
     e?.preventDefault();
     onSaveEdit?.();
+  };
+
+  const toggleMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMenuOpen((open) => !open);
   };
 
   return (
@@ -90,23 +70,31 @@ export default function CommentRow({
         />
       </Link>
 
-      <div
-        className="comment-bubble"
-        onContextMenu={handleContextMenu}
-        onPointerDown={handlePointerDown}
-        onPointerUp={clearLongPress}
-        onPointerLeave={clearLongPress}
-        onPointerCancel={clearLongPress}
-      >
+      <div className="comment-bubble">
         <div className="comment-header">
-          <Link to={profilePath} className="comment-author">
-            @{comment.username}
-          </Link>
-          {!isEditing && (
-            <time className="comment-time" dateTime={comment.createdAt}>
-              {comment.isEdited ? ' · Edited · ' : ' · '}
-              {timeAgo(comment.createdAt)}
-            </time>
+          <div className="comment-header-main">
+            <Link to={profilePath} className="comment-author">
+              @{comment.username}
+            </Link>
+            {!isEditing && (
+              <time className="comment-time" dateTime={comment.createdAt}>
+                {comment.isEdited ? ' · Edited · ' : ' · '}
+                {timeAgo(comment.createdAt)}
+              </time>
+            )}
+          </div>
+          {showMenu && (
+            <button
+              ref={menuBtnRef}
+              type="button"
+              className="comment-menu-btn"
+              onClick={toggleMenu}
+              aria-label="Comment options"
+              aria-expanded={menuOpen}
+              aria-haspopup="menu"
+            >
+              ⋯
+            </button>
           )}
         </div>
 
@@ -165,12 +153,11 @@ export default function CommentRow({
       )}
 
       <CommentContextMenu
-        open={!!menu}
-        x={menu?.x ?? 0}
-        y={menu?.y ?? 0}
+        open={menuOpen}
+        anchorRef={menuBtnRef}
         isOwnComment={isOwnComment}
         hasLiked={comment.hasLiked}
-        onClose={() => setMenu(null)}
+        onClose={() => setMenuOpen(false)}
         onLike={() => onLike?.()}
         onEdit={isOwnComment ? onStartEdit : undefined}
         onDelete={isOwnComment ? onDelete : undefined}

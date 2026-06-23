@@ -2268,14 +2268,49 @@ button.app-back-link {
   border-radius: 12px;
   background: var(--bg);
   border: 1px solid var(--border);
+  position: relative;
 }
 
 .comment-header {
   display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.comment-header-main {
+  display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0;
-  margin-bottom: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.comment-menu-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: -4px -6px 0 0;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.comment-menu-btn:hover,
+.comment-menu-btn[aria-expanded='true'] {
+  color: var(--text-muted);
+  background: var(--surface);
 }
 
 .comment-author {
@@ -2418,6 +2453,10 @@ button.app-back-link {
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.comment-context-menu--anchored {
+  transform: translateX(-100%);
 }
 
 .comment-context-menu-item {

@@ -1,10 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 type CommentContextMenuProps = {
   open: boolean;
-  x: number;
-  y: number;
+  anchorRef: React.RefObject<HTMLElement | null>;
   isOwnComment: boolean;
   hasLiked: boolean;
   onClose: () => void;
@@ -15,8 +14,7 @@ type CommentContextMenuProps = {
 
 export default function CommentContextMenu({
   open,
-  x,
-  y,
+  anchorRef,
   isOwnComment,
   hasLiked,
   onClose,
@@ -25,6 +23,19 @@ export default function CommentContextMenu({
   onDelete,
 }: CommentContextMenuProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!open || !anchorRef.current) {
+      setPosition(null);
+      return;
+    }
+    const rect = anchorRef.current.getBoundingClientRect();
+    setPosition({
+      top: rect.bottom + 4,
+      left: rect.right,
+    });
+  }, [open, anchorRef]);
 
   useEffect(() => {
     if (!open) return;
@@ -32,7 +43,9 @@ export default function CommentContextMenu({
       if (e.key === 'Escape') onClose();
     };
     const onPointer = (e: PointerEvent) => {
-      if (panelRef.current?.contains(e.target as Node)) return;
+      const target = e.target as Node;
+      if (panelRef.current?.contains(target)) return;
+      if (anchorRef.current?.contains(target)) return;
       onClose();
     };
     document.addEventListener('keydown', onKey);
@@ -41,9 +54,9 @@ export default function CommentContextMenu({
       document.removeEventListener('keydown', onKey);
       document.removeEventListener('pointerdown', onPointer);
     };
-  }, [open, onClose]);
+  }, [open, onClose, anchorRef]);
 
-  if (!open) return null;
+  if (!open || !position) return null;
 
   const run = (fn: () => void) => {
     onClose();
@@ -53,8 +66,8 @@ export default function CommentContextMenu({
   return createPortal(
     <div
       ref={panelRef}
-      className="comment-context-menu"
-      style={{ top: y, left: x }}
+      className="comment-context-menu comment-context-menu--anchored"
+      style={{ top: position.top, left: position.left }}
       role="menu"
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
