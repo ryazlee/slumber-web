@@ -541,6 +541,47 @@ main {
   margin-bottom: 0;
 }
 
+.home-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: clamp(20px, 3vw, 28px);
+}
+
+.home-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.home-cta--primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.home-cta--primary:hover {
+  background: var(--accent-bright);
+  color: #fff;
+}
+
+.home-cta--secondary {
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  background: var(--surface);
+}
+
+.home-cta--secondary:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
 .home-hero .hypno-demo {
   margin-top: clamp(24px, 4vw, 36px);
 }

@@ -26,8 +26,10 @@ npm install && npm run dev
 |-------|------|---------|
 | `/` | Login | App entry — email OTP, Google, magic link; redirects to `/feed` when signed in |
 | `/login-callback` | — | Supabase auth return (magic link + Google OAuth) |
-| `/feed` | Yes | Friends feed — kudos + comments |
+| `/feed` | Yes | Friends feed — kudos + comments; stage metrics on one line (dynamic sizing) |
 | `/profile` | Yes | Your profile and recent posts |
+| `/stats` | Yes | My Stats (30-day averages, charts, PRs) |
+| `/stats/compare` | Yes | Friend compare table (wearable-only; bedtime/wake not rankable) |
 | `/challenges` | Yes | Active and completed challenges |
 | `/home` | No | Marketing / product overview |
 | `/privacy` | No | Privacy policy (App Store link) |

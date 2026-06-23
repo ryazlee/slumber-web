@@ -18,6 +18,8 @@ export type CompareMetricDef = {
   category: CompareMetricCategory;
   defaultSelected: boolean;
   lessIsBetter?: boolean;
+  /** When false, no bold "leader" styling — e.g. schedule times with no objective best. */
+  rankable?: boolean;
 };
 
 export const COMPARE_METRIC_CATEGORIES: { key: CompareMetricCategory; label: string }[] = [
@@ -32,8 +34,8 @@ export const ALL_COMPARE_METRICS: CompareMetricDef[] = [
   { id: 'postsCount', kind: 'count', key: 'postsCount', label: 'Posts', category: 'activity', defaultSelected: true },
   { id: 'dreamsCount', kind: 'count', key: 'dreamsCount', label: 'Dreams', category: 'activity', defaultSelected: true },
   { id: 'dreamRate', kind: 'pct', key: 'dreamRate', label: 'Dream rate', category: 'activity', defaultSelected: false },
-  { id: 'avgBedtime', kind: 'time', key: 'avgBedtime', label: 'Bedtime', category: 'schedule', defaultSelected: true, lessIsBetter: true },
-  { id: 'avgWakeTime', kind: 'time', key: 'avgWakeTime', label: 'Wake-up', category: 'schedule', defaultSelected: true },
+  { id: 'avgBedtime', kind: 'time', key: 'avgBedtime', label: 'Bedtime', category: 'schedule', defaultSelected: true, lessIsBetter: true, rankable: false },
+  { id: 'avgWakeTime', kind: 'time', key: 'avgWakeTime', label: 'Wake-up', category: 'schedule', defaultSelected: true, rankable: false },
   { id: 'asleep', kind: 'mins', key: 'asleep', label: 'Sleep', category: 'duration', defaultSelected: true },
   { id: 'inBed', kind: 'mins', key: 'inBed', label: 'In bed', category: 'duration', defaultSelected: true },
   { id: 'bestNight', kind: 'mins', key: 'bestNight', label: 'Best night', category: 'duration', defaultSelected: false },
@@ -100,6 +102,8 @@ export function getCompareMetricLeaderIds(
   statsById: Record<string, PeriodStats | null>,
   metric: CompareMetricDef,
 ): Set<string> {
+  if (metric.rankable === false) return new Set();
+
   const entries: { id: string; value: number }[] = [];
   for (const id of participantIds) {
     const value = compareStatNumericValue(metric, statsById[id] ?? null);

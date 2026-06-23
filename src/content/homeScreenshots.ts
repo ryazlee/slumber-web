@@ -12,7 +12,7 @@ export const homeScreenshots: HomeScreenshot[] = [
     src: `${base}screenshots/feed.png`,
     alt: 'Slumber feed showing friends sleep posts with hypnograms and kudos',
     caption: 'Feed',
-    description: 'Friends\' nights with stage timelines, kudos, and comments.',
+    description: 'Friends\' nights with hypnograms, PR badges, kudos, and comments.',
   },
   {
     src: `${base}screenshots/post-detail.png`,
@@ -30,7 +30,7 @@ export const homeScreenshots: HomeScreenshot[] = [
     src: `${base}screenshots/stats.png`,
     alt: 'My Stats with weekly sleep chart and 30-day averages',
     caption: 'Stats',
-    description: 'Weekly bars, averages, and stage mix at a glance.',
+    description: 'Weekly chart, 30-day averages, stage mix, and personal records.',
   },
   {
     src: `${base}screenshots/compare.png`,

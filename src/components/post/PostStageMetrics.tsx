@@ -1,4 +1,6 @@
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { formatMins } from '../../lib/format';
+import { pickStageMetricRowSize, type StageMetricSize } from '../../lib/stageMetricSizing';
 import type { SleepSessionData } from '../../lib/types';
 
 type StageData = Pick<
@@ -18,10 +20,43 @@ function stageLabel(label: string, mins: number, style: 'lower' | 'title') {
 }
 
 export default function PostStageMetrics({ data, labelStyle = 'lower', className }: Props) {
-  const classes = ['post-stage-metrics', className].filter(Boolean).join(' ');
+  const ref = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState<StageMetricSize>('regular');
+
+  const labels = useMemo(() => {
+    const out: string[] = [];
+    if (data.coreMinutes > 0) out.push(stageLabel('Core', data.coreMinutes, labelStyle));
+    if (data.deepMinutes > 0) out.push(stageLabel('Deep', data.deepMinutes, labelStyle));
+    if (data.remMinutes > 0) out.push(stageLabel('REM', data.remMinutes, labelStyle));
+    if (data.awakeMinutes > 0) out.push(stageLabel('Awake', data.awakeMinutes, labelStyle));
+    if (data.awakeEvents > 0) {
+      out.push(`${data.awakeEvents} ${data.awakeEvents === 1 ? 'wake' : 'wakes'}`);
+    }
+    return out;
+  }, [data, labelStyle]);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || labels.length === 0) return;
+
+    const measure = () => {
+      setSize(pickStageMetricRowSize(labels, el.clientWidth).size);
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [labels]);
+
+  const classes = [
+    'post-stage-metrics',
+    `post-stage-metrics--${size}`,
+    className,
+  ].filter(Boolean).join(' ');
 
   return (
-    <div className={classes}>
+    <div ref={ref} className={classes}>
       {data.coreMinutes > 0 && (
         <span className="post-stage-metric post-stage-metric--core">
           {stageLabel('Core', data.coreMinutes, labelStyle)}

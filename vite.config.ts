@@ -1,6 +1,6 @@
 import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
-import { build404Html, buildIndexRestoreScript } from './lib/spaShellScripts';
+import { build404Html, buildIndexRestoreScript, buildSocialMetaHead } from './lib/spaShellScripts';
 
 const DEFAULT_SITE_URL = 'https://useslumber.com';
 const IOS_APP_ID = 'L57M37HLYR.com.ryan.slumber';
@@ -21,7 +21,7 @@ function pathSegmentsToKeep(basePath: string): number {
  * SPA fallback for GitHub Pages — https://github.com/rafgraph/spa-github-pages
  * 404.html redirects to index.html with a query param; index.html restores the path via replaceState.
  */
-function spaGithubPagesPlugin(basePath: string): Plugin {
+function spaGithubPagesPlugin(basePath: string, siteUrl: string): Plugin {
   const segments = pathSegmentsToKeep(basePath);
 
   const restoreScript = `
@@ -30,13 +30,15 @@ function spaGithubPagesPlugin(basePath: string): Plugin {
   return {
     name: 'spa-github-pages',
     transformIndexHtml(html) {
-      return html.replace('<head>', `<head>${restoreScript}`);
+      return html
+        .replace('<head>', `<head>${restoreScript}`)
+        .replace('<!-- SOCIAL_META -->', buildSocialMetaHead(siteUrl));
     },
     generateBundle() {
       this.emitFile({
         type: 'asset',
         fileName: '404.html',
-        source: build404Html(segments),
+        source: build404Html(segments, siteUrl),
       });
     },
   };
@@ -97,14 +99,8 @@ export default defineConfig(({ mode }) => {
     base,
     plugins: [
       react(),
-      spaGithubPagesPlugin(basePath),
+      spaGithubPagesPlugin(basePath, siteUrl),
       appleAppSiteAssociationPlugin(basePath),
-      {
-        name: 'html-site-url',
-        transformIndexHtml(html) {
-          return html.replaceAll('__SITE_URL__', siteUrl);
-        },
-      },
     ],
   };
 });
