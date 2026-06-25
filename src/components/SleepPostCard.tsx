@@ -18,6 +18,7 @@ type SleepPostCardProps = {
   post: SleepPost;
   showAuthor?: boolean;
   clickable?: boolean;
+  isLatestPost?: boolean;
   defaultCommentsOpen?: boolean;
   onSocialPatch?: (postId: string, patch: PostSocialPatch) => void;
 };
@@ -26,6 +27,7 @@ export default function SleepPostCard({
   post,
   showAuthor = true,
   clickable = true,
+  isLatestPost = false,
   defaultCommentsOpen = false,
   onSocialPatch,
 }: SleepPostCardProps) {
@@ -33,7 +35,6 @@ export default function SleepPostCard({
     isManual,
     isOwnPost,
     canReadDream,
-    isLatest,
     vibe,
     isNapDay,
     napCount,
@@ -58,7 +59,7 @@ export default function SleepPostCard({
   const postDetailLabel = `View post: ${displayTitle}`;
 
   return (
-    <article className={`post-card${clickable ? ' post-card--clickable' : ''}${isLatest ? ' post-card--latest' : ''}`}>
+    <article className={`post-card${clickable ? ' post-card--clickable' : ''}${isLatestPost ? ' post-card--latest' : ''}`}>
       <header className="post-card-header">
         {showAuthor && (
           <div className="post-card-author" data-post-interactive>
@@ -71,11 +72,11 @@ export default function SleepPostCard({
               avatarSize="md"
               className="post-author-link"
             />
-            {isLatest && <span className="post-badge post-badge-latest">🕒 Latest</span>}
+            {isLatestPost && <span className="post-badge post-badge-latest">🕒 Latest</span>}
           </div>
         )}
         <div className="post-card-meta">
-          {!showAuthor && isLatest && <span className="post-badge post-badge-latest">🕒 Latest</span>}
+          {!showAuthor && isLatestPost && <span className="post-badge post-badge-latest">🕒 Latest</span>}
           {post.isPrivate && <span className="post-badge">Private</span>}
           {isManual && <span className="post-badge post-badge-manual">Manual</span>}
         </div>

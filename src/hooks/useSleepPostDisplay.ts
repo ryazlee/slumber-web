@@ -2,7 +2,6 @@ import { useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import type { PostSocialPatch } from '../components/PostSocial';
 import type { SleepPost } from '../lib/types';
-import { isLatestSleepPost } from '../lib/format';
 import { isManualSleepPost } from '../lib/sleepPostCustom';
 import { sleepPostDisplayTitle } from '../lib/sleepPostTitle';
 import { countNaps, hasNapDay } from '../lib/napDay';
@@ -14,7 +13,6 @@ export function useSleepPostDisplay(post: SleepPost) {
   const isManual = isManualSleepPost(post);
   const isOwnPost = user?.id === post.userId;
   const canReadDream = Boolean(post.dreamLog) && (!post.blurDream || isOwnPost);
-  const isLatest = isLatestSleepPost(post.sleepDate);
   const vibe = post.vibe ? VIBE_CONFIG[post.vibe] : undefined;
   const isNapDay = !isManual && hasNapDay(post);
   const napCount = countNaps(post.sessionBreakdown) || (isNapDay ? 1 : 0);
@@ -27,7 +25,6 @@ export function useSleepPostDisplay(post: SleepPost) {
     isManual,
     isOwnPost,
     canReadDream,
-    isLatest,
     vibe,
     isNapDay,
     napCount,

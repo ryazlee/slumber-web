@@ -2,7 +2,15 @@ import { extractMentionUsernames } from './mentions';
 import { supabase } from './supabase';
 import type { Comment, KudosUser } from './types';
 
-const PROFILE_EMBED = 'profiles!user_id(username, avatar_url, user_roles)';
+const COMMENT_PROFILE_EMBED_VARIANTS = [
+  'profiles!comments_user_id_fkey(username, avatar_url, user_roles)',
+  'profiles(username, avatar_url, user_roles)',
+  'profiles!user_id(username, avatar_url, user_roles)',
+] as const;
+
+function isProfileEmbedAmbiguityError(message: string): boolean {
+  return /PGRST201|more than one relationship|Could not embed.*profiles/i.test(message);
+}
 
 type MentionField = 'comment';
 
@@ -141,6 +149,106 @@ async function fetchCommentLikeMeta(
   return { likeCountMap, myLikedIds };
 }
 
+async function fetchCommentRows(postId: string): Promise<CommentDbRow[]> {
+  for (let i = 0; i < COMMENT_PROFILE_EMBED_VARIANTS.length; i++) {
+    const embed = COMMENT_PROFILE_EMBED_VARIANTS[i];
+    const { data, error } = await supabase
+      .from('comments')
+      .select(`*, ${embed}`)
+      .eq('post_id', postId)
+      .order('created_at', { ascending: true });
+
+    if (!error) return data ?? [];
+
+    const msg = error.message ?? '';
+    if (i === 0 && isProfileEmbedAmbiguityError(msg)) continue;
+    if (i < COMMENT_PROFILE_EMBED_VARIANTS.length - 1) continue;
+  }
+
+  const { data, error } = await supabase
+    .from('comments')
+    .select('*')
+    .eq('post_id', postId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+
+  const rows = (data ?? []) as CommentDbRow[];
+  const userIds = [...new Set(rows.map((row) => row.user_id))];
+  if (userIds.length === 0) return rows;
+
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, username, avatar_url, user_roles')
+    .in('id', userIds);
+  const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
+  return rows.map((row) => ({
+    ...row,
+    profiles: profileMap.get(row.user_id) ?? null,
+  }));
+}
+
+async function insertCommentWithProfile(postId: string, userId: string, text: string) {
+  for (let i = 0; i < COMMENT_PROFILE_EMBED_VARIANTS.length; i++) {
+    const embed = COMMENT_PROFILE_EMBED_VARIANTS[i];
+    const result = await supabase
+      .from('comments')
+      .insert({ post_id: postId, user_id: userId, text })
+      .select(`*, ${embed}`)
+      .single();
+    if (!result.error) return result;
+    const msg = result.error.message ?? '';
+    if (i === 0 && isProfileEmbedAmbiguityError(msg)) continue;
+  }
+  const inserted = await supabase
+    .from('comments')
+    .insert({ post_id: postId, user_id: userId, text })
+    .select('*')
+    .single();
+  if (inserted.error || !inserted.data) return inserted;
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('username, avatar_url, user_roles')
+    .eq('id', userId)
+    .maybeSingle();
+  return {
+    data: { ...inserted.data, profiles: profile ?? null },
+    error: null,
+  };
+}
+
+async function updateCommentWithProfile(commentId: string, userId: string, trimmed: string) {
+  for (let i = 0; i < COMMENT_PROFILE_EMBED_VARIANTS.length; i++) {
+    const embed = COMMENT_PROFILE_EMBED_VARIANTS[i];
+    const result = await supabase
+      .from('comments')
+      .update({ text: trimmed, updated_at: new Date().toISOString() })
+      .eq('id', commentId)
+      .eq('user_id', userId)
+      .select(`*, ${embed}`)
+      .single();
+    if (!result.error) return result;
+    const msg = result.error.message ?? '';
+    if (i === 0 && isProfileEmbedAmbiguityError(msg)) continue;
+  }
+  const updated = await supabase
+    .from('comments')
+    .update({ text: trimmed, updated_at: new Date().toISOString() })
+    .eq('id', commentId)
+    .eq('user_id', userId)
+    .select('*')
+    .single();
+  if (updated.error || !updated.data) return updated;
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('username, avatar_url, user_roles')
+    .eq('id', userId)
+    .maybeSingle();
+  return {
+    data: { ...updated.data, profiles: profile ?? null },
+    error: null,
+  };
+}
+
 export async function fetchKudosUsers(postId: string): Promise<KudosUser[]> {
   const { data: kudosRows, error: kudosError } = await supabase
     .from('kudos')
@@ -185,17 +293,18 @@ export async function fetchComments(postId: string): Promise<Comment[]> {
   const { data: { user } } = await supabase.auth.getUser();
   const currentUserId = user?.id ?? null;
 
-  const { data, error } = await supabase
-    .from('comments')
-    .select(`*, ${PROFILE_EMBED}`)
-    .eq('post_id', postId)
-    .order('created_at', { ascending: true });
-
-  if (error) throw error;
-
-  const rows = data ?? [];
+  const rows = await fetchCommentRows(postId);
   const commentIds = rows.map((r) => r.id);
-  const { likeCountMap, myLikedIds } = await fetchCommentLikeMeta(commentIds, currentUserId);
+
+  let likeCountMap: Record<string, number> = {};
+  let myLikedIds = new Set<string>();
+  try {
+    const meta = await fetchCommentLikeMeta(commentIds, currentUserId);
+    likeCountMap = meta.likeCountMap;
+    myLikedIds = meta.myLikedIds;
+  } catch {
+    // comment_likes may be unavailable — still return comments without like state
+  }
 
   return rows.map((row) =>
     mapCommentRow(row, likeCountMap[row.id] ?? 0, myLikedIds.has(row.id)),
@@ -227,11 +336,7 @@ export async function toggleKudos(
 
 export async function addComment(postId: string, userId: string, text: string): Promise<Comment> {
   const trimmed = text.trim();
-  const { data, error } = await supabase
-    .from('comments')
-    .insert({ post_id: postId, user_id: userId, text: trimmed })
-    .select(`*, ${PROFILE_EMBED}`)
-    .single();
+  const { data, error } = await insertCommentWithProfile(postId, userId, trimmed);
   if (error) throw error;
 
   const friendMap = await fetchFriendsForMentions(userId);
@@ -266,13 +371,7 @@ export async function updateComment(
 
   const postId = existing.post_id as string;
 
-  const { data, error } = await supabase
-    .from('comments')
-    .update({ text: trimmed, updated_at: new Date().toISOString() })
-    .eq('id', commentId)
-    .eq('user_id', userId)
-    .select(`*, ${PROFILE_EMBED}`)
-    .single();
+  const { data, error } = await updateCommentWithProfile(commentId, userId, trimmed);
   if (error) throw error;
 
   const friendMap = await fetchFriendsForMentions(userId);
@@ -285,8 +384,16 @@ export async function updateComment(
     friendUsernameToId: friendMap,
   });
 
-  const { likeCountMap, myLikedIds } = await fetchCommentLikeMeta([commentId], userId);
-  return mapCommentRow(data, likeCountMap[commentId] ?? 0, myLikedIds.has(commentId));
+  let likeCount = 0;
+  let hasLiked = false;
+  try {
+    const meta = await fetchCommentLikeMeta([commentId], userId);
+    likeCount = meta.likeCountMap[commentId] ?? 0;
+    hasLiked = meta.myLikedIds.has(commentId);
+  } catch {
+    // comment_likes may be unavailable
+  }
+  return mapCommentRow(data, likeCount, hasLiked);
 }
 
 export async function deleteComment(commentId: string, userId: string): Promise<void> {

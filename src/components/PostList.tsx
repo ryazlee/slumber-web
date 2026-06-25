@@ -1,6 +1,9 @@
+import { useMemo } from 'react';
 import SleepPostCard from './SleepPostCard';
 import type { PostSocialPatch } from './PostSocial';
 import type { SleepPost } from '../lib/types';
+import { buildLatestPostIdsByUser, isLatestSleepPost } from '../lib/latestSleepPost';
+import { useLocalMidnightInvalidation } from '../hooks/useLocalMidnightInvalidation';
 
 type PostListProps = {
   posts: SleepPost[];
@@ -25,6 +28,9 @@ export default function PostList({
   onLoadMore,
   onPatchPost,
 }: PostListProps) {
+  const todayISO = useLocalMidnightInvalidation();
+  const latestPostIds = useMemo(() => buildLatestPostIdsByUser(posts), [posts]);
+
   return (
     <>
       {loading && <p className="app-muted">Loading posts…</p>}
@@ -40,6 +46,7 @@ export default function PostList({
             key={post.id}
             post={post}
             showAuthor={showAuthor}
+            isLatestPost={isLatestSleepPost(post, latestPostIds, todayISO)}
             onSocialPatch={onPatchPost}
           />
         ))}

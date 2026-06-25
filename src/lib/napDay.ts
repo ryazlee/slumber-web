@@ -45,7 +45,7 @@ export function hasNapDay(input: {
 }
 
 export function isNapSession(session: SleepSessionData): boolean {
-  return session.asleepMinutes < NAP_SESSION_MAX_MINUTES;
+  return session.asleepMinutes <= NAP_SESSION_MAX_MINUTES;
 }
 
 export function countNaps(sessions?: SleepSessionData[]): number {

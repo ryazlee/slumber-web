@@ -1,7 +1,11 @@
+import { useMemo } from 'react';
 import { formatMins, formatSleepDate, timeAgo } from '../lib/format';
 import { vibeColor } from '../lib/sleepPostMeta';
 import { getSessionLabel, isNapSession } from '../lib/napDay';
+import { buildLatestPostIdsByUser, isLatestSleepPost } from '../lib/latestSleepPost';
 import { usePostSocialPatch, useSleepPostDisplay } from '../hooks/useSleepPostDisplay';
+import { useLocalMidnightInvalidation } from '../hooks/useLocalMidnightInvalidation';
+import { useUserPosts } from '../hooks/useUserPosts';
 import type { SleepPost } from '../lib/types';
 import ManualLogSleepBlock from './ManualLogSleepBlock';
 import PersonalRecordBadges from './PersonalRecordBadges';
@@ -32,7 +36,6 @@ export default function PostDetailView({
     isManual,
     isOwnPost,
     canReadDream,
-    isLatest,
     vibe,
     isNapDay,
     napCount,
@@ -41,6 +44,13 @@ export default function PostDetailView({
     timelineSegments,
     displayTitle,
   } = useSleepPostDisplay(post);
+
+  const todayISO = useLocalMidnightInvalidation();
+  const { posts: authorPosts } = useUserPosts(post.userId);
+  const isLatestPost = useMemo(() => {
+    if (authorPosts.length === 0) return false;
+    return isLatestSleepPost(post, buildLatestPostIdsByUser(authorPosts), todayISO);
+  }, [post, authorPosts, todayISO]);
 
   const handleSocialPatch = usePostSocialPatch(post.id, onSocialPatch);
 
@@ -57,7 +67,7 @@ export default function PostDetailView({
             avatarSize="md"
             className="post-author-link"
           />
-          {isLatest ? <span className="post-badge post-badge-latest">🕒 Latest</span> : null}
+          {isLatestPost ? <span className="post-badge post-badge-latest">🕒 Latest</span> : null}
           {post.isPrivate ? <span className="post-badge">Private</span> : null}
           {isManual ? <span className="post-badge post-badge-manual">Manual</span> : null}
         </div>
