@@ -27,7 +27,7 @@ export default function ManualLogSleepBlock({ post }: Props) {
         <p className="manual-sleep-duration">{formatMins(post.asleepMinutes)}</p>
       )}
       {timeLine && <p className="manual-sleep-times">{timeLine}</p>}
-      <p className="manual-sleep-footnote">Not counted in challenges or stats</p>
+      <p className="manual-sleep-footnote">For the feed only — stats &amp; challenges sit this one out!</p>
     </div>
   );
 }
