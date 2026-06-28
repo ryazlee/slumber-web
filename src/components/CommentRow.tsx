@@ -5,6 +5,7 @@ import CommentContextMenu from './CommentContextMenu';
 import { timeAgo } from '../lib/format';
 import type { Comment } from '../lib/types';
 import MentionText from './MentionText';
+import { commentLikeEmoji } from '../lib/reactionEmojis';
 
 type CommentRowProps = {
   comment: Comment;
@@ -137,7 +138,7 @@ export default function CommentRow({
             aria-label={comment.hasLiked ? 'Unlike comment' : 'Like comment'}
             aria-pressed={comment.hasLiked}
           >
-            {comment.hasLiked ? '🫶' : '🤍'}
+            {commentLikeEmoji(comment.hasLiked)}
           </button>
           {comment.likeCount > 0 && (
             <button

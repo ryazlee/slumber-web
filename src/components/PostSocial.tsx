@@ -11,6 +11,7 @@ import {
   useUpdateComment,
 } from '../hooks/usePostSocial';
 import { timeAgo } from '../lib/format';
+import { kudosEmoji } from '../lib/reactionEmojis';
 import type { Comment } from '../lib/types';
 import CommentRow from './CommentRow';
 import Popup from './Popup';
@@ -236,7 +237,7 @@ export default function PostSocial({
                   aria-label={hasKudoed ? 'Remove kudos' : 'Give kudos'}
                   aria-pressed={hasKudoed}
                 >
-                  {hasKudoed ? '🫶' : '🤍'}
+                  {kudosEmoji(hasKudoed)}
                 </button>
                 {kudosCount > 0 && (
                   <button
