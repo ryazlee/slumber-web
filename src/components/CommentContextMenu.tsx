@@ -8,6 +8,7 @@ type CommentContextMenuProps = {
   hasLiked: boolean;
   onClose: () => void;
   onLike: () => void;
+  onReply?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
 };
@@ -19,6 +20,7 @@ export default function CommentContextMenu({
   hasLiked,
   onClose,
   onLike,
+  onReply,
   onEdit,
   onDelete,
 }: CommentContextMenuProps) {
@@ -75,6 +77,11 @@ export default function CommentContextMenu({
       <button type="button" className="comment-context-menu-item" role="menuitem" onClick={() => run(onLike)}>
         {hasLiked ? 'Unlike' : 'Like'}
       </button>
+      {onReply && (
+        <button type="button" className="comment-context-menu-item" role="menuitem" onClick={() => run(onReply)}>
+          Reply
+        </button>
+      )}
       {isOwnComment && onEdit && (
         <button type="button" className="comment-context-menu-item" role="menuitem" onClick={() => run(onEdit)}>
           Edit

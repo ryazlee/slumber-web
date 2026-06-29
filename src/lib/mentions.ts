@@ -41,3 +41,8 @@ export function parseMentionSegments(text: string): MentionSegment[] {
 
   return segments.length ? segments : [{ type: 'text', value: text }];
 }
+
+/** Strava-style flat reply — prepopulate the composer with @author. */
+export function buildCommentReplyPrefix(username: string): string {
+  return `@${username.toLowerCase()} `;
+}

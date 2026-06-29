@@ -10,11 +10,15 @@ import {
   useToggleKudos,
   useUpdateComment,
 } from '../hooks/usePostSocial';
+import { useLongPress } from '../hooks/useLongPress';
 import { timeAgo } from '../lib/format';
-import { kudosEmoji } from '../lib/reactionEmojis';
+import { buildCommentReplyPrefix } from '../lib/mentions';
 import type { Comment } from '../lib/types';
+import CommentActionIcon from './CommentActionIcon';
 import CommentRow from './CommentRow';
+import CommentsLoadingState from './CommentsLoadingState';
 import Popup from './Popup';
+import ReactionHeart from './ReactionHeart';
 import UserLink from './UserLink';
 
 export type PostSocialPatch = {
@@ -65,6 +69,7 @@ export default function PostSocial({
   const toggleCommentLikeMutation = useToggleCommentLike(postId);
   const updateCommentMutation = useUpdateComment(postId);
   const deleteCommentMutation = useDeleteComment(postId);
+  const composeRef = useRef<HTMLTextAreaElement>(null);
 
   const patchParent = useCallback((patch: PostSocialPatch) => {
     onPatch?.(patch);
@@ -215,6 +220,18 @@ export default function PostSocial({
     setCommentLikesId(commentId);
   };
 
+  const handleReplyToComment = (comment: Comment) => {
+    setEditingCommentId(null);
+    setEditText('');
+    setCommentText(buildCommentReplyPrefix(comment.username));
+    window.setTimeout(() => composeRef.current?.focus(), 50);
+  };
+
+  const openKudosIfAny = () => openKudosModal();
+  const kudosLongPress = useLongPress(openKudosIfAny, {
+    disabled: kudosCount <= 0,
+  });
+
   const kudos = kudosQuery.data ?? [];
   const comments = commentsQuery.data ?? [];
   const commentLikes = commentLikesQuery.data ?? [];
@@ -232,18 +249,20 @@ export default function PostSocial({
                 <button
                   type="button"
                   className={`post-social-icon-btn${hasKudoed ? ' post-social-icon-btn--active' : ''}`}
-                  onClick={handleKudos}
+                  onClick={kudosLongPress.wrapClick(() => { void handleKudos(); })}
+                  {...kudosLongPress.longPressProps}
                   disabled={toggleKudosMutation.isPending}
                   aria-label={hasKudoed ? 'Remove kudos' : 'Give kudos'}
                   aria-pressed={hasKudoed}
                 >
-                  {kudosEmoji(hasKudoed)}
+                  <ReactionHeart liked={hasKudoed} />
                 </button>
                 {kudosCount > 0 && (
                   <button
                     type="button"
                     className={`post-social-count${hasKudoed ? ' post-social-count--active' : ''}`}
                     onClick={openKudosModal}
+                    {...kudosLongPress.longPressProps}
                   >
                     {kudosCount}
                   </button>
@@ -252,12 +271,12 @@ export default function PostSocial({
 
               <button
                 type="button"
-                className={`post-social-icon-btn${commentsOpen ? ' post-social-icon-btn--active' : ''}`}
+                className="post-social-icon-btn"
                 onClick={toggleComments}
                 aria-expanded={commentsOpen}
                 aria-label="Comments"
               >
-                💬
+                <CommentActionIcon />
                 {commentCount > 0 && (
                   <span className="post-social-inline-count">{commentCount}</span>
                 )}
@@ -288,12 +307,12 @@ export default function PostSocial({
 
       {commentsOpen && (
         <section className="post-comments" aria-label="Comments">
-          {commentsQuery.isLoading && <p className="post-comments-status">Loading comments…</p>}
+          {commentsQuery.isLoading && <CommentsLoadingState />}
           {commentsError && <p className="admin-error">{commentsError}</p>}
-          {commentsQuery.isSuccess && comments.length === 0 && (
+          {!commentsQuery.isLoading && commentsQuery.isSuccess && comments.length === 0 && (
             <p className="post-comments-status">No comments yet.</p>
           )}
-          {commentsQuery.isSuccess && comments.length > 0 && (
+          {!commentsQuery.isLoading && commentsQuery.isSuccess && comments.length > 0 && (
             <ul className="comment-thread">
               {comments.map((comment) => (
                 <CommentRow
@@ -310,6 +329,7 @@ export default function PostSocial({
                   likeLoading={likePendingId === comment.id}
                   onLike={() => void handleLikeComment(comment)}
                   onOpenLikes={() => openCommentLikes(comment.id, comment.likeCount)}
+                  onReply={() => handleReplyToComment(comment)}
                   onStartEdit={() => handleStartEdit(comment)}
                   onDelete={() => void handleDeleteComment(comment.id)}
                 />
@@ -320,18 +340,19 @@ export default function PostSocial({
           {user && (
             <form className="comment-compose" onSubmit={handleSendComment}>
               <textarea
+                ref={composeRef}
                 className="comment-compose-input"
                 placeholder="Add a comment…"
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 maxLength={300}
                 rows={2}
-                disabled={addCommentMutation.isPending}
+                disabled={addCommentMutation.isPending || commentsQuery.isLoading}
               />
               <button
                 type="submit"
                 className="comment-compose-send"
-                disabled={!commentText.trim() || addCommentMutation.isPending}
+                disabled={!commentText.trim() || addCommentMutation.isPending || commentsQuery.isLoading}
                 aria-label="Send comment"
               >
                 {addCommentMutation.isPending ? '…' : '↑'}

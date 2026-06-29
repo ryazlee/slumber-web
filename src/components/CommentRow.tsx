@@ -5,7 +5,8 @@ import CommentContextMenu from './CommentContextMenu';
 import { timeAgo } from '../lib/format';
 import type { Comment } from '../lib/types';
 import MentionText from './MentionText';
-import { commentLikeEmoji } from '../lib/reactionEmojis';
+import ReactionHeart from './ReactionHeart';
+import { useLongPress } from '../hooks/useLongPress';
 
 type CommentRowProps = {
   comment: Comment;
@@ -20,6 +21,7 @@ type CommentRowProps = {
   likeLoading?: boolean;
   onLike?: () => void;
   onOpenLikes?: () => void;
+  onReply?: () => void;
   onStartEdit?: () => void;
   onDelete?: () => void;
 };
@@ -37,16 +39,25 @@ export default function CommentRow({
   likeLoading = false,
   onLike,
   onOpenLikes,
+  onReply,
   onStartEdit,
   onDelete,
 }: CommentRowProps) {
   const profilePath = `/profile/${comment.userId}`;
   const isOwnComment = !!currentUserId && comment.userId === currentUserId;
   const showLikeRail = canInteract && !isEditing && !!onLike;
-  const showMenu = canInteract && !isEditing && !!(onLike || (isOwnComment && (onStartEdit || onDelete)));
+  const showMenu = canInteract && !isEditing && !!(onLike || onReply || (isOwnComment && (onStartEdit || onDelete)));
 
   const menuBtnRef = useRef<HTMLButtonElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const openLikes = () => {
+    if (comment.likeCount > 0) onOpenLikes?.();
+  };
+
+  const likeLongPress = useLongPress(openLikes, {
+    disabled: !onOpenLikes || comment.likeCount <= 0 || likeLoading,
+  });
 
   const handleSave = (e?: FormEvent) => {
     e?.preventDefault();
@@ -133,18 +144,21 @@ export default function CommentRow({
           <button
             type="button"
             className={`comment-like-btn${comment.hasLiked ? ' comment-like-btn--active' : ''}`}
-            onClick={onLike}
+            onClick={likeLongPress.wrapClick(() => onLike?.())}
+            {...likeLongPress.longPressProps}
             disabled={likeLoading}
             aria-label={comment.hasLiked ? 'Unlike comment' : 'Like comment'}
             aria-pressed={comment.hasLiked}
           >
-            {commentLikeEmoji(comment.hasLiked)}
+            <ReactionHeart liked={comment.hasLiked} size="sm" />
           </button>
           {comment.likeCount > 0 && (
             <button
               type="button"
               className={`comment-like-count${comment.hasLiked ? ' comment-like-count--active' : ''}`}
               onClick={onOpenLikes}
+              {...likeLongPress.longPressProps}
+              disabled={!onOpenLikes}
               aria-label={`${comment.likeCount} likes`}
             >
               {comment.likeCount}
@@ -160,6 +174,7 @@ export default function CommentRow({
         hasLiked={comment.hasLiked}
         onClose={() => setMenuOpen(false)}
         onLike={() => onLike?.()}
+        onReply={onReply}
         onEdit={isOwnComment ? onStartEdit : undefined}
         onDelete={isOwnComment ? onDelete : undefined}
       />
