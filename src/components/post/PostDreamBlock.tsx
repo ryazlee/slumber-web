@@ -1,4 +1,4 @@
-import { dreamLogPrefix } from '../../lib/sleepPostMeta';
+import { DREAM_MOOD_CONFIG, dreamLogPrefix, dreamMoodColor } from '../../lib/sleepPostMeta';
 import type { DreamMood } from '../../lib/types';
 
 type Props = {
@@ -12,6 +12,9 @@ type Props = {
 export default function PostDreamBlock({ dreamLog, dreamMood, canReadDream, blurDream, isOwnPost }: Props) {
   if (!dreamLog) return null;
 
+  const moodMeta = dreamMood ? DREAM_MOOD_CONFIG[dreamMood] : undefined;
+  const showMoodLabel = canReadDream && moodMeta && dreamMood;
+
   return (
     <div className="post-dream">
       {canReadDream ? (
@@ -19,8 +22,15 @@ export default function PostDreamBlock({ dreamLog, dreamMood, canReadDream, blur
           {blurDream && isOwnPost ? (
             <span className="post-dream-badge">Private dream</span>
           ) : null}
+          {showMoodLabel ? (
+            <p className="post-dream-mood" style={{ color: dreamMoodColor(dreamMood) }}>
+              <span aria-hidden>{moodMeta.emoji}</span> {moodMeta.label}
+            </p>
+          ) : null}
           <p className="post-dream-text">
-            <span className="post-dream-icon" aria-hidden>{dreamLogPrefix(dreamMood).trim() || '💭'}</span>
+            {!showMoodLabel ? (
+              <span className="post-dream-icon" aria-hidden>{dreamLogPrefix(dreamMood).trim() || '💭'}</span>
+            ) : null}
             {dreamLog}
           </p>
         </>

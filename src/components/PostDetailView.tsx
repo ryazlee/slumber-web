@@ -89,7 +89,7 @@ export default function PostDetailView({
         <>
           <PostDetailSectionHeader title="Sleep" />
           <div className="post-detail-panel">
-            <ManualLogSleepBlock post={post} />
+            <ManualLogSleepBlock post={post} variant="detail" />
           </div>
         </>
       ) : showWearableSleep ? (

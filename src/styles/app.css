@@ -845,12 +845,24 @@
   color: var(--text-dim);
 }
 
+.manual-sleep-duration-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .manual-sleep-duration {
   margin: 0;
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--text);
+}
+
+.manual-sleep-duration--detail {
+  font-size: 2.25rem;
+  letter-spacing: -0.03em;
 }
 
 .manual-sleep-times {
@@ -1482,6 +1494,12 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: #c4b5fd;
+}
+
+.post-dream-mood {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .post-dream-text {
