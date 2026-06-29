@@ -24,11 +24,24 @@ const SLOT_PX: Record<NonNullable<AvatarProps['size']>, number> = {
 
 function avatarLayoutMetrics(outerSize: number) {
   const ringWidth = Math.min(4, Math.max(2, Math.round(outerSize * 0.075)));
+  const innerSize = Math.max(1, outerSize - ringWidth * 2);
   const badgeSize = Math.round(outerSize * 0.32);
   const badgeBorderWidth = Math.min(2, Math.max(1, Math.round(badgeSize * 0.12)));
-  const badgeEmojiSize = Math.round(badgeSize * 0.54);
-  const badgeCornerInset = Math.round(badgeSize * 0.04);
-  return { ringWidth, badgeSize, badgeBorderWidth, badgeEmojiSize, badgeCornerInset };
+  const badgeInnerSize = Math.max(1, badgeSize - badgeBorderWidth * 2);
+  const ringRadius = outerSize / 2;
+  const badgeCornerInset = Math.max(
+    0,
+    Math.round(ringRadius * (1 - Math.SQRT1_2) - badgeSize / 2),
+  );
+  return {
+    ringWidth,
+    innerSize,
+    badgeSize,
+    badgeBorderWidth,
+    badgeInnerSize,
+    badgeEmojiSize: Math.round(badgeInnerSize * 0.66),
+    badgeCornerInset,
+  };
 }
 
 type AvatarProps = {

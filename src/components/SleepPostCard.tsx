@@ -132,6 +132,7 @@ export default function SleepPostCard({
 
       <PostDreamBlock
         dreamLog={post.dreamLog ?? ''}
+        dreamMood={post.dreamMood}
         canReadDream={canReadDream}
         blurDream={post.blurDream}
         isOwnPost={isOwnPost}

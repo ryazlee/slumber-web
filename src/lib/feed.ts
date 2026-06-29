@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { SleepBuddyProfile, SleepPost, SleepSessionData, StageSegment, Vibe } from './types';
+import type { SleepBuddyProfile, SleepPost, SleepSessionData, StageSegment, Vibe, DreamMood } from './types';
 import { avatarColorFromName } from './format';
 import { countWakes } from './wakes';
 
@@ -29,6 +29,7 @@ export type PostRow = {
   location_label: string | null;
   tags: string[] | null;
   dream_log: string | null;
+  dream_mood: DreamMood | null;
   blur_dream: boolean | null;
   morning_notes: string | null;
   is_private: boolean | null;
@@ -80,6 +81,7 @@ function mapPostRow(
     locationLabel: row.location_label ?? undefined,
     tags: row.tags ?? [],
     dreamLog: row.dream_log ?? undefined,
+    dreamMood: row.dream_mood ?? undefined,
     blurDream: row.blur_dream ?? true,
     notes: row.morning_notes ?? undefined,
     isPrivate: row.is_private ?? false,

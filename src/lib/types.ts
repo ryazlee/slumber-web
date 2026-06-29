@@ -3,7 +3,9 @@ export type StageSegment = {
   minutes: number;
 };
 
-export type Vibe = 'CHARGED' | 'DRAGGING' | 'ZOMBIE';
+export type Vibe = 'CHARGED' | 'SOLID' | 'MEH' | 'DRAGGING' | 'ZOMBIE';
+
+export type DreamMood = 'NIGHTMARE' | 'WEIRD' | 'NEUTRAL' | 'GOOD' | 'VIVID';
 
 export type SleepSessionData = {
   bedtime: string;
@@ -50,6 +52,7 @@ export type SleepPost = {
   locationLabel?: string;
   tags: string[];
   dreamLog?: string;
+  dreamMood?: DreamMood;
   blurDream: boolean;
   notes?: string;
   isPrivate: boolean;

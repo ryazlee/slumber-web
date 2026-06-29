@@ -208,6 +208,7 @@ export default function PostDetailView({
           <div className="post-detail-panel post-detail-dream">
             <PostDreamBlock
               dreamLog={post.dreamLog}
+              dreamMood={post.dreamMood}
               canReadDream={canReadDream}
               blurDream={post.blurDream}
               isOwnPost={isOwnPost}
