@@ -11,8 +11,9 @@ export default function Home() {
           <h1>Log your nights. Share with friends.</h1>
           <p className="lead">
             Slumber syncs sleep from Apple Health each morning—stages, duration, bed and wake
-            times—and turns it into something you share with friends. Like Strava for your nights:
-            hypnograms, vibes, dreams, photos, sleep buddy tags, and challenges.
+            times—and turns it into posts you share with friends. Compare nights side by side,
+            scroll a morning feed, and see how your habits stack up against people you know.
+            Hypnograms, vibes, dreams, photos, sleep buddy tags, and challenges.
           </p>
 
           <div className="home-hero-actions">
@@ -60,8 +61,9 @@ export default function Home() {
             Open Slumber in the morning. Your last night&apos;s sleep is already there if you
             wear an Apple Watch, Oura, Garmin, Whoop, or anything else that writes to Apple Health.
             Add a title, pick a vibe, tag what might have affected your sleep, tag sleep buddies
-            you shared the night with, and jot down a dream. Hit publish—it shows up in your
-            friends&apos; feeds.
+            you shared the night with, and jot down a dream (private or shared). Hit publish—it
+            shows up in your friends&apos; feeds. Turn on auto-publish in Settings to post
+            wearable nights without opening the composer.
           </p>
           <p>
             Sign in with email, a magic link, or Google. Share your personal invite link from
@@ -78,8 +80,8 @@ export default function Home() {
           <ul className="feature-list">
             <li>
               <strong>Feed</strong>
-              Sleep posts from friends and yourself—hypnograms, stage breakdowns, personal-record
-              badges, kudos, comments, and @mentions.
+              Sleep posts from friends and yourself: hypnograms, stage breakdowns, personal-record
+              badges, dream logs, kudos, comments, and @mentions.
             </li>
             <li>
               <strong>Sleep buddies</strong>
@@ -88,26 +90,28 @@ export default function Home() {
             </li>
             <li>
               <strong>Stats</strong>
-              Weekly chart, 30-day averages, stage mix, personal records, monthly bests, and log
-              streaks—from wearable nights only.
+              Weekly chart, 30-day averages, stage mix, personal records, monthly bests, monthly
+              bed/wake timing, and log streaks—from wearable nights only.
             </li>
             <li>
               <strong>Compare</strong>
               Side-by-side sleep metrics with friends over today, 7 days, 30 days, or all time.
+              Wearable nights only; manual logs stay out of the table.
             </li>
             <li>
               <strong>Challenges</strong>
-              1v1 or group sleep races with custom goals. Whoever logs the most total sleep wins
-              when the race ends—good for accountability without competing to sleep least.
+              1v1 or group races for total sleep logged over a set window. Pick preset or custom
+              goal hours to end the race early. Highest total asleep through the window wins.
             </li>
             <li>
               <strong>Sleep clubs</strong>
-              Named groups for roommates, crews, or households—filter your feed, compare stats,
-              and run club races without everyone being friends first.
+              Named groups for roommates, crews, or households. Filter feed, compare, and
+              challenges to a club roster, or join club-wide races. Posts stay friend-only;
+              clubs help you organize and compete with the same people.
             </li>
             <li>
               <strong>Privacy &amp; safety</strong>
-              Friends are mutual—you both accept. Posts can be private. Dreams can be blurred.
+              Friends are mutual: you both accept. Posts can be private. Dreams can be blurred.
               Report, block, and delete your account in Settings.
             </li>
           </ul>
@@ -117,8 +121,8 @@ export default function Home() {
           <h2>On the web</h2>
           <p>
             Browse your feed, view stats, compare with friends, and leave kudos and comments at{' '}
-            <Link to="/">useslumber.com</Link>. Logging sleep, accepting friend invites, and
-            wearable sync happen in the iOS app.
+            <Link to="/">useslumber.com</Link>. Sleep logging, HealthKit sync, and connecting with
+            friends happen in the iOS app.
           </p>
         </section>
 
@@ -127,13 +131,17 @@ export default function Home() {
           <p>
             Slumber reads from HealthKit, not from individual wearables. Apple Watch, Oura,
             Garmin, Whoop, Fitbit—if it syncs sleep to Apple Health, Slumber can use it.
-            Stage detail (core, deep, REM) depends on what your device writes. Log manually when
-            you didn&apos;t wear a tracker.
+            Stage detail (core, deep, REM) depends on what your device writes.
+          </p>
+          <p>
+            No wearable? Log a night manually with notes, dreams, and how you felt. Manual posts
+            show in the feed but do not count toward stats, compare, challenges, or personal
+            records. If device data arrives later, Slumber can merge it into the post.
           </p>
         </section>
 
         <p className="platform-note">
-          <strong>Available on the App Store</strong> for iPhone (iOS 15.1+). Free account—Slumber
+          <strong>Available on the App Store</strong> for iPhone (iOS 15.1+). Free account. Slumber
           does not write to Apple Health. Android Health Connect is on the roadmap.
         </p>
       </div>
