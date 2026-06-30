@@ -79,6 +79,7 @@ a:hover {
 img {
   display: block;
   max-width: 100%;
+  height: auto;
 }
 
 #root {
@@ -150,6 +151,7 @@ img {
   width: clamp(24px, 6vw, 28px);
   height: clamp(24px, 6vw, 28px);
   border-radius: 7px;
+  object-fit: contain;
 }
 
 .brand:hover {
@@ -945,8 +947,9 @@ h1 {
   background: var(--border);
 }
 
-.hypno-seg {
+.hypno-bar > .hypno-seg {
   height: 100%;
+  min-height: 0;
 }
 
 .hypno-seg.core { background: var(--core); flex: 3; }

@@ -17,11 +17,15 @@ type SleepTimelineBarProps = {
 };
 
 const CARD_HEIGHT = 14;
-const DETAIL_HYPNO_HEIGHT = 72;
-const CARD_TOOLTIP_OFFSET = -36;
-const DETAIL_TOOLTIP_OFFSET = -28;
-const TOOLTIP_WIDTH = 76;
+const DETAIL_HYPNO_HEIGHT = 80;
 const HYPO_LANES = 4;
+const LANE_INSET = 3;
+
+const SCRUB_TOOLTIP_HEIGHT = 26;
+const SCRUB_TOOLTIP_GAP = 6;
+/** Space reserved above the chart for the hover time pill (matches iOS scrub-above layout). */
+const SCRUB_TOOLTIP_RESERVE = SCRUB_TOOLTIP_HEIGHT + SCRUB_TOOLTIP_GAP;
+const SCRUB_TOOLTIP_WIDTH = 80;
 
 const LANE_LABELS = [
   { label: 'Awake', className: 'awake' },
@@ -37,6 +41,52 @@ function totalTimelineMinutes(items: TimelineItem[]): number {
   );
 }
 
+type ScrubOverlayProps = {
+  scrubX: number;
+  scrubTime: string;
+  graphWidth: number;
+  chartHeight: number;
+  variant: 'card' | 'detail';
+};
+
+function ScrubOverlay({ scrubX, scrubTime, graphWidth, chartHeight, variant }: ScrubOverlayProps) {
+  const tooltipLeft = Math.max(
+    0,
+    Math.min(scrubX - SCRUB_TOOLTIP_WIDTH / 2, graphWidth - SCRUB_TOOLTIP_WIDTH),
+  );
+
+  const chartTop = variant === 'detail' ? SCRUB_TOOLTIP_RESERVE : 0;
+  const tooltipTop = variant === 'detail'
+    ? SCRUB_TOOLTIP_GAP
+    : SCRUB_TOOLTIP_GAP - SCRUB_TOOLTIP_RESERVE;
+
+  return (
+    <>
+      <div
+        className="sleep-scrub-line"
+        style={{
+          left: scrubX,
+          top: chartTop,
+          height: chartHeight,
+        }}
+        aria-hidden="true"
+      />
+      <div
+        className="sleep-scrub-tooltip"
+        style={{
+          left: tooltipLeft,
+          width: SCRUB_TOOLTIP_WIDTH,
+          top: tooltipTop,
+          height: SCRUB_TOOLTIP_HEIGHT,
+        }}
+        aria-hidden="true"
+      >
+        {scrubTime}
+      </div>
+    </>
+  );
+}
+
 export default function SleepTimelineBar({
   segments,
   bedtime,
@@ -44,13 +94,13 @@ export default function SleepTimelineBar({
   sessionBreakdown,
   variant = 'card',
 }: SleepTimelineBarProps) {
-  const hostRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<HTMLDivElement>(null);
+  const scrubbingRef = useRef(false);
   const [scrubX, setScrubX] = useState<number | null>(null);
   const [graphWidth, setGraphWidth] = useState(0);
 
   const isDetail = variant === 'detail';
-  const height = isDetail ? DETAIL_HYPNO_HEIGHT : CARD_HEIGHT;
-  const tooltipOffset = isDetail ? DETAIL_TOOLTIP_OFFSET : CARD_TOOLTIP_OFFSET;
+  const chartHeight = isDetail ? DETAIL_HYPNO_HEIGHT : CARD_HEIGHT;
 
   const timelineItems = useMemo(
     () => buildTimelineItems(segments, sessionBreakdown),
@@ -60,7 +110,7 @@ export default function SleepTimelineBar({
   const scrubEnabled = bedtime !== '—' && timelineItems.length > 0;
 
   const updateScrub = useCallback((clientX: number) => {
-    const el = hostRef.current;
+    const el = chartRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
     const width = rect.width;
@@ -73,13 +123,31 @@ export default function SleepTimelineBar({
     setScrubX(null);
   }, []);
 
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!scrubEnabled) return;
+    e.stopPropagation();
+    scrubbingRef.current = true;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    updateScrub(e.clientX);
+  };
+
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!scrubEnabled || e.pointerType === 'touch') return;
+    if (!scrubEnabled) return;
     e.stopPropagation();
     updateScrub(e.clientX);
   };
 
+  const endScrub = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    if (!scrubbingRef.current) return;
+    scrubbingRef.current = false;
+    clearScrub();
+  };
+
   const onPointerLeave = () => {
+    if (scrubbingRef.current) return;
     clearScrub();
   };
 
@@ -87,29 +155,30 @@ export default function SleepTimelineBar({
     ? timelineClockAtFraction(scrubX / graphWidth, timelineItems, bedtime)
     : null;
 
-  const tooltipLeft = scrubX !== null && graphWidth > 0
-    ? Math.max(0, Math.min(scrubX - TOOLTIP_WIDTH / 2, graphWidth - TOOLTIP_WIDTH))
-    : 0;
+  const scrubHostClass = [
+    'sleep-timeline-scrub-host',
+    isDetail ? 'sleep-hypnogram-scrub-host' : 'sleep-timeline-scrub-host--card',
+    scrubEnabled ? 'sleep-timeline-scrub-host--active' : '',
+  ].filter(Boolean).join(' ');
+
+  const scrubHandlers = scrubEnabled
+    ? {
+        onPointerDown,
+        onPointerMove,
+        onPointerLeave,
+        onPointerUp: endScrub,
+        onPointerCancel: endScrub,
+      }
+    : {};
 
   const scrubOverlay = scrubX !== null && scrubTime ? (
-    <>
-      <div
-        className="sleep-scrub-line"
-        style={{
-          left: scrubX,
-          top: tooltipOffset + 22,
-          height: height - tooltipOffset - 22,
-        }}
-        aria-hidden="true"
-      />
-      <div
-        className="sleep-scrub-tooltip"
-        style={{ left: tooltipLeft, width: TOOLTIP_WIDTH, top: tooltipOffset }}
-        aria-hidden="true"
-      >
-        {scrubTime}
-      </div>
-    </>
+    <ScrubOverlay
+      scrubX={scrubX}
+      scrubTime={scrubTime}
+      graphWidth={graphWidth}
+      chartHeight={chartHeight}
+      variant={isDetail ? 'detail' : 'card'}
+    />
   ) : null;
 
   if (timelineItems.length === 0) {
@@ -121,8 +190,10 @@ export default function SleepTimelineBar({
             <span>{wakeTime}</span>
           </div>
         ) : null}
-        <div className="hypno-bar">
-          <div className="hypno-seg core" style={{ flex: 1 }} />
+        <div className={scrubHostClass}>
+          <div className="hypno-bar" style={{ height: chartHeight, borderRadius: isDetail ? 8 : 6 }}>
+            <div className="hypno-seg core" style={{ flex: 1 }} />
+          </div>
         </div>
         {isDetail ? (
           <div className="sleep-hypnogram-axis-labels">
@@ -143,15 +214,17 @@ export default function SleepTimelineBar({
         </div>
 
         <div
-          ref={hostRef}
-          className={`sleep-timeline-scrub-host${scrubEnabled ? ' sleep-timeline-scrub-host--active' : ''}`}
-          style={{ height, borderRadius: 6 }}
-          onPointerMove={onPointerMove}
-          onPointerLeave={onPointerLeave}
+          className={scrubHostClass}
+          {...scrubHandlers}
           data-post-interactive={scrubEnabled ? true : undefined}
           role="presentation"
         >
-          <div className="hypno-bar" style={{ height, borderRadius: 6 }}>
+          {scrubOverlay}
+          <div
+            ref={chartRef}
+            className="hypno-bar sleep-timeline-chart"
+            style={{ height: chartHeight, borderRadius: 6 }}
+          >
             {timelineItems.map((item, idx) => {
               if (item.kind === 'gap') {
                 return (
@@ -180,85 +253,87 @@ export default function SleepTimelineBar({
               );
             })}
           </div>
-          {scrubOverlay}
         </div>
       </div>
     );
   }
 
   const totalMinutes = totalTimelineMinutes(timelineItems);
-  const laneHeight = height / HYPO_LANES;
+  const laneHeight = chartHeight / HYPO_LANES;
   let cumulative = 0;
 
   return (
     <div className={`sleep-timeline sleep-timeline--${variant}`}>
       <div className="sleep-hypnogram-wrap">
-        <div className="sleep-hypnogram-axis" style={{ height }} aria-hidden="true">
-          {LANE_LABELS.map((lane) => (
-            <div key={lane.label} className="sleep-hypnogram-axis-row" style={{ height: laneHeight }}>
-              <span className={`sleep-hypnogram-axis-dot sleep-hypnogram-axis-dot--${lane.className}`} />
-              <span className="sleep-hypnogram-axis-label">{lane.label}</span>
-            </div>
-          ))}
+        <div
+          className="sleep-hypnogram-axis-col"
+          style={{ paddingTop: SCRUB_TOOLTIP_RESERVE }}
+        >
+          <div className="sleep-hypnogram-axis" style={{ height: chartHeight }} aria-hidden="true">
+            {LANE_LABELS.map((lane) => (
+              <div key={lane.label} className="sleep-hypnogram-axis-row" style={{ height: laneHeight }}>
+                <span className={`sleep-hypnogram-axis-dot sleep-hypnogram-axis-dot--${lane.className}`} />
+                <span className="sleep-hypnogram-axis-label">{lane.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div
-          ref={hostRef}
-          className={`sleep-hypnogram-chart${scrubEnabled ? ' sleep-timeline-scrub-host--active' : ''}`}
-          style={{ height, borderRadius: 8 }}
-          onPointerMove={onPointerMove}
-          onPointerLeave={onPointerLeave}
-          role="presentation"
-        >
-          {Array.from({ length: HYPO_LANES - 1 }, (_, idx) => (
-            <div
-              key={`lane-${idx}`}
-              className="sleep-hypnogram-lane-divider"
-              style={{ top: (idx + 1) * laneHeight }}
-            />
-          ))}
+        <div className={scrubHostClass} {...scrubHandlers} role="presentation">
+          {scrubOverlay}
+          <div
+            ref={chartRef}
+            className="sleep-hypnogram-chart"
+            style={{ height: chartHeight, borderRadius: 8 }}
+          >
+            {Array.from({ length: HYPO_LANES - 1 }, (_, idx) => (
+              <div
+                key={`lane-${idx}`}
+                className="sleep-hypnogram-lane-divider"
+                style={{ top: (idx + 1) * laneHeight }}
+              />
+            ))}
 
-          {timelineItems.map((item, idx) => {
-            const itemMinutes = item.kind === 'gap' ? item.minutes : item.segment.minutes;
-            const left = totalMinutes > 0 ? (cumulative / totalMinutes) * 100 : 0;
-            const width = totalMinutes > 0 ? (itemMinutes / totalMinutes) * 100 : 0;
-            cumulative += itemMinutes;
+            {timelineItems.map((item, idx) => {
+              const itemMinutes = item.kind === 'gap' ? item.minutes : item.segment.minutes;
+              const left = totalMinutes > 0 ? (cumulative / totalMinutes) * 100 : 0;
+              const width = totalMinutes > 0 ? (itemMinutes / totalMinutes) * 100 : 0;
+              cumulative += itemMinutes;
 
-            if (item.kind === 'gap') {
-              const showGapLabel = width >= 6;
+              if (item.kind === 'gap') {
+                const showGapLabel = width >= 6;
+                return (
+                  <div
+                    key={`gap-${idx}`}
+                    className="sleep-hypnogram-gap"
+                    style={{ left: `${left}%`, width: `${width}%`, height: chartHeight }}
+                    title="Awake gap"
+                  >
+                    {showGapLabel ? (
+                      <span className="sleep-hypnogram-gap-label">
+                        {item.isAfterNap ? '☀️ ' : ''}{Math.round(item.minutes)}m awake
+                      </span>
+                    ) : null}
+                  </div>
+                );
+              }
+
+              const seg = item.segment;
+              const lane = STAGE_LANE[seg.type];
               return (
                 <div
-                  key={`gap-${idx}`}
-                  className="sleep-hypnogram-gap"
-                  style={{ left: `${left}%`, width: `${width}%`, height }}
-                  title="Awake gap"
-                >
-                  {showGapLabel ? (
-                    <span className="sleep-hypnogram-gap-label">
-                      {item.isAfterNap ? '☀️ ' : ''}{Math.round(item.minutes)}m awake
-                    </span>
-                  ) : null}
-                </div>
+                  key={`seg-${idx}`}
+                  className={`sleep-hypnogram-seg hypno-seg ${stageSegmentClass(seg.type)}`}
+                  style={{
+                    left: `${left}%`,
+                    width: `${width}%`,
+                    top: lane * laneHeight + LANE_INSET,
+                    height: laneHeight - LANE_INSET * 2,
+                  }}
+                />
               );
-            }
-
-            const seg = item.segment;
-            const lane = STAGE_LANE[seg.type];
-            return (
-              <div
-                key={`seg-${idx}`}
-                className={`sleep-hypnogram-seg hypno-seg ${stageSegmentClass(seg.type)}`}
-                style={{
-                  left: `${left}%`,
-                  width: `${width}%`,
-                  top: lane * laneHeight + 2,
-                  height: laneHeight - 4,
-                }}
-              />
-            );
-          })}
-
-          {scrubOverlay}
+            })}
+          </div>
         </div>
       </div>
 

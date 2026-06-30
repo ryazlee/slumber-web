@@ -696,7 +696,9 @@
 .avatar-slot {
   position: relative;
   flex-shrink: 0;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   vertical-align: middle;
   width: 40px;
   height: 40px;
@@ -768,6 +770,7 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  flex-shrink: 0;
 }
 
 .avatar-role-badge {
@@ -785,9 +788,13 @@
 }
 
 .avatar-role-badge-emoji {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
   line-height: 1;
-  text-align: center;
+  font-style: normal;
 }
 
 .post-card-meta {
@@ -1053,7 +1060,7 @@
 .post-detail-sleep {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 6px;
 }
 
 .post-detail-asleep-label {
@@ -1069,7 +1076,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  margin: 18px 0 10px;
+  margin: 20px 0 14px;
 }
 
 .post-detail-timeline-title {
@@ -1085,7 +1092,7 @@
 }
 
 .post-detail-stage-chips {
-  margin-top: 16px;
+  margin-top: 18px;
 }
 
 .post-detail-tags .post-tags {
@@ -1129,6 +1136,9 @@
 
 .post-hypno-wrap {
   margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .post-sleep-hero {
@@ -1400,7 +1410,7 @@
 }
 
 .sleep-timeline .hypno-labels {
-  margin-bottom: 8px;
+  margin-bottom: 0;
 }
 
 .sleep-timeline--card .hypno-bar {
@@ -1416,26 +1426,31 @@
 .sleep-hypnogram-wrap {
   display: flex;
   align-items: stretch;
-  gap: 10px;
+  gap: 14px;
+  margin-top: 2px;
+}
+
+.sleep-hypnogram-axis-col {
+  flex-shrink: 0;
 }
 
 .sleep-hypnogram-axis {
-  flex-shrink: 0;
-  width: 52px;
+  width: 58px;
   display: flex;
   flex-direction: column;
+  padding-top: 2px;
 }
 
 .sleep-hypnogram-axis-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  min-height: 0;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .sleep-hypnogram-axis-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
 }
@@ -1446,16 +1461,22 @@
 .sleep-hypnogram-axis-dot--deep { background: var(--deep); }
 
 .sleep-hypnogram-axis-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-dim);
-  line-height: 1.1;
+  line-height: 1.2;
+}
+
+.sleep-hypnogram-scrub-host {
+  flex: 1;
+  min-width: 0;
+  padding-top: var(--scrub-tooltip-reserve, 32px);
+  touch-action: none;
 }
 
 .sleep-hypnogram-chart {
   position: relative;
-  flex: 1;
-  min-width: 0;
+  width: 100%;
   overflow: hidden;
   background: var(--border);
 }
@@ -1475,6 +1496,8 @@
   border-radius: 2px;
   min-width: 1px;
   z-index: 2;
+  height: auto;
+  flex: none;
 }
 
 .sleep-hypnogram-gap {
@@ -1500,9 +1523,9 @@
 .sleep-hypnogram-axis-labels {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 8px;
-  padding-left: 62px;
+  gap: 16px;
+  margin-top: 12px;
+  padding-left: 72px;
   font-size: 12px;
   font-weight: 600;
   color: var(--text-dim);
@@ -1517,7 +1540,7 @@
 .session-timeline-detail {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
 
 .session-timeline-detail--divided {
@@ -1591,10 +1614,23 @@
 .sleep-timeline-scrub-host {
   position: relative;
   overflow: visible;
+  --scrub-tooltip-reserve: 32px;
+}
+
+.sleep-timeline-scrub-host--card {
+  touch-action: none;
 }
 
 .sleep-timeline-scrub-host--active {
   cursor: crosshair;
+  touch-action: none;
+}
+
+.sleep-timeline-chart {
+  display: flex;
+  width: 100%;
+  overflow: hidden;
+  background: var(--border);
 }
 
 .hypno-seg.gap {
@@ -1622,22 +1658,24 @@
   opacity: 0.85;
   border-radius: 1px;
   pointer-events: none;
-  z-index: 2;
+  z-index: 4;
 }
 
 .sleep-scrub-tooltip {
   position: absolute;
-  z-index: 3;
-  height: 22px;
+  z-index: 5;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--text);
   color: var(--bg);
-  border-radius: 5px;
+  border-radius: 6px;
   font-size: 11px;
   font-weight: 700;
+  letter-spacing: 0.01em;
   pointer-events: none;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
 }
 
 .post-tags {
@@ -2204,6 +2242,22 @@ button.app-back-link {
 .social-icon-muted {
   color: var(--text-muted);
   display: block;
+  flex-shrink: 0;
+  width: auto;
+  height: auto;
+  max-width: none;
+  overflow: visible;
+}
+
+.post-social-icon-btn svg,
+.comment-like-btn svg,
+.header-search-trigger svg,
+.search-bar-icon svg {
+  flex-shrink: 0;
+  width: auto;
+  height: auto;
+  max-width: none;
+  overflow: visible;
 }
 
 .reaction-heart-emoji {

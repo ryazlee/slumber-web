@@ -23,7 +23,7 @@ export function HeartOutlineIcon({ size = 20, className }: IconProps) {
   );
 }
 
-/** Ionicons chatbubble-outline — single speech bubble with tail. */
+/** Ionicons chatbubble-outline — matches Ionicons / Expo vector icon. */
 export function ChatBubbleOutlineIcon({ size = 20, className }: IconProps) {
   return (
     <svg
@@ -34,11 +34,11 @@ export function ChatBubbleOutlineIcon({ size = 20, className }: IconProps) {
       fill="none"
       stroke="currentColor"
       strokeWidth={32}
-      strokeLinecap="round"
-      strokeMiterlimit={10}
+      strokeLinejoin="round"
       aria-hidden
     >
       <path d="M87.49 153c23.51-23.77 38.14-32.78 68.54-47.38 4.48-2.3 9.41-1.23 12.87 2.57l43.09 45.77a10 10 0 0 0 8.87 3.45h66.99a32 32 0 0 1 32 32v32a16 16 0 0 0 16 16h96a32 32 0 0 1 32 32v192a32 32 0 0 1-32 32H219.18a111.6 111.6 0 0 1-98.5-59.74L53 464a4 4 0 0 1-3-6.43l103.11-191.1A64.11 64.11 0 0 1 87.49 153z" />
+      <path d="M176 416a16 16 0 0 0 16-16h96a16 16 0 0 0 16-16v-32a16 16 0 0 0-16-16h-96a16 16 0 0 0-16 16v32a16 16 0 0 0 16 16z" />
     </svg>
   );
 }
