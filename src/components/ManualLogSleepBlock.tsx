@@ -41,7 +41,7 @@ export default function ManualLogSleepBlock({ post, variant = 'card' }: Props) {
         </div>
       )}
       {timeLine && <p className="manual-sleep-times">{timeLine}</p>}
-      <p className="manual-sleep-footnote">For the feed only — stats &amp; challenges sit this one out!</p>
+      <p className="manual-sleep-footnote">For the feed only. Stats and challenges sit this one out!</p>
     </div>
   );
 }

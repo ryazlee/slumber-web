@@ -25,7 +25,7 @@ export default function ChallengeCard({ challenge }: ChallengeCardProps) {
         <p className="challenge-grace-banner">
           <ChallengeGraceCountdown
             challenge={challenge}
-            prefix="Finalizing — "
+            prefix="Finalizing: "
             suffix=" to sync"
           />
         </p>

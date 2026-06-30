@@ -25,7 +25,7 @@ export default function AppEntry() {
     <div className="login-page">
       <main className="login-page-main">
         <LoginForm
-          description="Browse your feed, stats, and challenges—and leave kudos and comments. Log sleep, accept invites, and manage friends in the iOS app. Use the email tied to your Slumber account."
+          description="Browse your feed, stats, and challenges and leave kudos and comments. Log sleep, accept invites, and manage friends in the iOS app. Use the email tied to your Slumber account."
         />
       </main>
     </div>

@@ -154,7 +154,7 @@ export default function ChallengeDetail() {
           <p className="challenge-grace-banner">
             <ChallengeGraceCountdown
               challenge={challenge}
-              prefix="Finalizing — "
+              prefix="Finalizing: "
               suffix=" to sync"
             />
           </p>

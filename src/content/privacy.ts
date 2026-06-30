@@ -7,7 +7,7 @@ export const privacySections = [
   {
     heading: 'Overview',
     body: [
-      'Slumber is a social sleep-tracking app for iOS. You log nights from Apple Health or manually, add context (notes, dreams, photos, tags), and share with friends you mutually approve. An optional web companion lets signed-in users browse their feed, profile, stats, and challenges in a browser—and leave kudos and comments. Sleep logging, HealthKit sync, and most account management stay in the mobile app.',
+      'Slumber is a social sleep-tracking app for iOS. You log nights from Apple Health or manually, add context (notes, dreams, photos, tags), and share with friends you mutually approve. An optional web companion lets signed-in users browse their feed, profile, stats, and challenges in a browser and leave kudos and comments. Sleep logging, HealthKit sync, and most account management stay in the mobile app.',
       'This policy describes what we collect through the Slumber mobile app and website, how we use it, and the choices you have.',
     ],
   },
@@ -37,7 +37,7 @@ export const privacySections = [
   {
     heading: 'Apple Health & HealthKit',
     body: [
-      'HealthKit data is used only inside Slumber—to display sleep metrics, build hypnogram charts, compute stats, and score sleep challenges you join.',
+      'HealthKit data is used only inside Slumber to display sleep metrics, build hypnogram charts, compute stats, and score sleep challenges you join.',
       'Slumber does not sell, trade, or share data obtained through the Apple HealthKit framework with advertising platforms, data brokers, or third-party information resellers.',
       'You can revoke HealthKit access at any time in iOS Settings. Existing posts already saved in Slumber are not automatically deleted when you revoke access.',
     ],
@@ -46,7 +46,7 @@ export const privacySections = [
     heading: 'Who sees your data',
     body: [
       'We do not sell your personal information.',
-      'Friends: Slumber uses mutual friend requests—both people must accept before either can see the other\'s posts. Your feed shows posts from accepted friends and your own posts.',
+      'Friends: Slumber uses mutual friend requests. Both people must accept before either can see the other\'s posts. Your feed shows posts from accepted friends and your own posts.',
       'Post visibility: posts default to visible to friends. You can mark an individual post private (visible only to you).',
       'Dream privacy: you can blur a dream entry so friends see that you logged a dream without reading the text. Mentioned friends may see a minimal indicator when they are @mentioned in a private dream.',
       'Challenges: participants in a challenge you join can see challenge-related sleep contributions according to challenge rules.',
@@ -61,7 +61,7 @@ export const privacySections = [
       'Control post privacy per night (public to friends or private to you).',
       'Blur dream journal entries on individual posts.',
       'Edit or delete your own posts.',
-      'Block users—they are removed from your feed, search, and challenge interactions.',
+      'Block users. They are removed from your feed, search, and challenge interactions.',
       'Report posts for moderation review.',
       'Delete your account in Settings, which permanently removes your authentication record, profile, posts, and associated social data.',
       'Revoke Apple Health access in iOS Settings at any time.',

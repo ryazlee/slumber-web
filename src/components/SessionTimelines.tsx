@@ -48,7 +48,7 @@ function SessionBlock({
             {sessionIsNap ? '☀️' : '🌙'} {sessionLabel}
           </span>
           <span className="session-timeline-detail-meta">
-            {' · '}{session.bedtime} – {session.wakeTime} · {formatMins(session.asleepMinutes)}
+            {' · '}{session.bedtime} to {session.wakeTime} · {formatMins(session.asleepMinutes)}
           </span>
         </p>
         <SleepTimelineBar

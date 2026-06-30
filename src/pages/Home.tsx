@@ -80,7 +80,7 @@ export default function Home() {
           <ul className="feature-list">
             <li>
               <strong>Feed</strong>
-              Sleep posts from friends and yourself: hypnograms, stage breakdowns, personal-record
+              Sleep posts from friends and yourself: hypnograms, stage breakdowns, personal record
               badges, dream logs, kudos, comments, and @mentions.
             </li>
             <li>
@@ -95,7 +95,7 @@ export default function Home() {
             </li>
             <li>
               <strong>Compare</strong>
-              Side-by-side sleep metrics with friends over today, 7 days, 30 days, or all time.
+              Side by side sleep metrics with friends over today, 7 days, 30 days, or all time.
               Wearable nights only; manual logs stay out of the table.
             </li>
             <li>

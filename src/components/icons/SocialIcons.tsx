@@ -18,7 +18,7 @@ function SocialIconSlot({
   return (
     <span
       className={`social-icon-slot ${className}`.trim()}
-      style={{ width: size, height: size }}
+      style={{ width: size, height: size, minWidth: size, minHeight: size }}
       aria-hidden
     >
       {children}
@@ -26,37 +26,43 @@ function SocialIconSlot({
   );
 }
 
-/** Ionicons-style heart outline — inactive kudos / comment like. */
+/** Ionicons heart-outline (v7) — inactive kudos / comment like. */
 export function HeartOutlineIcon({ size = 20, className }: IconProps) {
   return (
     <SocialIconSlot size={size} className={className}>
       <svg
+        width={size}
+        height={size}
         viewBox="0 0 512 512"
         fill="none"
         stroke="currentColor"
         strokeWidth={32}
         strokeLinecap="round"
         strokeLinejoin="round"
+        preserveAspectRatio="xMidYMid meet"
       >
-        <path d="M352.92 80C328 80 312 112 256 144s-72-64-96.92-64c-26.51 0-51.39 16.86-55.53 44.73C98.44 170.55 96 192 96 219.18c0 47.35 19.86 81.78 50.25 114.39 16.4 17.79 90.25 97.38 121.35 128.6 12.5 12.7 32.83 12.7 45.33 0C343.75 441.06 417.6 361.47 434 343.68c30.39-32.61 50.25-67.04 50.25-114.39C484.28 192 484.12 169 464.08 124.8 459.34 111.06 445.15 80 352.92 80z" />
+        <path d="M352.92 80C288 80 256 144 256 144s-32-64-96.92-64c-52.76 0-94.54 44.14-95.08 96.81-1.1 109.33 86.73 187.08 183 252.42a16 16 0 0018 0c96.26-65.34 184.09-143.09 183-252.42-.54-52.67-42.32-96.81-95.08-96.81z" />
       </svg>
     </SocialIconSlot>
   );
 }
 
-/** Ionicons chatbubble-outline — matches Ionicons / Expo vector icon. */
+/** Ionicons chatbubble-outline (v7) — matches Expo vector icon. */
 export function ChatBubbleOutlineIcon({ size = 20, className }: IconProps) {
   return (
     <SocialIconSlot size={size} className={className}>
       <svg
+        width={size}
+        height={size}
         viewBox="0 0 512 512"
         fill="none"
         stroke="currentColor"
         strokeWidth={32}
-        strokeLinejoin="round"
+        strokeLinecap="round"
+        strokeMiterlimit={10}
+        preserveAspectRatio="xMidYMid meet"
       >
-        <path d="M87.49 153c23.51-23.77 38.14-32.78 68.54-47.38 4.48-2.3 9.41-1.23 12.87 2.57l43.09 45.77a10 10 0 0 0 8.87 3.45h66.99a32 32 0 0 1 32 32v32a16 16 0 0 0 16 16h96a32 32 0 0 1 32 32v192a32 32 0 0 1-32 32H219.18a111.6 111.6 0 0 1-98.5-59.74L53 464a4 4 0 0 1-3-6.43l103.11-191.1A64.11 64.11 0 0 1 87.49 153z" />
-        <path d="M176 416a16 16 0 0 0 16-16h96a16 16 0 0 0 16-16v-32a16 16 0 0 0-16-16h-96a16 16 0 0 0-16 16v32a16 16 0 0 0 16 16z" />
+        <path d="M87.49 380c1.19-4.38-1.44-10.47-3.95-14.86a44.86 44.86 0 00-2.54-3.8 199.81 199.81 0 01-33-110C47.65 139.09 140.73 48 255.83 48 356.21 48 440 117.54 459.58 209.85a199 199 0 014.42 41.64c0 112.41-89.49 204.93-204.59 204.93-18.3 0-43-4.6-56.47-8.37s-26.92-8.77-30.39-10.11a31.09 31.09 0 00-11.12-2.07 30.71 30.71 0 00-12.09 2.43l-67.83 24.48a16 16 0 01-4.67 1.22 9.6 9.6 0 01-9.57-9.74 15.85 15.85 0 01.6-3.29z" />
       </svg>
     </SocialIconSlot>
   );

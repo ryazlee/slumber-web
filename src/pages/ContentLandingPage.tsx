@@ -51,7 +51,7 @@ function postMetaDescription(row: PostPreview): string {
   const parts: string[] = [];
   if (row.sleepDate) parts.push(`Night of ${formatSleepDate(row.sleepDate)}`);
   if (row.asleepMinutes) parts.push(`${formatMins(row.asleepMinutes)} asleep`);
-  if (row.bedtime && row.wakeTime) parts.push(`${row.bedtime} – ${row.wakeTime}`);
+  if (row.bedtime && row.wakeTime) parts.push(`${row.bedtime} to ${row.wakeTime}`);
   parts.push('Open in Slumber');
   return parts.join(' · ');
 }

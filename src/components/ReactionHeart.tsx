@@ -17,7 +17,7 @@ export default function ReactionHeart({ liked, size = 'md' }: Props) {
     return (
       <span
         className="social-icon-slot reaction-heart-emoji"
-        style={{ width: px, height: px, fontSize: EMOJI_SIZE[size] }}
+        style={{ width: px, height: px, minWidth: px, minHeight: px, fontSize: EMOJI_SIZE[size] }}
         aria-hidden
       >
         {REACTION_EMOJI_ACTIVE}
