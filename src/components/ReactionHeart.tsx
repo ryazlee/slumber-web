@@ -11,13 +11,19 @@ const EMOJI_SIZE = { sm: 16, md: 18 } as const;
 
 /** Post kudos + comment likes — outline heart when inactive, 🫶 when liked. */
 export default function ReactionHeart({ liked, size = 'md' }: Props) {
+  const px = ICON_SIZE[size];
+
   if (liked) {
     return (
-      <span className="reaction-heart-emoji" style={{ fontSize: EMOJI_SIZE[size] }} aria-hidden>
+      <span
+        className="social-icon-slot reaction-heart-emoji"
+        style={{ width: px, height: px, fontSize: EMOJI_SIZE[size] }}
+        aria-hidden
+      >
         {REACTION_EMOJI_ACTIVE}
       </span>
     );
   }
 
-  return <HeartOutlineIcon size={ICON_SIZE[size]} className="social-icon-muted" />;
+  return <HeartOutlineIcon size={px} className="social-icon-muted" />;
 }
