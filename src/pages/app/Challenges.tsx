@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import ChallengeListSkeleton from '../../components/ChallengeListSkeleton';
 import ChallengeCard from '../../components/ChallengeCard';
 import { useAuth } from '../../context/AuthContext';
 import { useActiveChallenges, useCompletedChallenges } from '../../hooks/useChallenges';
@@ -40,7 +41,7 @@ export default function Challenges() {
         </p>
       ) : null}
 
-      {loading && <p className="app-muted">Loading challenges…</p>}
+      {loading && <ChallengeListSkeleton count={3} />}
       {errorMessage && <p className="admin-error">{errorMessage}</p>}
 
       {!loading && !errorMessage && (

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import UserListRowsSkeleton from '../../components/UserListRowsSkeleton';
 import Avatar from '../../components/Avatar';
 import {
   useAcceptFriendRequest,
@@ -103,7 +104,7 @@ export default function SocialFriends() {
       ? declineMutation.variables
       : null;
 
-  if (loading) return <p className="app-muted">Loading…</p>;
+  if (loading) return <UserListRowsSkeleton rows={6} />;
   if (errorMessage) return <p className="admin-error">{errorMessage}</p>;
 
   return (

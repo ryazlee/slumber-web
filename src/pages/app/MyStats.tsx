@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import StatsScreenSkeleton from '../../components/StatsScreenSkeleton';
 import { useQueryClient } from '@tanstack/react-query';
 import StatsInsightChips from '../../components/stats/StatsInsightChips';
 import StatsPeriodMetrics from '../../components/stats/StatsPeriodMetrics';
@@ -84,7 +85,7 @@ export default function MyStats() {
   };
 
   if (isLoading && !isRefetching) {
-    return <p className="app-muted stats-loading">Loading stats…</p>;
+    return <StatsScreenSkeleton />;
   }
 
   if (isStatsError || isLifetimeError) {

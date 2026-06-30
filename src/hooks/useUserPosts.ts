@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { fetchUserPosts, PAGE_SIZE } from '../lib/feed';
+import { prefetchCachedImageUrls } from '../lib/imageCache';
 import { patchPostInCache } from '../lib/patchPostCache';
 import { getOptionalQueryErrorMessage } from '../lib/queryError';
 import type { SleepPost } from '../lib/types';
@@ -23,6 +24,10 @@ export function useUserPosts(userId: string | null, options?: { enabled?: boolea
     () => query.data?.pages.flat() ?? [],
     [query.data],
   );
+
+  useEffect(() => {
+    if (posts.length > 0) prefetchCachedImageUrls(posts.map((post) => post.avatarUrl));
+  }, [posts]);
 
   const patchPost = useCallback((postId: string, patch: Partial<SleepPost>) => {
     if (!userId) return;

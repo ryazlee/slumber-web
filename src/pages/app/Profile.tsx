@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import ProfileHeroSkeleton from '../../components/ProfileHeroSkeleton';
 import Avatar from '../../components/Avatar';
+import FeedPostsSkeleton from '../../components/FeedPostsSkeleton';
 import PostList from '../../components/PostList';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../hooks/useProfile';
@@ -45,7 +47,8 @@ export default function Profile() {
   if (profileQuery.isLoading) {
     return (
       <div className="app-page">
-        <p className="app-muted">Loading profile…</p>
+        <ProfileHeroSkeleton />
+        <FeedPostsSkeleton count={2} />
       </div>
     );
   }

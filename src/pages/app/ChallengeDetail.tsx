@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import ChallengeDetailSkeleton from '../../components/ChallengeDetailSkeleton';
 import { Link, useParams } from 'react-router-dom';
 import ChallengeContributionsByDay from '../../components/ChallengeContributionsByDay';
 import ChallengeGraceCountdown from '../../components/ChallengeGraceCountdown';
@@ -97,7 +98,7 @@ export default function ChallengeDetail() {
   if (loading) {
     return (
       <div className="app-page">
-        <p className="app-muted">Loading challenge…</p>
+        <ChallengeDetailSkeleton />
       </div>
     );
   }

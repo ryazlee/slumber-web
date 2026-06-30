@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Avatar from '../../components/Avatar';
+import UserListRowsSkeleton from '../../components/UserListRowsSkeleton';
 import { useClubMembers, useClubs, useRespondToClubInvite } from '../../hooks/useSocial';
 import type { WebClub, WebClubMember } from '../../lib/types';
 
@@ -124,7 +125,7 @@ function ClubDetail({
         <div className="social-club-members">
           <h3>Members</h3>
           {membersQuery.isLoading ? (
-            <p className="app-muted">Loading members…</p>
+            <UserListRowsSkeleton rows={4} />
           ) : membersQuery.error ? (
             <p className="admin-error">Could not load members.</p>
           ) : membersQuery.data?.length ? (
@@ -164,7 +165,7 @@ export default function SocialClubs() {
       ? 'Could not load clubs.'
       : null;
 
-  if (loading) return <p className="app-muted">Loading…</p>;
+  if (loading) return <UserListRowsSkeleton rows={4} />;
   if (errorMessage) return <p className="admin-error">{errorMessage}</p>;
 
   return (

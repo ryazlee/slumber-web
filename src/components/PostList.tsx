@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import SleepPostCard from './SleepPostCard';
+import FeedPostsSkeleton from './FeedPostsSkeleton';
 import type { PostSocialPatch } from './PostSocial';
 import type { SleepPost } from '../lib/types';
 import { buildLatestPostIdsByUser, isLatestSleepPost } from '../lib/latestSleepPost';
@@ -33,7 +34,7 @@ export default function PostList({
 
   return (
     <>
-      {loading && <p className="app-muted">Loading posts…</p>}
+      {loading && <FeedPostsSkeleton count={3} />}
       {error && <p className="admin-error">{error}</p>}
 
       {!loading && !error && posts.length === 0 && (
@@ -41,7 +42,7 @@ export default function PostList({
       )}
 
       <div className="post-list">
-        {posts.map((post) => (
+        {!loading && posts.map((post) => (
           <SleepPostCard
             key={post.id}
             post={post}

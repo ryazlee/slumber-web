@@ -1,3 +1,4 @@
+import CompareTableSkeleton from '../../components/CompareTableSkeleton';
 import ComparePicker from '../../components/ComparePicker';
 import CompareTable from '../../components/CompareTable';
 import { COMPARE_PERIODS } from '../../lib/comparePeriods';
@@ -59,7 +60,7 @@ export default function Compare() {
       </header>
 
       <div className="compare-main">
-        {loading ? <p className="app-muted">Loading…</p> : null}
+        {loading ? <CompareTableSkeleton columns={3} rows={5} /> : null}
         {errorMessage ? <p className="admin-error">{errorMessage}</p> : null}
 
         {!loading && !errorMessage && (
