@@ -10,8 +10,8 @@ export default function Home() {
           <p className="eyebrow">iOS · Social sleep tracking</p>
           <h1>Log your nights. Share with friends.</h1>
           <p className="lead">
-            Slumber syncs sleep from Apple Health each morning—stages, duration, bed and wake
-            times—and turns it into posts you share with friends. Compare nights side by side,
+            Slumber syncs sleep from Apple Health each morning: stages, duration, bed and wake
+            times. It turns into posts you share with friends. Compare nights side by side,
             scroll a morning feed, and see how your habits stack up against people you know.
             Hypnograms, vibes, dreams, photos, sleep buddy tags, and challenges.
           </p>
@@ -61,8 +61,8 @@ export default function Home() {
             Open Slumber in the morning. Your last night&apos;s sleep is already there if you
             wear an Apple Watch, Oura, Garmin, Whoop, or anything else that writes to Apple Health.
             Add a title, pick a vibe, tag what might have affected your sleep, tag sleep buddies
-            you shared the night with, and jot down a dream (private or shared). Hit publish—it
-            shows up in your friends&apos; feeds. Turn on auto-publish in Settings to post
+            you shared the night with, and jot down a dream (private or shared). Hit publish and
+            it shows up in your friends&apos; feeds. Turn on auto-publish in Settings to post
             wearable nights without opening the composer.
           </p>
           <p>
@@ -91,7 +91,7 @@ export default function Home() {
             <li>
               <strong>Stats</strong>
               Weekly chart, 30-day averages, stage mix, personal records, monthly bests, monthly
-              bed/wake timing, and log streaks—from wearable nights only.
+              bed/wake timing, and log streaks (wearable nights only).
             </li>
             <li>
               <strong>Compare</strong>
@@ -130,7 +130,7 @@ export default function Home() {
           <h2>Devices</h2>
           <p>
             Slumber reads from HealthKit, not from individual wearables. Apple Watch, Oura,
-            Garmin, Whoop, Fitbit—if it syncs sleep to Apple Health, Slumber can use it.
+            Garmin, Whoop, Fitbit. If it syncs sleep to Apple Health, Slumber can use it.
             Stage detail (core, deep, REM) depends on what your device writes.
           </p>
           <p>
