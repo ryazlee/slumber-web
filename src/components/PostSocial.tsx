@@ -11,7 +11,7 @@ import {
   useUpdateComment,
 } from '../hooks/usePostSocial';
 import { useLongPress } from '../hooks/useLongPress';
-import { timeAgo } from '../lib/format';
+import { pluralCount, timeAgo } from '../lib/format';
 import { buildCommentReplyPrefix } from '../lib/mentions';
 import type { Comment } from '../lib/types';
 import CommentActionIcon from './CommentActionIcon';
@@ -286,7 +286,7 @@ export default function PostSocial({
             <>
               {kudosCount > 0 && (
                 <button type="button" className="post-social-btn" onClick={openKudosModal}>
-                  {kudosCount} kudo{kudosCount === 1 ? '' : 's'}
+                  {pluralCount(kudosCount, 'kudo')}
                 </button>
               )}
               {commentCount > 0 && (
@@ -296,7 +296,7 @@ export default function PostSocial({
                   onClick={toggleComments}
                   aria-expanded={commentsOpen}
                 >
-                  {commentCount} comment{commentCount === 1 ? '' : 's'}
+                  {pluralCount(commentCount, 'comment')}
                 </button>
               )}
             </>
@@ -308,7 +308,7 @@ export default function PostSocial({
       {commentsOpen && (
         <section className="post-comments" aria-label="Comments">
           {commentsQuery.isLoading && <CommentsLoadingState />}
-          {commentsError && <p className="admin-error">{commentsError}</p>}
+          {commentsError && <p className="inline-error">{commentsError}</p>}
           {!commentsQuery.isLoading && commentsQuery.isSuccess && comments.length === 0 && (
             <p className="post-comments-status">No comments yet.</p>
           )}
@@ -359,13 +359,13 @@ export default function PostSocial({
               </button>
             </form>
           )}
-          {sendError && <p className="admin-error">{sendError}</p>}
+          {sendError && <p className="inline-error">{sendError}</p>}
         </section>
       )}
 
       <Popup open={kudosOpen} onClose={() => setKudosOpen(false)} title="Kudos">
         {kudosQuery.isLoading && <p className="popup-status">Loading…</p>}
-        {kudosError && <p className="admin-error">{kudosError}</p>}
+        {kudosError && <p className="inline-error">{kudosError}</p>}
         {kudosQuery.isSuccess && kudos.length === 0 && (
           <p className="popup-status">No kudos yet.</p>
         )}
@@ -391,7 +391,7 @@ export default function PostSocial({
 
       <Popup open={!!commentLikesId} onClose={() => setCommentLikesId(null)} title="Likes">
         {commentLikesQuery.isLoading && <p className="popup-status">Loading…</p>}
-        {commentLikesError && <p className="admin-error">{commentLikesError}</p>}
+        {commentLikesError && <p className="inline-error">{commentLikesError}</p>}
         {commentLikesQuery.isSuccess && commentLikes.length === 0 && (
           <p className="popup-status">No likes yet.</p>
         )}

@@ -5,7 +5,6 @@ import type { SleepPost } from '../lib/types';
 import { isManualSleepPost } from '../lib/sleepPostCustom';
 import { sleepPostDisplayTitle } from '../lib/sleepPostTitle';
 import { countNaps, hasNapDay } from '../lib/napDay';
-import { VIBE_CONFIG } from '../lib/sleepPostMeta';
 import { segmentsForPost } from '../lib/timeline';
 
 export function useSleepPostDisplay(post: SleepPost) {
@@ -13,7 +12,6 @@ export function useSleepPostDisplay(post: SleepPost) {
   const isManual = isManualSleepPost(post);
   const isOwnPost = user?.id === post.userId;
   const canReadDream = Boolean(post.dreamLog) && (!post.blurDream || isOwnPost);
-  const vibe = post.vibe ? VIBE_CONFIG[post.vibe] : undefined;
   const isNapDay = !isManual && hasNapDay(post);
   const napCount = countNaps(post.sessionBreakdown) || (isNapDay ? 1 : 0);
   const sessions = post.sessionBreakdown ?? [];
@@ -25,7 +23,6 @@ export function useSleepPostDisplay(post: SleepPost) {
     isManual,
     isOwnPost,
     canReadDream,
-    vibe,
     isNapDay,
     napCount,
     sessions,

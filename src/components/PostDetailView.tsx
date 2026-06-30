@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { formatMins, formatSleepDate, timeAgo } from '../lib/format';
-import { vibeColor } from '../lib/sleepPostMeta';
 import { buildLatestPostIdsByUser, isLatestSleepPost } from '../lib/latestSleepPost';
 import { usePostSocialPatch, useSleepPostDisplay } from '../hooks/useSleepPostDisplay';
 import { useLocalMidnightInvalidation } from '../hooks/useLocalMidnightInvalidation';
@@ -12,6 +11,7 @@ import PostDetailSectionHeader from './PostDetailSectionHeader';
 import PostPhotoGallery from './PostPhotoGallery';
 import PostDetailMetrics from './post/PostDetailMetrics';
 import PostDreamBlock from './post/PostDreamBlock';
+import PostVibe from './post/PostVibe';
 import PostStageMetrics from './post/PostStageMetrics';
 import PostSocial, { type PostSocialPatch } from './PostSocial';
 import PostTagList from './PostTagList';
@@ -35,7 +35,6 @@ export default function PostDetailView({
     isManual,
     isOwnPost,
     canReadDream,
-    vibe,
     isNapDay,
     napCount,
     sessions,
@@ -106,12 +105,7 @@ export default function PostDetailView({
                   </span>
                 ) : null}
               </div>
-              {vibe && post.vibe ? (
-                <div className="post-vibe" style={{ color: vibeColor(post.vibe) }}>
-                  <span className="post-vibe-emoji" aria-hidden>{vibe.emoji}</span>
-                  <span className="post-vibe-label">{vibe.label}</span>
-                </div>
-              ) : null}
+              {post.vibe ? <PostVibe vibe={post.vibe} showLabel /> : null}
             </div>
 
             {isNapDay ? (

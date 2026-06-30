@@ -1,12 +1,12 @@
 import { Link } from 'react-router-dom';
 import { formatMins, formatSleepDate, timeAgo } from '../lib/format';
-import { vibeColor } from '../lib/sleepPostMeta';
 import { usePostSocialPatch, useSleepPostDisplay } from '../hooks/useSleepPostDisplay';
 import type { SleepPost } from '../lib/types';
 import ManualLogSleepBlock from './ManualLogSleepBlock';
 import PersonalRecordBadges from './PersonalRecordBadges';
 import PostPhotoGallery from './PostPhotoGallery';
 import PostDreamBlock from './post/PostDreamBlock';
+import PostVibe from './post/PostVibe';
 import PostStageMetrics from './post/PostStageMetrics';
 import PostSocial, { type PostSocialPatch } from './PostSocial';
 import SessionTimelines from './SessionTimelines';
@@ -35,7 +35,6 @@ export default function SleepPostCard({
     isManual,
     isOwnPost,
     canReadDream,
-    vibe,
     isNapDay,
     napCount,
     showWearableSleep,
@@ -102,11 +101,7 @@ export default function SleepPostCard({
                 </span>
               ) : null}
             </div>
-            {vibe && post.vibe ? (
-              <div className="post-vibe" style={{ color: vibeColor(post.vibe) }}>
-                <span className="post-vibe-emoji" aria-hidden>{vibe.emoji}</span>
-              </div>
-            ) : null}
+            {post.vibe ? <PostVibe vibe={post.vibe} /> : null}
           </div>
 
           {scheduleParts.length > 0 ? (

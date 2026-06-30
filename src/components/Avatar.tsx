@@ -128,6 +128,3 @@ export default function Avatar({
     </span>
   );
 }
-
-export const BORDER_WIDTH = 3;
-export { BORDER_WIDTH as AVATAR_RING_WIDTH };

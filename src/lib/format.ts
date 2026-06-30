@@ -23,6 +23,14 @@ export const formatSleepDate = (dateISO: string): string => {
   return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 };
 
+export function pluralize(count: number, singular: string, plural = `${singular}s`) {
+  return count === 1 ? singular : plural;
+}
+
+export function pluralCount(count: number, singular: string, plural = `${singular}s`) {
+  return `${count} ${pluralize(count, singular, plural)}`;
+}
+
 export const goalHours = (minutes: number): string => `${minutes / 60}h`;
 
 export function formatChallengeStatus(status: string): string {

@@ -1,6 +1,6 @@
 import type { SleepPost } from '../lib/types';
 import { formatMins } from '../lib/format';
-import { VIBE_CONFIG, vibeColor } from '../lib/sleepPostMeta';
+import PostVibe from './post/PostVibe';
 
 type Props = {
   post: Pick<SleepPost, 'asleepMinutes' | 'bedtime' | 'wakeTime' | 'vibe'>;
@@ -13,7 +13,6 @@ export default function ManualLogSleepBlock({ post, variant = 'card' }: Props) {
   const hasBedtime = hasTime(post.bedtime);
   const hasWake = hasTime(post.wakeTime);
   const hasDuration = post.asleepMinutes > 0;
-  const vibe = post.vibe ? VIBE_CONFIG[post.vibe] : undefined;
   const isDetail = variant === 'detail';
 
   const timeLine = hasBedtime && hasWake
@@ -32,12 +31,7 @@ export default function ManualLogSleepBlock({ post, variant = 'card' }: Props) {
           <p className={`manual-sleep-duration${isDetail ? ' manual-sleep-duration--detail' : ''}`}>
             {formatMins(post.asleepMinutes)}
           </p>
-          {vibe && post.vibe ? (
-            <div className="post-vibe" style={{ color: vibeColor(post.vibe) }}>
-              <span className="post-vibe-emoji" aria-hidden>{vibe.emoji}</span>
-              {isDetail ? <span className="post-vibe-label">{vibe.label}</span> : null}
-            </div>
-          ) : null}
+          {post.vibe ? <PostVibe vibe={post.vibe} showLabel={isDetail} /> : null}
         </div>
       )}
       {timeLine && <p className="manual-sleep-times">{timeLine}</p>}
