@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { formatMins, formatSleepDate, timeAgo } from '../lib/format';
 import { vibeColor } from '../lib/sleepPostMeta';
-import { getSessionLabel, isNapSession } from '../lib/napDay';
 import { buildLatestPostIdsByUser, isLatestSleepPost } from '../lib/latestSleepPost';
 import { usePostSocialPatch, useSleepPostDisplay } from '../hooks/useSleepPostDisplay';
 import { useLocalMidnightInvalidation } from '../hooks/useLocalMidnightInvalidation';
@@ -16,8 +15,8 @@ import PostDreamBlock from './post/PostDreamBlock';
 import PostStageMetrics from './post/PostStageMetrics';
 import PostSocial, { type PostSocialPatch } from './PostSocial';
 import PostTagList from './PostTagList';
+import SessionTimelines from './SessionTimelines';
 import SleepBuddiesRow from './SleepBuddiesRow';
-import SleepTimelineBar from './SleepTimelineBar';
 import StageBreakdown from './StageBreakdown';
 import UserLink from './UserLink';
 
@@ -41,7 +40,6 @@ export default function PostDetailView({
     napCount,
     sessions,
     showWearableSleep,
-    timelineSegments,
     displayTitle,
   } = useSleepPostDisplay(post);
 
@@ -146,34 +144,11 @@ export default function PostDetailView({
               ) : null}
             </div>
 
-            <SleepTimelineBar
-              segments={timelineSegments}
-              bedtime={post.bedtime}
-              wakeTime={post.wakeTime}
-              sessionBreakdown={post.sessionBreakdown}
-              variant="detail"
-            />
+            <SessionTimelines post={post} variant="detail" />
 
-            {isNapDay && sessions.length > 0 ? (
-              <div className="post-session-stats">
-                {sessions.map((session, idx) => (
-                  <div key={`session-${idx}`} className="post-session-block">
-                    <p className="post-session-title">
-                      {isNapSession(session) ? '☀️ Nap' : '🌙 Overnight'}
-                      {' · '}
-                      {getSessionLabel(session, idx, sessions)}
-                    </p>
-                    <PostStageMetrics
-                      data={session}
-                      labelStyle="title"
-                      className="post-stage-metrics--session"
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
+            {!isNapDay || sessions.length === 0 ? (
               <PostStageMetrics data={post} className="post-detail-stage-chips" />
-            )}
+            ) : null}
           </div>
 
           <PostDetailSectionHeader title="Stages" />

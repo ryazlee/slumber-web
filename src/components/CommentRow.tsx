@@ -78,7 +78,7 @@ export default function CommentRow({
           username={comment.username}
           avatarUrl={comment.avatarUrl}
           userRoles={comment.userRoles}
-          size="sm"
+          size="compact"
         />
       </Link>
 

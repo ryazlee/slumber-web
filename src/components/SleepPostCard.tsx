@@ -9,7 +9,7 @@ import PostPhotoGallery from './PostPhotoGallery';
 import PostDreamBlock from './post/PostDreamBlock';
 import PostStageMetrics from './post/PostStageMetrics';
 import PostSocial, { type PostSocialPatch } from './PostSocial';
-import SleepTimelineBar from './SleepTimelineBar';
+import SessionTimelines from './SessionTimelines';
 import PostTagList from './PostTagList';
 import SleepBuddiesRow from './SleepBuddiesRow';
 import UserLink from './UserLink';
@@ -39,7 +39,6 @@ export default function SleepPostCard({
     isNapDay,
     napCount,
     showWearableSleep,
-    timelineSegments,
     displayTitle,
   } = useSleepPostDisplay(post);
 
@@ -114,13 +113,7 @@ export default function SleepPostCard({
             <p className="post-schedule-meta">{scheduleParts.join(' · ')}</p>
           ) : null}
 
-          <SleepTimelineBar
-            segments={timelineSegments}
-            bedtime={post.bedtime}
-            wakeTime={post.wakeTime}
-            sessionBreakdown={post.sessionBreakdown}
-            variant={clickable ? 'card' : 'detail'}
-          />
+          <SessionTimelines post={post} variant="card" />
 
           <PostStageMetrics data={post} />
         </div>

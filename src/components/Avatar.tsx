@@ -17,6 +17,7 @@ export const AVATAR_SIZE = {
 export type AvatarSizeName = keyof typeof AVATAR_SIZE;
 
 const SLOT_PX: Record<NonNullable<AvatarProps['size']>, number> = {
+  compact: AVATAR_SIZE.compact,
   sm: AVATAR_SIZE.tab,
   md: AVATAR_SIZE.row,
   lg: AVATAR_SIZE.hero,
@@ -49,11 +50,12 @@ type AvatarProps = {
   username: string;
   avatarUrl?: string;
   userRoles?: string[] | null;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'compact' | 'sm' | 'md' | 'lg';
   className?: string;
 };
 
 const SLOT_CLASS: Record<NonNullable<AvatarProps['size']>, string> = {
+  compact: 'avatar-slot avatar-slot--compact',
   sm: 'avatar-slot avatar-slot--sm',
   md: 'avatar-slot avatar-slot--md',
   lg: 'avatar-slot avatar-slot--lg',

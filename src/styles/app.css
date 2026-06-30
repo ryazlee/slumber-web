@@ -696,8 +696,15 @@
 .avatar-slot {
   position: relative;
   flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
   width: 40px;
   height: 40px;
+}
+
+.avatar-slot--compact {
+  width: 28px;
+  height: 28px;
 }
 
 .avatar-slot--sm {
@@ -737,6 +744,10 @@
   color: #fff;
   overflow: hidden;
   font-size: 14px;
+}
+
+.avatar-slot--compact .avatar-face {
+  font-size: 11px;
 }
 
 .avatar-slot--sm .avatar-face {
@@ -1400,6 +1411,181 @@
 .sleep-timeline--detail .hypno-bar {
   height: 36px;
   border-radius: 6px;
+}
+
+.sleep-hypnogram-wrap {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.sleep-hypnogram-axis {
+  flex-shrink: 0;
+  width: 52px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sleep-hypnogram-axis-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 0;
+}
+
+.sleep-hypnogram-axis-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sleep-hypnogram-axis-dot--awake { background: var(--awake); }
+.sleep-hypnogram-axis-dot--rem { background: var(--rem); }
+.sleep-hypnogram-axis-dot--core { background: var(--core); }
+.sleep-hypnogram-axis-dot--deep { background: var(--deep); }
+
+.sleep-hypnogram-axis-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-dim);
+  line-height: 1.1;
+}
+
+.sleep-hypnogram-chart {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--border);
+}
+
+.sleep-hypnogram-lane-divider {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.sleep-hypnogram-seg {
+  position: absolute;
+  border-radius: 2px;
+  min-width: 1px;
+  z-index: 2;
+}
+
+.sleep-hypnogram-gap {
+  position: absolute;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(245, 158, 11, 0.12);
+  border-left: 1px solid rgba(245, 158, 11, 0.45);
+  border-right: 1px solid rgba(245, 158, 11, 0.45);
+  z-index: 3;
+}
+
+.sleep-hypnogram-gap-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: #fbbf24;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.sleep-hypnogram-axis-labels {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  padding-left: 62px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.session-timelines {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.session-timeline-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.session-timeline-detail--divided {
+  padding-bottom: 16px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.session-timeline-detail-header {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.session-timeline-detail-label {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.session-timeline-detail-meta {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.session-timeline-card {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.session-timeline-card--nap {
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.session-timeline-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 11px;
+}
+
+.session-timeline-badge {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.session-timeline-badge--nap {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+.session-timeline-badge--overnight {
+  background: rgba(139, 92, 246, 0.15);
+  color: #c4b5fd;
+}
+
+.session-timeline-card-times {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.session-timeline-card-label {
+  color: var(--text-dim);
 }
 
 .sleep-timeline-scrub-host {
@@ -2281,6 +2467,8 @@ button.app-back-link {
 .comment-row-avatar {
   display: block;
   flex-shrink: 0;
+  width: 28px;
+  line-height: 0;
   text-decoration: none;
 }
 

@@ -120,3 +120,12 @@ export function segmentsForPost(input: {
 export function stageSegmentClass(type: StageSegment['type']): string {
   return type.toLowerCase();
 }
+
+/** Lane index for hypnogram detail view — matches the iOS SleepTimeline layout. */
+export const STAGE_LANE: Record<StageSegment['type'], number> = {
+  AWAKE: 0,
+  REM: 1,
+  CORE: 2,
+  ASLEEP: 2,
+  DEEP: 3,
+};
