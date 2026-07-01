@@ -1,16 +1,18 @@
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
+import SkeletonLoadingShell from './SkeletonLoadingShell';
 
 type Props = {
   rows?: number;
+  withSpinner?: boolean;
 };
 
-export default function CommentsLoadingState({ rows = 2 }: Props) {
-  return (
+export default function CommentsLoadingState({ rows = 2, withSpinner = true }: Props) {
+  const content = (
     <Stack
       spacing={1.25}
       sx={{ py: 0.5, pb: 1 }}
-      aria-label="Loading comments"
+      aria-label={withSpinner ? undefined : 'Loading comments'}
     >
       {Array.from({ length: rows }, (_, index) => (
         <Stack key={index} direction="row" spacing={1.25} sx={{ alignItems: 'flex-start' }}>
@@ -27,5 +29,13 @@ export default function CommentsLoadingState({ rows = 2 }: Props) {
         </Stack>
       ))}
     </Stack>
+  );
+
+  if (!withSpinner) return content;
+
+  return (
+    <SkeletonLoadingShell aria-label="Loading comments">
+      {content}
+    </SkeletonLoadingShell>
   );
 }

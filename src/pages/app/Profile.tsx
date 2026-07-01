@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import ProfileHeroSkeleton from '../../components/ProfileHeroSkeleton';
+import SkeletonLoadingShell from '../../components/SkeletonLoadingShell';
 import Avatar from '../../components/Avatar';
 import FeedPostsSkeleton from '../../components/FeedPostsSkeleton';
 import PostList from '../../components/PostList';
@@ -47,8 +48,10 @@ export default function Profile() {
   if (profileQuery.isLoading) {
     return (
       <div className="app-page">
-        <ProfileHeroSkeleton />
-        <FeedPostsSkeleton count={2} />
+        <SkeletonLoadingShell aria-label="Loading profile">
+          <ProfileHeroSkeleton />
+          <FeedPostsSkeleton count={2} withSpinner={false} />
+        </SkeletonLoadingShell>
       </div>
     );
   }

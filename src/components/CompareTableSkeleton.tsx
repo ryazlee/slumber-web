@@ -1,16 +1,22 @@
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
+import SkeletonLoadingShell from './SkeletonLoadingShell';
 import { AVATAR_SIZE } from './Avatar';
 
 type Props = {
   columns?: number;
   rows?: number;
+  withSpinner?: boolean;
 };
 
-export default function CompareTableSkeleton({ columns = 3, rows = 6 }: Props) {
-  return (
-    <Box aria-label="Loading compare table">
+export default function CompareTableSkeleton({
+  columns = 3,
+  rows = 6,
+  withSpinner = true,
+}: Props) {
+  const content = (
+    <Box aria-label={withSpinner ? undefined : 'Loading compare table'}>
       <Skeleton variant="rounded" width={160} height={14} sx={{ mb: 1.5 }} />
 
       <Box
@@ -82,5 +88,13 @@ export default function CompareTableSkeleton({ columns = 3, rows = 6 }: Props) {
         ))}
       </Box>
     </Box>
+  );
+
+  if (!withSpinner) return content;
+
+  return (
+    <SkeletonLoadingShell aria-label="Loading compare table">
+      {content}
+    </SkeletonLoadingShell>
   );
 }

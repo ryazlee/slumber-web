@@ -1,9 +1,14 @@
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
+import SkeletonLoadingShell from './SkeletonLoadingShell';
 
-export default function StatsScreenSkeleton() {
-  return (
-    <Stack spacing={2} aria-label="Loading stats">
+type Props = {
+  withSpinner?: boolean;
+};
+
+export default function StatsScreenSkeleton({ withSpinner = true }: Props) {
+  const content = (
+    <Stack spacing={2} aria-label={withSpinner ? undefined : 'Loading stats'}>
       <Skeleton variant="rounded" width={72} height={11} sx={{ mt: 0.5 }} />
       <Skeleton variant="rounded" height={168} />
 
@@ -27,5 +32,13 @@ export default function StatsScreenSkeleton() {
         ))}
       </Stack>
     </Stack>
+  );
+
+  if (!withSpinner) return content;
+
+  return (
+    <SkeletonLoadingShell aria-label="Loading stats">
+      {content}
+    </SkeletonLoadingShell>
   );
 }

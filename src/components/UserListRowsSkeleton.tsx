@@ -1,14 +1,16 @@
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
+import SkeletonLoadingShell from './SkeletonLoadingShell';
 import { AVATAR_SIZE } from './Avatar';
 
 type Props = {
   rows?: number;
+  withSpinner?: boolean;
 };
 
-export default function UserListRowsSkeleton({ rows = 4 }: Props) {
-  return (
-    <Stack aria-label="Loading">
+export default function UserListRowsSkeleton({ rows = 4, withSpinner = true }: Props) {
+  const content = (
+    <Stack aria-label={withSpinner ? undefined : 'Loading'}>
       {Array.from({ length: rows }, (_, index) => (
         <Stack
           key={index}
@@ -29,5 +31,13 @@ export default function UserListRowsSkeleton({ rows = 4 }: Props) {
         </Stack>
       ))}
     </Stack>
+  );
+
+  if (!withSpinner) return content;
+
+  return (
+    <SkeletonLoadingShell aria-label="Loading">
+      {content}
+    </SkeletonLoadingShell>
   );
 }

@@ -1,14 +1,16 @@
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
+import SkeletonLoadingShell from './SkeletonLoadingShell';
 
 type Props = {
   count?: number;
+  withSpinner?: boolean;
 };
 
-export default function ChallengeListSkeleton({ count = 3 }: Props) {
-  return (
-    <Stack spacing={1} aria-label="Loading challenges">
+export default function ChallengeListSkeleton({ count = 3, withSpinner = true }: Props) {
+  const content = (
+    <Stack spacing={1} aria-label={withSpinner ? undefined : 'Loading challenges'}>
       {Array.from({ length: count }, (_, index) => (
         <Box
           key={index}
@@ -34,5 +36,13 @@ export default function ChallengeListSkeleton({ count = 3 }: Props) {
         </Box>
       ))}
     </Stack>
+  );
+
+  if (!withSpinner) return content;
+
+  return (
+    <SkeletonLoadingShell aria-label="Loading challenges">
+      {content}
+    </SkeletonLoadingShell>
   );
 }

@@ -1,9 +1,10 @@
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
+import SkeletonLoadingShell from './SkeletonLoadingShell';
 import { AVATAR_SIZE } from './Avatar';
 
 export default function ChallengeDetailSkeleton() {
-  return (
+  const content = (
     <Stack spacing={1.5} aria-label="Loading challenge">
       <Skeleton variant="rounded" width="70%" height={22} />
       <Skeleton variant="rounded" width={120} height={12} sx={{ opacity: 0.75 }} />
@@ -22,5 +23,11 @@ export default function ChallengeDetailSkeleton() {
         ))}
       </Stack>
     </Stack>
+  );
+
+  return (
+    <SkeletonLoadingShell aria-label="Loading challenge">
+      {content}
+    </SkeletonLoadingShell>
   );
 }
