@@ -39,6 +39,12 @@ export type PostRow = {
   is_custom?: boolean | null;
 };
 
+/** Supabase infers `GenericStringError[]` for dynamic `.select()` strings — narrow at the boundary. */
+function toPostRows(data: unknown): PostRow[] {
+  if (!Array.isArray(data)) return [];
+  return data as PostRow[];
+}
+
 async function getBlockedUserIds(): Promise<Set<string>> {
   const { data, error } = await supabase.rpc('get_blocked_user_ids');
   if (error) return new Set();
@@ -232,7 +238,7 @@ export async function fetchFeed(cursor?: string): Promise<SleepPost[]> {
 
   const { data, error } = await query;
   if (error) throw error;
-  return enrichSleepPostRows((data ?? []) as PostRow[]);
+  return enrichSleepPostRows(toPostRows(data));
 }
 
 export async function fetchPost(postId: string): Promise<SleepPost | null> {
@@ -246,7 +252,7 @@ export async function fetchPost(postId: string): Promise<SleepPost | null> {
   if (error) throw error;
   if (!data) return null;
 
-  const [post] = await enrichSleepPostRows([data as PostRow]);
+  const [post] = await enrichSleepPostRows(toPostRows([data]));
   return post ?? null;
 }
 
@@ -264,7 +270,7 @@ export async function fetchUserPosts(userId: string, cursor?: string): Promise<S
 
   const { data, error } = await query;
   if (error) throw error;
-  return enrichSleepPostRows((data ?? []) as PostRow[]);
+  return enrichSleepPostRows(toPostRows(data));
 }
 
 export { avatarColorFromName };
