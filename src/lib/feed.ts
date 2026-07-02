@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import type { SleepBuddyProfile, SleepPost, SleepSessionData, StageSegment, Vibe, DreamMood } from './types';
 import { avatarColorFromName } from './format';
 import { countWakes } from './wakes';
+import { SLEEP_POST_FEED_SELECT } from './sleepPostSelect';
 
 export const PAGE_SIZE = 20;
 
@@ -220,7 +221,7 @@ export async function fetchFeed(cursor?: string): Promise<SleepPost[]> {
 
   let query = supabase
     .from('sleep_posts')
-    .select('*')
+    .select(SLEEP_POST_FEED_SELECT)
     .is('deleted_at', null)
     .in('user_id', feedIds)
     .order('sleep_date', { ascending: false })
@@ -252,7 +253,7 @@ export async function fetchPost(postId: string): Promise<SleepPost | null> {
 export async function fetchUserPosts(userId: string, cursor?: string): Promise<SleepPost[]> {
   let query = supabase
     .from('sleep_posts')
-    .select('*')
+    .select(SLEEP_POST_FEED_SELECT)
     .eq('user_id', userId)
     .is('deleted_at', null)
     .order('sleep_date', { ascending: false })
