@@ -18,10 +18,11 @@ const DEEP_LINK_PREFIXES = [
   '/challenge/join/',
   '/club/',
   '/login-callback',
+  '/health-callback',
 ];
 
 function isDeepLinkPath(pathname) {
-  if (pathname === '/login-callback') return true;
+  if (pathname === '/login-callback' || pathname === '/health-callback') return true;
   return DEEP_LINK_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 

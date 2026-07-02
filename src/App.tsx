@@ -31,6 +31,7 @@ import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import InviteLandingPage from './pages/InviteLandingPage';
 import LoginCallback from './pages/LoginCallback';
+import HealthCallback from './pages/HealthCallback';
 import { withDeepLinkAuthGate } from './components/DeepLinkAuthGate';
 
 const GatedPostDetail = withDeepLinkAuthGate(PostDetail);
@@ -73,6 +74,7 @@ export default function App() {
           </Route>
         </Route>
         <Route path="login-callback" element={<LoginCallback />} />
+        <Route path="health-callback" element={<HealthCallback />} />
         <Route index element={<AppEntry />} />
         <Route element={<ProtectedAppShell />}>
           <Route path="feed" element={<Feed />} />
