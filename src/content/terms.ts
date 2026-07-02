@@ -1,26 +1,26 @@
 export const termsMeta = {
   title: 'Terms of Service',
-  updated: 'June 2026',
+  updated: 'July 2026',
 };
 
 export const termsSections = [
   {
     heading: 'The short version',
     body: [
-      'Slumber is a social sleep-tracking app for iOS. You sync sleep from Apple Health, log context around your nights, and share with friends you approve. By using Slumber you agree to these terms.',
+      'Slumber is a social sleep-tracking app for iOS. You sync sleep from Apple Health or Google Health (optional), log context around your nights, and share with friends you approve. By using Slumber you agree to these terms.',
     ],
   },
   {
     heading: 'Eligibility',
     body: [
       'You must be at least 13 years old to use Slumber.',
-      'You need a compatible iOS device and, for sleep sync, a source that writes to Apple Health (Apple Watch, Oura, Garmin, etc.).',
+      'You need a compatible iOS device (iOS 16.4+) and, for automatic sleep sync, a source that writes to Apple Health or Google Health (Apple Watch, Oura, Garmin, Pixel Watch, Fitbit, etc.).',
     ],
   },
   {
     heading: 'Your account',
     body: [
-      'You sign in with a one-time code sent to your email. Keep that email access secure. It\'s how you get back in.',
+      'You sign in with a one-time code sent to your email, a magic link, or Google. Keep that email access secure. It\'s how you get back in.',
       'Pick a username you\'re comfortable sharing. You\'re responsible for activity on your account.',
       'You can delete your account at any time in Settings.',
     ],
@@ -30,7 +30,7 @@ export const termsSections = [
     body: [
       'You own the sleep logs, photos, notes, and dreams you post. You grant Slumber a license to store, display, and process that content so the app works: showing your feed, stats, challenges, and notifications.',
       'Don\'t post anything illegal, harassing, or that violates someone else\'s rights. We can remove content and suspend accounts that break these rules or that get valid abuse reports.',
-      'Sleep metrics pulled from HealthKit are tied to your device data. You can edit titles, notes, tags, and privacy settings, but the underlying sleep numbers come from what HealthKit provides.',
+      'Sleep metrics pulled from Apple Health or Google Health are tied to your device or account data. You can edit titles, notes, tags, and privacy settings, but the underlying sleep numbers come from the source you connected.',
     ],
   },
   {
@@ -57,8 +57,15 @@ export const termsSections = [
   {
     heading: 'Apple Health',
     body: [
-      'HealthKit access is optional but required for automatic sleep sync. You can revoke access in iOS Settings at any time.',
+      'HealthKit access is optional but required for automatic Apple Health sync. You can revoke access in iOS Settings at any time.',
       'We handle HealthKit data as described in our Privacy Policy.',
+    ],
+  },
+  {
+    heading: 'Google Health',
+    body: [
+      'Google Health is optional. If you connect it in Settings, you authorize Slumber to read sleep data from your Google account until you disconnect.',
+      'We handle Google Health data as described in our Privacy Policy.',
     ],
   },
   {
