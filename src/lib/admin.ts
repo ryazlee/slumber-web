@@ -275,7 +275,6 @@ export type RecentPostRow = {
   deep_minutes: number | null;
   rem_minutes: number | null;
   awake_minutes: number | null;
-  efficiency: number | null;
   is_custom: boolean;
   source_device: string | null;
   has_dream: boolean;

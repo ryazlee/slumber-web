@@ -92,14 +92,6 @@ export function buildRecentPostColumns(
     sleepMinutesColumn('rem_minutes', 'REM'),
     sleepMinutesColumn('awake_minutes', 'Awake'),
     {
-      field: 'efficiency',
-      headerName: 'Efficiency',
-      type: 'number',
-      width: 96,
-      valueGetter: (_value, row) => (row.efficiency == null ? null : Number(row.efficiency)),
-      valueFormatter: (value) => (value == null ? '—' : `${value}%`),
-    },
-    {
       field: 'source',
       headerName: 'Source',
       width: 110,

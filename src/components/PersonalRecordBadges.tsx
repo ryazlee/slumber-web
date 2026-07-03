@@ -1,15 +1,15 @@
 import type { SleepPost } from '../lib/types';
-import { PR_LABELS } from '../lib/pr';
+import { PR_LABELS, getVisibleMonthlyPrTypes } from '../lib/pr';
 
 type Props = {
-  post: Pick<SleepPost, 'prTypes' | 'monthlyPrTypes' | 'isPR'>;
+  post: Pick<SleepPost, 'prTypes' | 'monthlyPrTypes' | 'monthPostCount' | 'isPR'>;
 };
 
 export default function PersonalRecordBadges({ post }: Props) {
   const allTime = post.prTypes ?? [];
-  const monthly = post.monthlyPrTypes ?? [];
+  const monthly = getVisibleMonthlyPrTypes(post);
 
-  if (!post.isPR && allTime.length === 0 && monthly.length === 0) return null;
+  if (allTime.length === 0 && monthly.length === 0) return null;
 
   return (
     <div className="post-pr-badges">

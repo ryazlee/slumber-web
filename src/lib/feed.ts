@@ -51,6 +51,46 @@ async function getBlockedUserIds(): Promise<Set<string>> {
   return new Set((data as string[] | null) ?? []);
 }
 
+function monthPostCountKey(userId: string, sleepDate: string): string {
+  return `${userId}:${sleepDate.slice(0, 7)}`;
+}
+
+function monthRangeBounds(sleepDates: string[]): { start: string; end: string } | null {
+  if (sleepDates.length === 0) return null;
+  const months = [...new Set(sleepDates.map((d) => d.slice(0, 7)))].sort();
+  const minMonth = months[0];
+  const maxMonth = months[months.length - 1];
+  const [y, m] = maxMonth.split('-').map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  return {
+    start: `${minMonth}-01`,
+    end: `${maxMonth}-${String(lastDay).padStart(2, '0')}`,
+  };
+}
+
+async function fetchMonthPostCounts(rows: PostRow[]): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  const authorUserIds = [...new Set(rows.map((r) => r.user_id))];
+  const bounds = monthRangeBounds(rows.map((r) => r.sleep_date));
+  if (authorUserIds.length === 0 || !bounds) return counts;
+
+  const { data, error } = await supabase
+    .from('sleep_posts')
+    .select('user_id, sleep_date')
+    .in('user_id', authorUserIds)
+    .gte('sleep_date', bounds.start)
+    .lte('sleep_date', bounds.end)
+    .is('deleted_at', null)
+    .eq('is_custom', false);
+  if (error) return counts;
+
+  for (const row of data ?? []) {
+    const key = monthPostCountKey(row.user_id, row.sleep_date);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return counts;
+}
+
 function mapPostRow(
   row: PostRow,
   authorProfile: AuthorProfile | undefined,
@@ -59,6 +99,7 @@ function mapPostRow(
   commentCountMap: Record<string, number>,
   prAllTimeMap: Map<string, string[]>,
   prMonthlyMap: Map<string, string[]>,
+  monthPostCountMap: Map<string, number>,
 ): SleepPost {
   const username = authorProfile?.username ?? 'unknown';
   const prTypes = prAllTimeMap.get(row.id);
@@ -98,6 +139,7 @@ function mapPostRow(
     isPR: prAllTimeMap.has(row.id) || prMonthlyMap.has(row.id),
     prTypes,
     monthlyPrTypes,
+    monthPostCount: monthPostCountMap.get(monthPostCountKey(row.user_id, row.sleep_date)),
     createdAt: row.created_at,
     sourceDevice: row.source_device ?? 'Unknown',
     isCustom: row.is_custom === true,
@@ -111,7 +153,7 @@ export async function enrichSleepPostRows(rows: PostRow[]): Promise<SleepPost[]>
   const { data: { user } } = await supabase.auth.getUser();
   const currentUserId = user?.id ?? null;
 
-  const [kudosRes, commentsRes, prRes, authorProfilesRes] = await Promise.all([
+  const [kudosRes, commentsRes, prRes, authorProfilesRes, monthPostCountMap] = await Promise.all([
     supabase.from('kudos').select('post_id, user_id').in('post_id', postIds),
     supabase.from('comments').select('post_id').in('post_id', postIds),
     supabase
@@ -120,6 +162,7 @@ export async function enrichSleepPostRows(rows: PostRow[]): Promise<SleepPost[]>
       .in('post_id', postIds)
       .not('post_id', 'is', null),
     supabase.from('profiles').select('id, username, avatar_url, user_roles').in('id', authorUserIds),
+    fetchMonthPostCounts(rows),
   ]);
 
   const authorProfileMap = new Map<string, AuthorProfile>();
@@ -202,6 +245,7 @@ export async function enrichSleepPostRows(rows: PostRow[]): Promise<SleepPost[]>
       commentCountMap,
       prAllTimeMap,
       prMonthlyMap,
+      monthPostCountMap,
     );
     const accepted = (buddiesByPost.get(row.id) ?? [])
       .filter((r) => r.status === 'accepted')

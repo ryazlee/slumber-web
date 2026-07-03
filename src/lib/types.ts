@@ -62,6 +62,8 @@ export type SleepPost = {
   isPR: boolean;
   prTypes?: string[];
   monthlyPrTypes?: string[];
+  /** Wearable (non-custom) posts by this author in `sleepDate`'s calendar month. */
+  monthPostCount?: number;
   createdAt: string;
   sourceDevice: string;
   isCustom?: boolean;
