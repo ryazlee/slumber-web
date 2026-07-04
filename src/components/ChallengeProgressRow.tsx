@@ -20,7 +20,6 @@ type Props = {
   place?: number | null;
   placeTied?: boolean;
   showPlace?: boolean;
-  syncCountdownLabel?: string | null;
 };
 
 export default function ChallengeProgressRow({
@@ -37,7 +36,6 @@ export default function ChallengeProgressRow({
   place,
   placeTied,
   showPlace = false,
-  syncCountdownLabel,
 }: Props) {
   const barColor = isMe ? BAR_COLOR_ME : BAR_COLOR_OTHER;
 
@@ -86,9 +84,6 @@ export default function ChallengeProgressRow({
       </div>
       <span className="challenge-progress-pct">
         {totalPct}% of {goalHours(goalMinutes)}
-        {syncCountdownLabel ? (
-          <> · <span className="challenge-sync-countdown">{syncCountdownLabel}</span></>
-        ) : null}
       </span>
     </div>
   );

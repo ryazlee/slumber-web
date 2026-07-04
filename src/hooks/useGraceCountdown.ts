@@ -19,17 +19,15 @@ export function useGraceCountdown(graceEndsAtMs: number | null) {
   }, [graceEndsAtMs]);
 
   if (graceEndsAtMs == null) {
-    return { remainingMs: null, label: null, syncLabel: null, expired: false };
+    return { remainingMs: null, label: null, expired: false };
   }
 
   const remainingMs = graceEndsAtMs - now;
   const label = remainingMs <= 0 ? 'Closing…' : formatGraceRemaining(remainingMs);
-  const syncLabel = remainingMs <= 0 ? 'Closing…' : `${label} to sync`;
 
   return {
     remainingMs,
     label,
-    syncLabel,
     expired: remainingMs <= 0,
   };
 }

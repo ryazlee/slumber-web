@@ -11,14 +11,16 @@ import {
   useChallengeContributions,
   useChallengeProgress,
 } from '../../hooks/useChallenges';
-import { useGraceCountdown } from '../../hooks/useGraceCountdown';
 import { buildSplitBarsByUser } from '../../lib/challengeProgressBar';
-import { challengeGraceEndsAtMs } from '../../lib/challengeGrace';
+import { challengeGraceEndsAtMs, formatChallengeLockAt } from '../../lib/challengeGrace';
 import { rankBySleepProgress } from '../../lib/challengeRank';
 import {
   formatChallengeRaceType,
   formatChallengeStartDate,
   formatChallengeStatus,
+  PENDING_COMPLETION_BANNER_PREFIX,
+  PENDING_COMPLETION_BANNER_PREFIX_GOAL_HIT,
+  PENDING_COMPLETION_BANNER_SUFFIX,
 } from '../../lib/format';
 
 const PROGRESS_STATUSES = new Set(['active', 'pending_completion', 'completed']);
@@ -87,14 +89,6 @@ export default function ChallengeDetail() {
     return rows;
   }, [progress, splitBarByUser, challenge?.isGroup, currentUserId]);
 
-  const graceEndsAtMs = useMemo(
-    () => (challenge?.status === 'pending_completion' && challenge
-      ? challengeGraceEndsAtMs(challenge)
-      : null),
-    [challenge],
-  );
-  const graceCountdown = useGraceCountdown(graceEndsAtMs);
-
   if (loading) {
     return (
       <div className="app-page">
@@ -116,6 +110,7 @@ export default function ChallengeDetail() {
   const accepted = challenge.participants.filter((p) => p.inviteStatus === 'accepted');
   const pending = challenge.participants.filter((p) => p.inviteStatus === 'pending');
   const isFinalizing = challenge.status === 'pending_completion';
+  const lockAtMs = isFinalizing ? challengeGraceEndsAtMs(challenge) : null;
   const winner = challenge.winnerId
     ? accepted.find((p) => p.userId === challenge.winnerId)
     : null;
@@ -136,9 +131,11 @@ export default function ChallengeDetail() {
           {challenge.startedAt && (
             <> · started {formatChallengeStartDate(challenge.startedAt)}</>
           )}
-          {challenge.expiresAt && !challenge.noExpiration && (
+          {lockAtMs != null ? (
+            <> · locks {formatChallengeLockAt(lockAtMs)}</>
+          ) : challenge.expiresAt && !challenge.noExpiration ? (
             <> · ends {new Date(challenge.expiresAt).toLocaleDateString()}</>
-          )}
+          ) : null}
         </p>
         {winner && (
           <p className="challenge-winner">
@@ -155,8 +152,12 @@ export default function ChallengeDetail() {
           <p className="challenge-grace-banner">
             <ChallengeGraceCountdown
               challenge={challenge}
-              prefix="Finalizing: "
-              suffix=" to sync"
+              prefix={
+                challenge.goalReachedBy && challenge.goalReachedBy !== currentUserId
+                  ? PENDING_COMPLETION_BANNER_PREFIX_GOAL_HIT
+                  : PENDING_COMPLETION_BANNER_PREFIX
+              }
+              suffix={PENDING_COMPLETION_BANNER_SUFFIX}
             />
           </p>
         )}
@@ -219,7 +220,6 @@ export default function ChallengeDetail() {
                   place={challenge.isGroup ? row.place : null}
                   placeTied={challenge.isGroup ? row.tied : false}
                   showPlace={challenge.isGroup}
-                  syncCountdownLabel={isFinalizing ? graceCountdown.syncLabel : null}
                 />
               );
             })}

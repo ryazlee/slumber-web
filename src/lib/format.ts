@@ -45,6 +45,14 @@ export function formatChallengeStatus(status: string): string {
   }
 }
 
+/** Live banner: `{prefix}{countdown}{suffix}` e.g. "Finalizing — 2h 15m left". */
+export const PENDING_COMPLETION_BANNER_PREFIX = 'Finalizing — ';
+/** When another racer hit the goal hours (not necessarily the winner). */
+export const PENDING_COMPLETION_BANNER_PREFIX_GOAL_HIT = 'Goal hit — ';
+export const PENDING_COMPLETION_BANNER_SUFFIX = ' left';
+export const PENDING_COMPLETION_TOOLTIP =
+  'Sync wearables or post missing nights before the timer ends. Scores lock then — nights without a wearable post count as zero.';
+
 export function formatChallengeRaceType(challenge: {
   isGroup: boolean;
   goalMinutes: number;

@@ -1,6 +1,13 @@
 import type { SleepPost } from './types';
 import { addDaysToDateISO, getLocalDateISO } from './dates';
 
+/**
+ * Max age (viewer-local calendar days) for the green Latest badge.
+ * Covers timezone skew: `sleep_date` is the author's night on their device, so
+ * their "last night" may be the viewer's today or up to ~2 days ago.
+ */
+export const LATEST_POST_MAX_AGE_DAYS = 2;
+
 /** Negative when `a` is more recent than `b` (by sleep night, then publish time). */
 export function compareSleepPostsByRecency(a: SleepPost, b: SleepPost): number {
   if (a.sleepDate !== b.sleepDate) {
@@ -21,15 +28,16 @@ export function buildLatestPostIdsByUser(posts: SleepPost[]): Set<string> {
   return new Set([...bestByUser.values()].map((p) => p.id));
 }
 
-/** Last night's sleep_date in the viewer's local calendar. */
-export function getViewerLastNightSleepDateISO(todayISO = getLocalDateISO()): string {
-  return addDaysToDateISO(todayISO, -1);
-}
-
+/**
+ * Green "Latest" badge: author's most recent post in the loaded list, and not older
+ * than {@link LATEST_POST_MAX_AGE_DAYS} on the viewer's local calendar.
+ */
 export function isLatestSleepPost(
   post: SleepPost,
   latestIds: Set<string>,
   todayISO = getLocalDateISO(),
 ): boolean {
-  return latestIds.has(post.id) && post.sleepDate === getViewerLastNightSleepDateISO(todayISO);
+  if (!latestIds.has(post.id)) return false;
+  const oldestFreshISO = addDaysToDateISO(todayISO, -LATEST_POST_MAX_AGE_DAYS);
+  return post.sleepDate >= oldestFreshISO;
 }

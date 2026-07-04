@@ -44,3 +44,13 @@ export function formatGraceRemaining(remainingMs: number): string {
   if (minutes >= 1) return `${minutes}m ${seconds}s`;
   return `${seconds}s`;
 }
+
+/** Short lock time for overview chips (e.g. "Mar 5, 3:45 PM"). */
+export function formatChallengeLockAt(graceEndsAtMs: number): string {
+  return new Date(graceEndsAtMs).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}

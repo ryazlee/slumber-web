@@ -1,6 +1,13 @@
 import { Link } from 'react-router-dom';
 import type { Challenge } from '../lib/types';
-import { formatChallengeRaceType, formatChallengeStatus, goalHours } from '../lib/format';
+import { challengeGraceEndsAtMs, formatChallengeLockAt } from '../lib/challengeGrace';
+import {
+  formatChallengeRaceType,
+  formatChallengeStatus,
+  goalHours,
+  PENDING_COMPLETION_BANNER_PREFIX,
+  PENDING_COMPLETION_BANNER_SUFFIX,
+} from '../lib/format';
 import ChallengeGraceCountdown from './ChallengeGraceCountdown';
 
 type ChallengeCardProps = {
@@ -11,6 +18,7 @@ export default function ChallengeCard({ challenge }: ChallengeCardProps) {
   const accepted = challenge.participants.filter((p) => p.inviteStatus === 'accepted');
   const title = challenge.title?.trim() || formatChallengeRaceType(challenge);
   const isFinalizing = challenge.status === 'pending_completion';
+  const lockAtMs = isFinalizing ? challengeGraceEndsAtMs(challenge) : null;
 
   return (
     <Link to={`/challenges/${challenge.id}`} className="challenge-card challenge-card-link">
@@ -25,17 +33,19 @@ export default function ChallengeCard({ challenge }: ChallengeCardProps) {
         <p className="challenge-grace-banner">
           <ChallengeGraceCountdown
             challenge={challenge}
-            prefix="Finalizing: "
-            suffix=" to sync"
+            prefix={PENDING_COMPLETION_BANNER_PREFIX}
+            suffix={PENDING_COMPLETION_BANNER_SUFFIX}
           />
         </p>
       ) : null}
 
       <p className="challenge-meta">
         {goalHours(challenge.goalMinutes)} goal
-        {challenge.expiresAt && challenge.status === 'active' && (
+        {lockAtMs != null ? (
+          <> · locks {formatChallengeLockAt(lockAtMs)}</>
+        ) : challenge.expiresAt && challenge.status === 'active' ? (
           <> · ends {new Date(challenge.expiresAt).toLocaleDateString()}</>
-        )}
+        ) : null}
       </p>
 
       <div className="challenge-participants">
