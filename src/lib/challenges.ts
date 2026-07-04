@@ -82,6 +82,7 @@ function attachParticipants(challenges: Record<string, unknown>[], participantRo
       startedAt: (c.started_at as string | null) ?? null,
       expiresAt: (c.expires_at as string | null) ?? null,
       goalReachedAt: (c.goal_reached_at as string | null) ?? null,
+      goalReachedBy: (c.goal_reached_by as string | null) ?? null,
       graceEndsAt: (c.grace_ends_at as string | null) ?? null,
       winnerId: (c.winner_id as string | null) ?? null,
       participants,
