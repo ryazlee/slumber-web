@@ -1,4 +1,5 @@
 import type { SleepSessionData, StageSegment } from './types';
+import { classifySessionNaps } from './napDay';
 
 export function parseClockToMinutes(label: string): number | null {
   const match = label.trim().match(/^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$/);
@@ -23,12 +24,6 @@ export function formatClockMinutes(minsOfDay: number): string {
   return `${h12}:${m.toString().padStart(2, '0')} ${ampm}`;
 }
 
-const NAP_SESSION_MAX_MINUTES = 120;
-
-function isNapSession(session: SleepSessionData): boolean {
-  return session.asleepMinutes < NAP_SESSION_MAX_MINUTES;
-}
-
 function gapMinutesBetweenSessions(wakeTime: string, bedtime: string): number {
   const wake = parseClockToMinutes(wakeTime);
   const bed = parseClockToMinutes(bedtime);
@@ -51,6 +46,7 @@ export function buildTimelineItems(
   }
 
   const items: TimelineItem[] = [];
+  const napFlags = classifySessionNaps(sessionBreakdown);
   for (let si = 0; si < sessionBreakdown.length; si++) {
     const session = sessionBreakdown[si];
     for (const segment of session.segments) {
@@ -62,7 +58,7 @@ export function buildTimelineItems(
         kind: 'gap',
         minutes: gap,
         afterSessionIndex: si,
-        isAfterNap: isNapSession(session),
+        isAfterNap: napFlags[si],
       });
     }
   }

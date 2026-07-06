@@ -37,7 +37,7 @@ function SessionBlock({
   variant: 'card' | 'detail';
   isLast: boolean;
 }) {
-  const sessionIsNap = isNapSession(session);
+  const sessionIsNap = isNapSession(session, idx, sessions);
   const sessionLabel = getSessionLabel(session, idx, sessions);
 
   if (variant === 'detail') {

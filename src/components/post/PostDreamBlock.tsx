@@ -1,3 +1,5 @@
+import ExpandableMentionText from '../ExpandableMentionText';
+import MentionText from '../MentionText';
 import { DREAM_MOOD_CONFIG, dreamLogPrefix, dreamMoodColor } from '../../lib/sleepPostMeta';
 import type { DreamMood } from '../../lib/types';
 
@@ -7,13 +9,22 @@ type Props = {
   canReadDream: boolean;
   blurDream: boolean;
   isOwnPost: boolean;
+  variant?: 'feed' | 'detail';
 };
 
-export default function PostDreamBlock({ dreamLog, dreamMood, canReadDream, blurDream, isOwnPost }: Props) {
+export default function PostDreamBlock({
+  dreamLog,
+  dreamMood,
+  canReadDream,
+  blurDream,
+  isOwnPost,
+  variant = 'feed',
+}: Props) {
   if (!dreamLog) return null;
 
   const moodMeta = dreamMood ? DREAM_MOOD_CONFIG[dreamMood] : undefined;
-  const showMoodLabel = canReadDream && moodMeta && dreamMood;
+  const showMoodLabel = variant === 'detail' && canReadDream && moodMeta && dreamMood;
+  const prefix = dreamLogPrefix(dreamMood);
 
   return (
     <div className="post-dream">
@@ -27,12 +38,18 @@ export default function PostDreamBlock({ dreamLog, dreamMood, canReadDream, blur
               <span aria-hidden>{moodMeta.emoji}</span> {moodMeta.label}
             </p>
           ) : null}
-          <p className="post-dream-text">
-            {!showMoodLabel ? (
-              <span className="post-dream-icon" aria-hidden>{dreamLogPrefix(dreamMood).trim() || '💭'}</span>
-            ) : null}
-            {dreamLog}
-          </p>
+          {variant === 'feed' ? (
+            <ExpandableMentionText className="post-dream-text" prefix={prefix}>
+              {dreamLog}
+            </ExpandableMentionText>
+          ) : (
+            <p className="post-dream-text">
+              {dreamMood ? null : (
+                <span className="post-dream-icon" aria-hidden>💭 </span>
+              )}
+              <MentionText>{dreamLog}</MentionText>
+            </p>
+          )}
         </>
       ) : (
         <div className="post-dream-private">

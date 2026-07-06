@@ -5,7 +5,8 @@ export default function HomeScreenshots() {
     <section className="section home-screenshots" aria-labelledby="home-screenshots-title">
       <h2 id="home-screenshots-title">See the app</h2>
       <p className="home-screenshots-lead">
-        Real screens from Slumber: feed, post detail, challenges, stats, and friend compare.
+        Real screens from Slumber: feed, post detail with nap days and dream moods, challenges,
+        stats, and friend compare.
       </p>
 
       <div className="home-screenshot-scroll" tabIndex={0}>

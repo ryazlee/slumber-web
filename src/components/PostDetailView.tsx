@@ -19,6 +19,7 @@ import SessionTimelines from './SessionTimelines';
 import SleepBuddiesRow from './SleepBuddiesRow';
 import StageBreakdown from './StageBreakdown';
 import UserLink from './UserLink';
+import MentionText from './MentionText';
 
 type Props = {
   post: SleepPost;
@@ -166,7 +167,9 @@ export default function PostDetailView({
         <>
           <PostDetailSectionHeader title="Notes" />
           <div className="post-detail-panel post-detail-text">
-            <p className="post-notes">{post.notes}</p>
+            <p className="post-notes">
+              <MentionText>{post.notes}</MentionText>
+            </p>
           </div>
         </>
       ) : null}
@@ -181,6 +184,7 @@ export default function PostDetailView({
               canReadDream={canReadDream}
               blurDream={post.blurDream}
               isOwnPost={isOwnPost}
+              variant="detail"
             />
           </div>
         </>

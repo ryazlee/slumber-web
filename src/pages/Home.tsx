@@ -13,8 +13,8 @@ export default function Home() {
             Slumber syncs sleep each morning from Apple Health or Google Health: stages,
             duration, bed and wake times. It turns into posts you share with friends. Compare
             nights side by side, scroll a morning feed, and see how your habits stack up against
-            people you know. Hypnograms, vibes, dream moods, photos, sleep buddy tags, clubs, and
-            challenges.
+            people you know. Hypnograms, morning vibes, dream moods, split-sleep nap days, photos,
+            sleep buddy tags, clubs, and challenges.
           </p>
 
           <div className="home-hero-actions">
@@ -63,10 +63,11 @@ export default function Home() {
             wear an Apple Watch, Oura, Garmin, Whoop, or anything else that writes to Apple
             Health — or if you connect Google Health in Settings for a Pixel Watch or Fitbit
             that syncs there instead. Pick your data source: Automatic, Apple Health, or Google
-            Health. Add a title, pick a vibe, tag what might have affected your sleep, tag sleep
-            buddies you shared the night with, and jot down a dream with an optional mood
-            (private or shared). Hit publish and it shows up in your friends&apos; feeds. Turn on
-            auto-publish in Settings to post wearable nights without opening the composer.
+            Health. Add a title, pick a morning vibe (Charged, Solid, Meh, Dragging, or Zombie),
+            tag what might have affected your sleep, tag sleep buddies you shared the night with,
+            and jot down a dream with an optional mood — Nightmare, Weird, Neutral, Good, or
+            Vivid — private or shared. Hit publish and it shows up in your friends&apos; feeds.
+            Turn on auto-publish in Settings to post wearable nights without opening the composer.
           </p>
           <p>
             Sign in with email, a magic link, or Google. Share your personal invite link from
@@ -74,7 +75,9 @@ export default function Home() {
           </p>
           <p>
             Miss a day? Backfill up to a week. The app nags you (gently) when wearable data
-            exists for a night you haven&apos;t logged yet.
+            exists for a night you haven&apos;t logged yet. When Apple Health or Google Health
+            revises a night — extra sleep, new times, or nap-then-overnight updates — Slumber
+            flags your posts so you can refresh them in one tap.
           </p>
         </section>
 
@@ -84,8 +87,14 @@ export default function Home() {
             <li>
               <strong>Feed</strong>
               Sleep posts from friends and yourself: hypnograms, stage breakdowns, personal record
-              badges, dream logs with optional mood, kudos, comments, comment likes, @mentions,
-              and @reply via long-press.
+              badges, morning vibe emoji, dream logs with optional mood, kudos, comments, comment
+              likes, @mentions, and @reply via long-press. Nap days show per-session timelines
+              instead of one combined bar.
+            </li>
+            <li>
+              <strong>Morning vibes &amp; dreams</strong>
+              Optional how-you-felt picker on every post. Dreams support a mood chip, private blur,
+              and read-more on long entries in the feed — same gradient dream card as the app.
             </li>
             <li>
               <strong>Sleep buddies</strong>
@@ -114,6 +123,12 @@ export default function Home() {
               clubs help you organize and compete with the same people.
             </li>
             <li>
+              <strong>Wearable sync</strong>
+              Posts stay aligned with Apple Health and Google Health. When your wearable adds sleep,
+              changes times, or lands overnight after a daytime nap, Slumber surfaces an update on
+              your post and in Sleep History for the week.
+            </li>
+            <li>
               <strong>Privacy &amp; safety</strong>
               Friends are mutual: you both accept. Posts can be private. Dreams can be blurred.
               Report, block, and delete your account in Settings.
@@ -125,7 +140,9 @@ export default function Home() {
           <h2>On the web</h2>
           <p>
             Browse your feed, view stats, compare with friends, and leave kudos and comments at{' '}
-            <Link to="/">useslumber.com</Link>. Sleep logging, HealthKit / Google Health sync, and
+            <Link to="/">useslumber.com</Link>. Feed cards and post detail mirror the app:
+            hypnograms, nap-day session breakdowns, stage percentages, vibes, dream moods, sleep
+            buddies, and comment likes. Sleep logging, HealthKit / Google Health sync, and
             connecting with friends happen in the iOS app.
           </p>
         </section>

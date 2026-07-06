@@ -5,6 +5,7 @@ import type { SleepPost } from '../lib/types';
 import ManualLogSleepBlock from './ManualLogSleepBlock';
 import PersonalRecordBadges from './PersonalRecordBadges';
 import PostPhotoGallery from './PostPhotoGallery';
+import MentionText from './MentionText';
 import PostDreamBlock from './post/PostDreamBlock';
 import PostVibe from './post/PostVibe';
 import PostStageMetrics from './post/PostStageMetrics';
@@ -116,7 +117,11 @@ export default function SleepPostCard({
 
       <PostTagList tags={post.tags} />
 
-      {post.notes && <p className="post-notes">{post.notes}</p>}
+      {post.notes ? (
+        <p className="post-notes">
+          <MentionText>{post.notes}</MentionText>
+        </p>
+      ) : null}
 
       <PostDreamBlock
         dreamLog={post.dreamLog ?? ''}
@@ -124,6 +129,7 @@ export default function SleepPostCard({
         canReadDream={canReadDream}
         blurDream={post.blurDream}
         isOwnPost={isOwnPost}
+        variant="feed"
       />
 
       {(post.photoUrls?.length ?? 0) > 0 ? (

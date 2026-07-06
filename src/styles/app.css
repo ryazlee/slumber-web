@@ -1751,6 +1751,57 @@
   color: var(--text-dim);
 }
 
+.expandable-mention-text {
+  position: relative;
+}
+
+.expandable-mention-text-measure {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  inset: 0 auto auto 0;
+  width: 100%;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.expandable-mention-text-body {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.expandable-mention-text-body--clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.expandable-mention-text-toggle {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 6px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-style: italic;
+  cursor: pointer;
+}
+
+.expandable-mention-text-ellipsis {
+  color: var(--text-muted);
+}
+
+.expandable-mention-text-action {
+  color: var(--accent);
+}
+
+.expandable-mention-text-toggle:hover .expandable-mention-text-action {
+  text-decoration: underline;
+}
+
 .post-card-footer {
   display: flex;
   align-items: center;

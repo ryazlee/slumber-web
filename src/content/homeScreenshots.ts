@@ -10,15 +10,15 @@ const base = import.meta.env.BASE_URL;
 export const homeScreenshots: HomeScreenshot[] = [
   {
     src: `${base}screenshots/feed.png`,
-    alt: 'Slumber feed showing friends sleep posts with hypnograms and kudos',
+    alt: 'Slumber feed showing friends sleep posts with hypnograms, vibes, and kudos',
     caption: 'Feed',
-    description: 'Friends\' nights with hypnograms, PR badges, kudos, and comments.',
+    description: 'Friends\' nights with hypnograms, morning vibes, PR badges, kudos, and comments.',
   },
   {
     src: `${base}screenshots/post-detail.png`,
-    alt: 'Sleep post detail with nap day breakdown and stage stats',
+    alt: 'Sleep post detail with nap day sessions, stage percentages, and dream mood',
     caption: 'Post detail',
-    description: 'Hypnogram, stage mix, and nap-day split sessions.',
+    description: 'Per-session hypnograms on nap days, stage mix with percentages, and dream mood.',
   },
   {
     src: `${base}screenshots/challenges.png`,
