@@ -7,14 +7,15 @@ export default function Home() {
     <div className="content-wrap home-page-wrap">
       <div className="home-page">
         <header className="home-hero">
-          <p className="eyebrow">iOS · Social sleep tracking</p>
-          <h1>Log your nights. Share with friends.</h1>
+          <p className="eyebrow">iOS · Android in development</p>
+          <h1>See how friends slept. Compare side by side.</h1>
           <p className="lead">
-            Slumber syncs sleep each morning from Apple Health or Google Health: stages,
-            duration, bed and wake times. It turns into posts you share with friends. Compare
-            nights side by side, scroll a morning feed, and see how your habits stack up against
-            people you know. Hypnograms, morning vibes, dream moods, split-sleep nap days, photos,
-            sleep buddy tags, clubs, and challenges.
+            Slumber syncs sleep each morning from Apple Health or Google Health — stages,
+            duration, bed and wake times — and turns it into posts you share with friends.
+            Your wearable&apos;s morning score isn&apos;t enough on its own; what helps is seeing
+            how people you know actually slept and comparing stats side by side. Hypnograms,
+            morning vibes, dream moods, nap-day timelines, photos, sleep buddy tags, clubs,
+            and challenges.
           </p>
 
           <div className="home-hero-actions">
@@ -88,8 +89,17 @@ export default function Home() {
               <strong>Feed</strong>
               Sleep posts from friends and yourself: hypnograms, stage breakdowns, personal record
               badges, morning vibe emoji, dream logs with optional mood, kudos, comments, comment
-              likes, @mentions, and @reply via long-press. Nap days show per-session timelines
-              instead of one combined bar.
+              likes, and @mentions. Nap days show per-session timelines instead of one combined bar.
+            </li>
+            <li>
+              <strong>Compare</strong>
+              Side by side sleep metrics with friends over today, 7 days, 30 days, or all time.
+              Wearable nights only; manual logs stay out of the table.
+            </li>
+            <li>
+              <strong>Stats</strong>
+              Weekly chart, 30-day averages, stage mix, personal records, monthly bests, monthly
+              bed/wake timing, and log streaks (wearable nights only).
             </li>
             <li>
               <strong>Morning vibes &amp; dreams</strong>
@@ -100,16 +110,6 @@ export default function Home() {
               <strong>Sleep buddies</strong>
               Tag accepted friends you shared the night with (partner, roommate, travel crew). They
               confirm before it shows on your post as &ldquo;Slept with @friend.&rdquo;
-            </li>
-            <li>
-              <strong>Stats</strong>
-              Weekly chart, 30-day averages, stage mix, personal records, monthly bests, monthly
-              bed/wake timing, and log streaks (wearable nights only).
-            </li>
-            <li>
-              <strong>Compare</strong>
-              Side by side sleep metrics with friends over today, 7 days, 30 days, or all time.
-              Wearable nights only; manual logs stay out of the table.
             </li>
             <li>
               <strong>Challenges</strong>
@@ -142,8 +142,9 @@ export default function Home() {
             Browse your feed, view stats, compare with friends, and leave kudos and comments at{' '}
             <Link to="/">useslumber.com</Link>. Feed cards and post detail mirror the app:
             hypnograms, nap-day session breakdowns, stage percentages, vibes, dream moods, sleep
-            buddies, and comment likes. Sleep logging, HealthKit / Google Health sync, and
-            connecting with friends happen in the iOS app.
+            buddies (including pending tags on your own posts), tappable @mentions, and comment
+            long-press for reply. Sleep logging, HealthKit / Google Health sync, and connecting with
+            friends happen in the iOS app.
           </p>
         </section>
 
@@ -169,8 +170,8 @@ export default function Home() {
 
         <p className="platform-note">
           <strong>Available on the App Store</strong> for iPhone (iOS 16.4+). Free account.
-          Slumber does not write to Apple Health or Google Health. Android Health Connect is on
-          the roadmap.
+          Slumber does not write to Apple Health or Google Health. Android (Health Connect) is in
+          development.
         </p>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { SleepBuddyProfile, SleepPost, SleepSessionData, StageSegment, Vibe, DreamMood } from './types';
+import type { SleepBuddyProfile, SleepBuddyStatus, SleepPost, SleepSessionData, StageSegment, Vibe, DreamMood } from './types';
 import { avatarColorFromName } from './format';
 import { countWakes } from './wakes';
 import { SLEEP_POST_FEED_SELECT } from './sleepPostSelect';
@@ -247,10 +247,21 @@ export async function enrichSleepPostRows(rows: PostRow[]): Promise<SleepPost[]>
       prMonthlyMap,
       monthPostCountMap,
     );
-    const accepted = (buddiesByPost.get(row.id) ?? [])
+    const postBuddyRows = buddiesByPost.get(row.id) ?? [];
+    const isAuthor = currentUserId === row.user_id;
+
+    const accepted = postBuddyRows
       .filter((r) => r.status === 'accepted')
       .map((r) => buddyProfile(r.user_id));
     if (accepted.length > 0) post.sleepBuddies = accepted;
+
+    if (isAuthor && postBuddyRows.length > 0) {
+      post.sleepBuddyTags = postBuddyRows.map((r) => ({
+        ...buddyProfile(r.user_id),
+        status: r.status as SleepBuddyStatus,
+      }));
+    }
+
     return post;
   });
 }

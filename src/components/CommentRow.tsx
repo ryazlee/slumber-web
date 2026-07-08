@@ -24,6 +24,7 @@ type CommentRowProps = {
   onReply?: () => void;
   onStartEdit?: () => void;
   onDelete?: () => void;
+  onMentionPress?: (username: string) => void;
 };
 
 export default function CommentRow({
@@ -42,6 +43,7 @@ export default function CommentRow({
   onReply,
   onStartEdit,
   onDelete,
+  onMentionPress,
 }: CommentRowProps) {
   const profilePath = `/profile/${comment.userId}`;
   const isOwnComment = !!currentUserId && comment.userId === currentUserId;
@@ -49,7 +51,17 @@ export default function CommentRow({
   const showMenu = canInteract && !isEditing && !!(onLike || onReply || (isOwnComment && (onStartEdit || onDelete)));
 
   const menuBtnRef = useRef<HTMLButtonElement>(null);
+  const bubbleRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const openMenu = () => {
+    if (!showMenu) return;
+    setMenuOpen(true);
+  };
+
+  const bubbleLongPress = useLongPress(openMenu, {
+    disabled: !showMenu,
+  });
 
   const openLikes = () => {
     if (comment.likeCount > 0) onOpenLikes?.();
@@ -82,7 +94,11 @@ export default function CommentRow({
         />
       </Link>
 
-      <div className="comment-bubble">
+      <div
+        ref={bubbleRef}
+        className="comment-bubble"
+        {...(showMenu && !isEditing ? bubbleLongPress.longPressProps : {})}
+      >
         <div className="comment-header">
           <div className="comment-header-main">
             <Link to={profilePath} className="comment-author">
@@ -135,7 +151,7 @@ export default function CommentRow({
             </div>
           </form>
         ) : (
-          <MentionText className="comment-text">{comment.text}</MentionText>
+          <MentionText className="comment-text" onMentionPress={onMentionPress}>{comment.text}</MentionText>
         )}
       </div>
 
@@ -170,6 +186,7 @@ export default function CommentRow({
       <CommentContextMenu
         open={menuOpen}
         anchorRef={menuBtnRef}
+        fallbackAnchorRef={bubbleRef}
         isOwnComment={isOwnComment}
         hasLiked={comment.hasLiked}
         onClose={() => setMenuOpen(false)}

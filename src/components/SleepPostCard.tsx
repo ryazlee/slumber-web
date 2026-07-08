@@ -1,5 +1,9 @@
 import { Link } from 'react-router-dom';
 import { formatMins, formatSleepDate, timeAgo } from '../lib/format';
+import { hasVisiblePrBadges } from '../lib/pr';
+import { hasVisibleSleepBuddies, sleepBuddiesForViewer } from '../lib/sleepBuddiesDisplay';
+import { useAuth } from '../context/AuthContext';
+import { useMentionProfilePress } from '../hooks/useMentionProfilePress';
 import { usePostSocialPatch, useSleepPostDisplay } from '../hooks/useSleepPostDisplay';
 import type { SleepPost } from '../lib/types';
 import ManualLogSleepBlock from './ManualLogSleepBlock';
@@ -32,6 +36,8 @@ export default function SleepPostCard({
   defaultCommentsOpen = false,
   onSocialPatch,
 }: SleepPostCardProps) {
+  const { user } = useAuth();
+  const handleMentionPress = useMentionProfilePress();
   const {
     isManual,
     isOwnPost,
@@ -43,6 +49,7 @@ export default function SleepPostCard({
   } = useSleepPostDisplay(post);
 
   const handleSocialPatch = usePostSocialPatch(post.id, onSocialPatch);
+  const visibleBuddies = sleepBuddiesForViewer(post, user?.id);
 
   const metaParts = [
     formatSleepDate(post.sleepDate),
@@ -85,7 +92,7 @@ export default function SleepPostCard({
 
       <h2 className="post-title">{displayTitle}</h2>
 
-      {post.isPR && !isManual ? (
+      {hasVisiblePrBadges(post) && !isManual ? (
         <PersonalRecordBadges post={post} />
       ) : null}
 
@@ -98,7 +105,7 @@ export default function SleepPostCard({
               <span className="post-sleep-duration">{formatMins(post.asleepMinutes)}</span>
               {isNapDay ? (
                 <span className="post-nap-chip">
-                  ☀️ {napCount === 1 ? 'nap day' : `${napCount} naps`}
+                  ☀️ {napCount === 1 ? 'nap' : `${napCount} naps`}
                 </span>
               ) : null}
             </div>
@@ -119,7 +126,7 @@ export default function SleepPostCard({
 
       {post.notes ? (
         <p className="post-notes">
-          <MentionText>{post.notes}</MentionText>
+          <MentionText onMentionPress={handleMentionPress}>{post.notes}</MentionText>
         </p>
       ) : null}
 
@@ -130,6 +137,7 @@ export default function SleepPostCard({
         blurDream={post.blurDream}
         isOwnPost={isOwnPost}
         variant="feed"
+        onMentionPress={handleMentionPress}
       />
 
       {(post.photoUrls?.length ?? 0) > 0 ? (
@@ -138,8 +146,8 @@ export default function SleepPostCard({
         </div>
       ) : null}
 
-      {(post.sleepBuddies?.length ?? 0) > 0 ? (
-        <SleepBuddiesRow buddies={post.sleepBuddies!} variant="card" />
+      {hasVisibleSleepBuddies(post, user?.id) ? (
+        <SleepBuddiesRow buddies={visibleBuddies} variant="card" />
       ) : null}
 
       <div data-post-interactive>

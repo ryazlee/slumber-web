@@ -1,9 +1,9 @@
-/** @username mention parsing. Usernames are lowercase [a-z0-9_]. */
+/** @username mention parsing. */
 
-const USERNAME_PATTERN = '[a-z0-9_]+';
+import { USERNAME_MENTION_PATTERN } from './username';
 
 export function extractMentionUsernames(text: string): string[] {
-  const regex = new RegExp(`@(${USERNAME_PATTERN})`, 'gi');
+  const regex = new RegExp(`@(${USERNAME_MENTION_PATTERN})`, 'gi');
   const seen = new Set<string>();
   const result: string[] = [];
   let match: RegExpExecArray | null;
@@ -22,7 +22,7 @@ export type MentionSegment =
   | { type: 'mention'; username: string };
 
 export function parseMentionSegments(text: string): MentionSegment[] {
-  const regex = new RegExp(`@(${USERNAME_PATTERN})`, 'gi');
+  const regex = new RegExp(`@(${USERNAME_MENTION_PATTERN})`, 'gi');
   const segments: MentionSegment[] = [];
   let lastIndex = 0;
   let match: RegExpExecArray | null;

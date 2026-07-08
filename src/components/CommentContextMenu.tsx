@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 type CommentContextMenuProps = {
   open: boolean;
   anchorRef: React.RefObject<HTMLElement | null>;
+  fallbackAnchorRef?: React.RefObject<HTMLElement | null>;
   isOwnComment: boolean;
   hasLiked: boolean;
   onClose: () => void;
@@ -16,6 +17,7 @@ type CommentContextMenuProps = {
 export default function CommentContextMenu({
   open,
   anchorRef,
+  fallbackAnchorRef,
   isOwnComment,
   hasLiked,
   onClose,
@@ -28,16 +30,21 @@ export default function CommentContextMenu({
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
 
   useLayoutEffect(() => {
-    if (!open || !anchorRef.current) {
+    if (!open) {
       setPosition(null);
       return;
     }
-    const rect = anchorRef.current.getBoundingClientRect();
+    const anchor = anchorRef.current ?? fallbackAnchorRef?.current;
+    if (!anchor) {
+      setPosition(null);
+      return;
+    }
+    const rect = anchor.getBoundingClientRect();
     setPosition({
       top: rect.bottom + 4,
       left: rect.right,
     });
-  }, [open, anchorRef]);
+  }, [open, anchorRef, fallbackAnchorRef]);
 
   useEffect(() => {
     if (!open) return;
@@ -48,6 +55,7 @@ export default function CommentContextMenu({
       const target = e.target as Node;
       if (panelRef.current?.contains(target)) return;
       if (anchorRef.current?.contains(target)) return;
+      if (fallbackAnchorRef?.current?.contains(target)) return;
       onClose();
     };
     document.addEventListener('keydown', onKey);
@@ -56,7 +64,7 @@ export default function CommentContextMenu({
       document.removeEventListener('keydown', onKey);
       document.removeEventListener('pointerdown', onPointer);
     };
-  }, [open, onClose, anchorRef]);
+  }, [open, onClose, anchorRef, fallbackAnchorRef]);
 
   if (!open || !position) return null;
 

@@ -20,11 +20,17 @@ export type SleepSessionData = {
   segments: StageSegment[];
 };
 
+export type SleepBuddyStatus = 'pending' | 'accepted' | 'declined';
+
 export type SleepBuddyProfile = {
   userId: string;
   username: string;
   avatarUrl?: string;
   userRoles?: string[];
+};
+
+export type SleepBuddyTag = SleepBuddyProfile & {
+  status: SleepBuddyStatus;
 };
 
 export type SleepPost = {
@@ -67,8 +73,10 @@ export type SleepPost = {
   createdAt: string;
   sourceDevice: string;
   isCustom?: boolean;
-  /** Accepted sleep buddies — visible on feed/detail. */
+  /** Accepted sleep buddies — visible on feed/detail for viewers. */
   sleepBuddies?: SleepBuddyProfile[];
+  /** Author-only: all non-declined tags including pending. */
+  sleepBuddyTags?: SleepBuddyTag[];
 };
 
 export type WebProfile = {

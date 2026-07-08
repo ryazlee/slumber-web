@@ -2373,6 +2373,35 @@ button.app-back-link {
   font-weight: 600;
 }
 
+.mention-handle--link {
+  display: inline;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.mention-handle--link:hover {
+  text-decoration: underline;
+}
+
+.post-dream-mention-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.post-sleep-buddies-pending {
+  color: var(--text-dim);
+  font-style: italic;
+  font-weight: 500;
+}
+
+.post-sleep-buddies-mention--pending {
+  opacity: 0.75;
+}
+
 .comment-compose {
   display: flex;
   align-items: flex-end;

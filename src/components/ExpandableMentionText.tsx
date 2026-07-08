@@ -7,9 +7,10 @@ type Props = {
   children: string;
   className?: string;
   prefix?: string;
+  onMentionPress?: (username: string) => void;
 };
 
-export default function ExpandableMentionText({ children, className, prefix = '' }: Props) {
+export default function ExpandableMentionText({ children, className, prefix = '', onMentionPress }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [needsExpand, setNeedsExpand] = useState(false);
   const measureRef = useRef<HTMLParagraphElement>(null);
@@ -33,7 +34,7 @@ export default function ExpandableMentionText({ children, className, prefix = ''
   return (
     <div className="expandable-mention-text">
       <p ref={measureRef} className="expandable-mention-text-measure" aria-hidden>
-        <MentionText className={className}>{text}</MentionText>
+        <MentionText className={className} onMentionPress={onMentionPress}>{text}</MentionText>
       </p>
       <p
         className={[
@@ -43,7 +44,7 @@ export default function ExpandableMentionText({ children, className, prefix = ''
         ].filter(Boolean).join(' ')}
         style={collapsed ? { WebkitLineClamp: PREVIEW_LINES } : undefined}
       >
-        <MentionText>{text}</MentionText>
+        <MentionText onMentionPress={onMentionPress}>{text}</MentionText>
       </p>
       {needsExpand ? (
         <button

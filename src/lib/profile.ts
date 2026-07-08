@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { filterWearableSleepRows } from './sleepPostCustom';
+import { normalizeUsername } from './username';
 import type { WebProfile } from './types';
 
 function isAcceptedFriendStatus(status: string | null | undefined): boolean {
@@ -88,4 +89,16 @@ export async function fetchMyProfile(): Promise<WebProfile | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
   return fetchProfileSummary(user.id);
+}
+
+export async function getUserIdByUsername(username: string): Promise<string | null> {
+  const normalized = normalizeUsername(username);
+  if (!normalized) return null;
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('username', normalized)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data.id;
 }

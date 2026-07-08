@@ -1,6 +1,10 @@
 import { useMemo } from 'react';
 import { formatMins, formatSleepDate, timeAgo } from '../lib/format';
 import { buildLatestPostIdsByUser, isLatestSleepPost } from '../lib/latestSleepPost';
+import { hasVisiblePrBadges } from '../lib/pr';
+import { hasVisibleSleepBuddies, sleepBuddiesForViewer } from '../lib/sleepBuddiesDisplay';
+import { useAuth } from '../context/AuthContext';
+import { useMentionProfilePress } from '../hooks/useMentionProfilePress';
 import { usePostSocialPatch, useSleepPostDisplay } from '../hooks/useSleepPostDisplay';
 import { useLocalMidnightInvalidation } from '../hooks/useLocalMidnightInvalidation';
 import { useUserPosts } from '../hooks/useUserPosts';
@@ -32,6 +36,8 @@ export default function PostDetailView({
   defaultCommentsOpen = true,
   onSocialPatch,
 }: Props) {
+  const { user } = useAuth();
+  const handleMentionPress = useMentionProfilePress();
   const {
     isManual,
     isOwnPost,
@@ -51,6 +57,7 @@ export default function PostDetailView({
   }, [post, authorPosts, todayISO]);
 
   const handleSocialPatch = usePostSocialPatch(post.id, onSocialPatch);
+  const visibleBuddies = sleepBuddiesForViewer(post, user?.id);
 
   return (
     <article className="post-detail-view">
@@ -77,7 +84,7 @@ export default function PostDetailView({
 
       <h1 className="post-detail-title">{displayTitle}</h1>
 
-      {post.isPR && !isManual ? (
+      {hasVisiblePrBadges(post) && !isManual ? (
         <div className="post-detail-pr">
           <PersonalRecordBadges post={post} />
         </div>
@@ -97,12 +104,10 @@ export default function PostDetailView({
             <div className="post-sleep-hero">
               <div className="post-sleep-hero-main">
                 <span className="post-sleep-duration">{formatMins(post.asleepMinutes)}</span>
-                <span className="post-detail-asleep-label">
-                  asleep{isNapDay ? ' · nap day' : ''}
-                </span>
+                <span className="post-detail-asleep-label">asleep</span>
                 {isNapDay ? (
                   <span className="post-nap-chip">
-                    ☀️ {napCount === 1 ? 'nap day' : `${napCount} naps`}
+                    ☀️ {napCount === 1 ? 'nap' : `${napCount} naps`}
                   </span>
                 ) : null}
               </div>
@@ -168,7 +173,7 @@ export default function PostDetailView({
           <PostDetailSectionHeader title="Notes" />
           <div className="post-detail-panel post-detail-text">
             <p className="post-notes">
-              <MentionText>{post.notes}</MentionText>
+              <MentionText onMentionPress={handleMentionPress}>{post.notes}</MentionText>
             </p>
           </div>
         </>
@@ -185,6 +190,7 @@ export default function PostDetailView({
               blurDream={post.blurDream}
               isOwnPost={isOwnPost}
               variant="detail"
+              onMentionPress={handleMentionPress}
             />
           </div>
         </>
@@ -199,10 +205,10 @@ export default function PostDetailView({
         </>
       ) : null}
 
-      {(post.sleepBuddies?.length ?? 0) > 0 ? (
+      {hasVisibleSleepBuddies(post, user?.id) ? (
         <>
           <PostDetailSectionHeader title="Sleep buddies" />
-          <SleepBuddiesRow buddies={post.sleepBuddies!} variant="detail" />
+          <SleepBuddiesRow buddies={visibleBuddies} variant="detail" />
         </>
       ) : null}
 

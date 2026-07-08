@@ -11,6 +11,7 @@ import {
   useUpdateComment,
 } from '../hooks/usePostSocial';
 import { useLongPress } from '../hooks/useLongPress';
+import { useMentionProfilePress } from '../hooks/useMentionProfilePress';
 import { pluralCount, timeAgo } from '../lib/format';
 import { buildCommentReplyPrefix } from '../lib/mentions';
 import type { Comment } from '../lib/types';
@@ -47,6 +48,7 @@ export default function PostSocial({
   onPatch,
 }: PostSocialProps) {
   const { user } = useAuth();
+  const handleMentionPress = useMentionProfilePress();
 
   const [kudosCount, setKudosCount] = useState(initialKudosCount);
   const [hasKudoed, setHasKudoed] = useState(initialHasKudoed);
@@ -332,6 +334,7 @@ export default function PostSocial({
                   onReply={() => handleReplyToComment(comment)}
                   onStartEdit={() => handleStartEdit(comment)}
                   onDelete={() => void handleDeleteComment(comment.id)}
+                  onMentionPress={handleMentionPress}
                 />
               ))}
             </ul>

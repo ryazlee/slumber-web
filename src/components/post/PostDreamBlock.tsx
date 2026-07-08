@@ -1,5 +1,7 @@
 import ExpandableMentionText from '../ExpandableMentionText';
 import MentionText from '../MentionText';
+import PrivateDreamMentionHint from '../PrivateDreamMentionHint';
+import { extractMentionUsernames } from '../../lib/mentions';
 import { DREAM_MOOD_CONFIG, dreamLogPrefix, dreamMoodColor } from '../../lib/sleepPostMeta';
 import type { DreamMood } from '../../lib/types';
 
@@ -10,6 +12,7 @@ type Props = {
   blurDream: boolean;
   isOwnPost: boolean;
   variant?: 'feed' | 'detail';
+  onMentionPress?: (username: string) => void;
 };
 
 export default function PostDreamBlock({
@@ -19,12 +22,14 @@ export default function PostDreamBlock({
   blurDream,
   isOwnPost,
   variant = 'feed',
+  onMentionPress,
 }: Props) {
   if (!dreamLog) return null;
 
   const moodMeta = dreamMood ? DREAM_MOOD_CONFIG[dreamMood] : undefined;
   const showMoodLabel = variant === 'detail' && canReadDream && moodMeta && dreamMood;
   const prefix = dreamLogPrefix(dreamMood);
+  const dreamMentionUsernames = extractMentionUsernames(dreamLog);
 
   return (
     <div className="post-dream">
@@ -39,7 +44,7 @@ export default function PostDreamBlock({
             </p>
           ) : null}
           {variant === 'feed' ? (
-            <ExpandableMentionText className="post-dream-text" prefix={prefix}>
+            <ExpandableMentionText className="post-dream-text" prefix={prefix} onMentionPress={onMentionPress}>
               {dreamLog}
             </ExpandableMentionText>
           ) : (
@@ -47,14 +52,21 @@ export default function PostDreamBlock({
               {dreamMood ? null : (
                 <span className="post-dream-icon" aria-hidden>💭 </span>
               )}
-              <MentionText>{dreamLog}</MentionText>
+              <MentionText onMentionPress={onMentionPress}>{dreamLog}</MentionText>
             </p>
           )}
         </>
       ) : (
         <div className="post-dream-private">
           <span className="post-dream-badge">Private dream</span>
-          <p className="post-dream-hint">Dream logged (only they can read it)</p>
+          {dreamMentionUsernames.length > 0 ? (
+            <PrivateDreamMentionHint
+              usernames={dreamMentionUsernames}
+              onMentionPress={onMentionPress}
+            />
+          ) : (
+            <p className="post-dream-hint">Dream logged (only they can read it)</p>
+          )}
         </div>
       )}
     </div>
