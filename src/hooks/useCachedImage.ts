@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { resolveCachedImageUrl } from '../lib/imageCache';
+import { getCachedImageUrlSync, resolveCachedImageUrl } from '../lib/imageCache';
 
 export function useCachedImage(url?: string): string | undefined {
-  const [src, setSrc] = useState<string | undefined>(url);
+  const [src, setSrc] = useState<string | undefined>(() =>
+    (url ? getCachedImageUrlSync(url) : undefined),
+  );
 
   useEffect(() => {
     if (!url) {
@@ -10,12 +12,21 @@ export function useCachedImage(url?: string): string | undefined {
       return;
     }
 
-    let cancelled = false;
-    setSrc(url);
+    const cached = getCachedImageUrlSync(url);
+    if (cached) {
+      setSrc(cached);
+      return;
+    }
 
-    resolveCachedImageUrl(url).then((resolved) => {
-      if (!cancelled) setSrc(resolved);
-    });
+    let cancelled = false;
+
+    resolveCachedImageUrl(url)
+      .then((resolved) => {
+        if (!cancelled) setSrc(resolved);
+      })
+      .catch(() => {
+        if (!cancelled) setSrc(url);
+      });
 
     return () => { cancelled = true; };
   }, [url]);

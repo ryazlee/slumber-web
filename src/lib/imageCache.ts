@@ -1,5 +1,7 @@
 const CACHE_NAME = 'slumber-images-v1';
 const memory = new Map<string, string>();
+const prefetchedUrls = new Set<string>();
+const inflight = new Map<string, Promise<string>>();
 
 export function isCacheableImageUrl(url: string): boolean {
   try {
@@ -12,6 +14,12 @@ export function isCacheableImageUrl(url: string): boolean {
   }
 }
 
+/** Blob URL when already resolved in this session; remote URL when not cacheable. */
+export function getCachedImageUrlSync(url: string): string | undefined {
+  if (!isCacheableImageUrl(url)) return url;
+  return memory.get(url);
+}
+
 /**
  * Resolve a remote image URL to a blob URL, using the Cache API when available.
  * Repeat loads skip Supabase egress when the browser already has the bytes.
@@ -22,36 +30,45 @@ export async function resolveCachedImageUrl(url: string): Promise<string> {
   const existing = memory.get(url);
   if (existing) return existing;
 
-  if (typeof caches === 'undefined') return url;
+  const pending = inflight.get(url);
+  if (pending) return pending;
 
-  try {
-    const cache = await caches.open(CACHE_NAME);
-    let response = await cache.match(url);
+  const promise = (async () => {
+    try {
+      if (typeof caches === 'undefined') return url;
 
-    if (!response) {
-      response = await fetch(url, { mode: 'cors', credentials: 'omit' });
-      if (response.ok) {
-        await cache.put(url, response.clone());
+      const cache = await caches.open(CACHE_NAME);
+      let response = await cache.match(url);
+
+      if (!response) {
+        response = await fetch(url, { mode: 'cors', credentials: 'omit' });
+        if (response.ok) {
+          await cache.put(url, response.clone());
+        }
       }
+
+      if (!response?.ok) return url;
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      memory.set(url, blobUrl);
+      return blobUrl;
+    } catch {
+      return url;
+    } finally {
+      inflight.delete(url);
     }
+  })();
 
-    if (!response?.ok) return url;
-
-    const blob = await response.blob();
-    const blobUrl = URL.createObjectURL(blob);
-    memory.set(url, blobUrl);
-    return blobUrl;
-  } catch {
-    return url;
-  }
+  inflight.set(url, promise);
+  return promise;
 }
 
-/** Warm the image cache for a list of URLs (e.g. friend avatars on compare). */
+/** Warm the image cache for URLs not yet prefetched this session. */
 export function prefetchCachedImageUrls(urls: Iterable<string | undefined | null>): void {
-  const seen = new Set<string>();
   for (const url of urls) {
-    if (!url || seen.has(url)) continue;
-    seen.add(url);
+    if (!url || prefetchedUrls.has(url)) continue;
+    prefetchedUrls.add(url);
     void resolveCachedImageUrl(url);
   }
 }

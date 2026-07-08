@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { SleepPost } from '../lib/types';
 import { postPhotoDisplayUrl } from '../lib/postPhotos';
-import { resolveCachedImageUrl } from '../lib/imageCache';
 import CachedImage from './CachedImage';
 
 type Props = {
@@ -12,13 +11,6 @@ type Props = {
 export default function PostPhotoGallery({ post, variant }: Props) {
   const urls = post.photoUrls ?? [];
   const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    for (let i = 0; i < urls.length; i += 1) {
-      const url = postPhotoDisplayUrl(post, i, variant === 'feed' ? 'feed' : 'full');
-      if (url) void resolveCachedImageUrl(url);
-    }
-  }, [urls.join('|'), variant]);
 
   if (!urls.length) return null;
 
