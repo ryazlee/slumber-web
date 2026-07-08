@@ -79,7 +79,7 @@ export default function Compare() {
               <p className="app-muted compare-empty-sub">
                 {friends.length === 0
                   ? 'Add friends in the iOS app to see sleep stats side by side.'
-                  : 'Select yourself and at least one friend, then choose which stats to show.'}
+                  : 'Choose people and stats in the picker — include yourself to see your column beside friends.'}
               </p>
               {friends.length > 0 ? (
                 <button type="button" className="compare-empty-cta" onClick={openPicker}>

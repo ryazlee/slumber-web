@@ -18,6 +18,10 @@ import {
   saveCompareState,
   type ComparePeriodKey,
 } from '../lib/compareState';
+import {
+  buildCompareParticipants,
+  shouldShowCompareTable,
+} from '../lib/compareParticipants';
 import type { CompareParticipant } from '../lib/compareTypes';
 
 export function useCompareSetup() {
@@ -43,10 +47,15 @@ export function useCompareSetup() {
     if (!user?.id) return;
     setSelectedPeople((prev) => {
       const friendIds = new Set(friends.map((f) => f.id));
-      const next = prev.filter((id) => id === user.id || friendIds.has(id));
-      return next.length === prev.length ? prev : next;
+      const valid = prev.filter((id) => id === user.id || friendIds.has(id));
+      const hadPersistedSelection = (persisted?.people?.length ?? 0) > 0;
+      const next = !hadPersistedSelection && valid.length === 0
+        ? [user.id]
+        : valid;
+      const unchanged = next.length === prev.length && next.every((id, i) => id === prev[i]);
+      return unchanged ? prev : next;
     });
-  }, [friends, user?.id]);
+  }, [friends, user?.id, persisted?.people?.length]);
 
   useEffect(() => {
     saveCompareState({
@@ -68,22 +77,10 @@ export function useCompareSetup() {
       : null
   ), [user?.id, profileQuery.data?.username, profileQuery.data?.avatarUrl, profileQuery.data?.userRoles]);
 
-  const participants = useMemo(() => {
-    const list: CompareParticipant[] = [];
-    if (me && selectedPeople.includes(me.id)) list.push(me);
-    for (const f of friends) {
-      if (selectedPeople.includes(f.id)) {
-        list.push({
-          id: f.id,
-          username: f.username,
-          avatarUrl: f.avatarUrl,
-          userRoles: f.userRoles,
-          isSelf: false,
-        });
-      }
-    }
-    return list;
-  }, [me, friends, selectedPeople]);
+  const participants = useMemo(
+    () => buildCompareParticipants(user?.id, me, friends, selectedPeople),
+    [user?.id, me, friends, selectedPeople],
+  );
 
   useEffect(() => {
     prefetchCachedImageUrls([
@@ -97,7 +94,7 @@ export function useCompareSetup() {
     [selectedMetricIds],
   );
 
-  const showTable = participants.some((p) => !p.isSelf) && activeMetrics.length > 0;
+  const showTable = shouldShowCompareTable(participants, activeMetrics.length);
 
   const openPicker = useCallback(() => {
     const allowed = new Set([
@@ -115,10 +112,14 @@ export function useCompareSetup() {
   }, [user?.id, friends, selectedPeople, selectedMetricIds]);
 
   const applyPicker = useCallback(() => {
-    setSelectedPeople(draftPeople);
+    const allowed = new Set([
+      ...(user?.id ? [user.id] : []),
+      ...friends.map((f) => f.id),
+    ]);
+    setSelectedPeople(draftPeople.filter((id) => allowed.has(id)));
     setSelectedMetricIds(draftMetricIds);
     setPickerOpen(false);
-  }, [draftPeople, draftMetricIds]);
+  }, [draftPeople, draftMetricIds, friends, user?.id]);
 
   const loading = friendsQuery.isLoading || profileQuery.isLoading;
   const error = friendsQuery.error ?? profileQuery.error;
