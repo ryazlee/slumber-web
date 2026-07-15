@@ -1375,6 +1375,24 @@
   font-weight: 600;
 }
 
+.post-stage-metrics--scrollable {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+  gap: 14px;
+  min-width: 0;
+  /* Peek that more chips exist off-screen */
+  mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 28px), transparent 100%);
+}
+
+.post-stage-metrics--scrollable::-webkit-scrollbar {
+  display: none;
+}
+
 .post-stage-metrics--compact {
   gap: 8px 12px;
   font-size: 11px;

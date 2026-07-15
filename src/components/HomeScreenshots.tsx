@@ -2,11 +2,10 @@ import { homeScreenshots } from '../content/homeScreenshots';
 
 export default function HomeScreenshots() {
   return (
-    <section className="section home-screenshots" aria-labelledby="home-screenshots-title">
-      <h2 id="home-screenshots-title">See the app</h2>
+    <section className="home-screenshots" aria-labelledby="home-screenshots-title">
+      <h2 id="home-screenshots-title">Inside the app</h2>
       <p className="home-screenshots-lead">
-        Real screens from Slumber: feed, post detail with nap days and dream moods, challenges,
-        stats, and friend compare.
+        Feed, detail, stats, compare, and challenges.
       </p>
 
       <div className="home-screenshot-scroll" tabIndex={0}>

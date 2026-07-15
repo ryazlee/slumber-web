@@ -12,6 +12,8 @@ type Props = {
   data: StageData;
   labelStyle?: 'lower' | 'title';
   className?: string;
+  /** Match feed cards: keep chip size and scroll horizontally when needed. */
+  scrollable?: boolean;
 };
 
 function stageLabel(label: string, mins: number, style: 'lower' | 'title') {
@@ -19,7 +21,12 @@ function stageLabel(label: string, mins: number, style: 'lower' | 'title') {
   return style === 'title' ? `${label} ${formatted}` : `${formatted} ${label.toLowerCase()}`;
 }
 
-export default function PostStageMetrics({ data, labelStyle = 'lower', className }: Props) {
+export default function PostStageMetrics({
+  data,
+  labelStyle = 'lower',
+  className,
+  scrollable = false,
+}: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<StageMetricSize>('regular');
 
@@ -36,6 +43,7 @@ export default function PostStageMetrics({ data, labelStyle = 'lower', className
   }, [data, labelStyle]);
 
   useLayoutEffect(() => {
+    if (scrollable) return;
     const el = ref.current;
     if (!el || labels.length === 0) return;
 
@@ -47,11 +55,11 @@ export default function PostStageMetrics({ data, labelStyle = 'lower', className
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [labels]);
+  }, [labels, scrollable]);
 
   const classes = [
     'post-stage-metrics',
-    `post-stage-metrics--${size}`,
+    scrollable ? 'post-stage-metrics--scrollable' : `post-stage-metrics--${size}`,
     className,
   ].filter(Boolean).join(' ');
 

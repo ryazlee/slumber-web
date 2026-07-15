@@ -894,21 +894,7 @@ h1 {
   gap: 12px;
 }
 
-.home-screenshot-frame {
-  border-radius: 22px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  background: #0a0a0b;
-  box-shadow:
-    0 20px 40px rgba(0, 0, 0, 0.35),
-    0 0 0 1px rgba(255, 255, 255, 0.03) inset;
-}
-
-.home-screenshot-frame img {
-  display: block;
-  width: 100%;
-  height: auto;
-}
+/* Screenshot device chrome lives in home.css (.home-screenshot-frame). */
 
 .home-screenshot-caption {
   display: grid;
@@ -943,6 +929,19 @@ h1 {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
+}
+
+.home-hypnogram .sleep-timeline {
+  margin: 0;
+}
+
+.home-hypnogram .sleep-timeline--card .hypno-bar {
+  height: 36px;
+  border-radius: 8px;
+}
+
+.home-hypnogram .hypno-stats {
+  margin-top: 16px;
 }
 
 .hypno-labels {
