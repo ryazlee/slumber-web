@@ -10,7 +10,7 @@ export type SocialMetaVariant = 'site' | 'deeplink';
 
 const SITE_TITLE = 'Slumber';
 const SITE_DESCRIPTION =
-  'Social sleep tracking for iOS. Log from Apple Health, share with friends, and join sleep challenges.';
+  'Social sleep tracking for iOS. Log from Apple Health or Google Health, share with friends, and join sleep challenges.';
 
 const DEEPLINK_TITLE = 'Join on Slumber';
 const DEEPLINK_DESCRIPTION =

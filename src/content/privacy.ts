@@ -14,7 +14,7 @@ export const privacySections = [
   {
     heading: 'Information we collect',
     body: [
-      'Account information: email address (for one-time-code sign-in), username, profile photo, sleep goal, and optional profile settings.',
+      'Account information: email address (for email one-time-code / magic-link sign-in), username, profile photo, sleep goal, and optional profile settings. On iOS you can also sign in with Google or Sign in with Apple.',
       'Sleep data you create: sleep duration, bed and wake times, sleep stages (when available from a wearable), hypnogram samples, titles, location labels, vibes, tags, morning notes, dream journal entries, optional dream mood, and photos you attach to posts.',
       'Manual sleep logs: when you log a night without wearable data, we store the times and duration you enter. Manual logs appear in your social feed but are excluded from competitive stats, personal records, and challenge scoring.',
       'Apple Health data (with your permission): sleep duration and stage data read via HealthKit to populate wearable sleep logs. Slumber only reads Health data you authorize; we do not write to HealthKit on your behalf.',
@@ -57,7 +57,7 @@ export const privacySections = [
     body: [
       'We do not sell your personal information.',
       'Friends: Slumber uses mutual friend requests. Both people must accept before either can see the other\'s posts. Your feed shows posts from accepted friends and your own posts.',
-      'Post visibility: posts default to visible to friends. You can mark an individual post private (visible only to you).',
+      'Post visibility: posts default to visible to friends. You can mark an individual post private (hidden from the feed; tagged sleep buddies can still see it).',
       'Dream privacy: you can blur a dream entry so friends see that you logged a dream without reading the text. Mentioned friends may see a minimal indicator when they are @mentioned in a private dream.',
       'Sleep buddies: when you tag a friend on a post, they must accept before the tag appears to other viewers.',
       'Challenges: participants in a challenge you join can see challenge-related sleep contributions according to challenge rules.',
@@ -74,7 +74,7 @@ export const privacySections = [
       'Edit or delete your own posts.',
       'Block users. They are removed from your feed, search, and challenge interactions.',
       'Report posts for moderation review.',
-      'Delete your account in Settings, which permanently removes your authentication record, profile, posts, and associated social data.',
+      'Delete your account in Settings — removes your login, personal sleep posts, photos, health connections, and social connections; comments and likes you left on others\' posts may remain under an anonymized account name.',
       'Revoke Apple Health access in iOS Settings at any time.',
       'Disconnect Google Health in Slumber Settings.',
     ],
@@ -82,7 +82,7 @@ export const privacySections = [
   {
     heading: 'Retention',
     body: [
-      'We retain your data while your account is active. When you delete your account, we remove your authentication record and associated profile, posts, photos, and social data from our systems.',
+      'We retain your data while your account is active. When you delete your account, we remove your authentication record and personal sleep data. Comments and likes you left on other people\'s posts may be retained under an anonymized username so those conversations stay intact.',
     ],
   },
   {

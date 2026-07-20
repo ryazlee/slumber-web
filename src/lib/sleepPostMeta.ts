@@ -5,7 +5,7 @@ export type { Vibe, DreamMood };
 export const VIBE_CONFIG: Record<Vibe, { emoji: string; label: string }> = {
   CHARGED: { emoji: '⚡️', label: 'Charged' },
   SOLID: { emoji: '😌', label: 'Solid' },
-  MEH: { emoji: '😐', label: 'Meh' },
+  MEH: { emoji: '😐', label: 'Neutral' },
   DRAGGING: { emoji: '☕️', label: 'Dragging' },
   ZOMBIE: { emoji: '🧟', label: 'Zombie' },
 };

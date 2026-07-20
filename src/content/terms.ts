@@ -20,9 +20,9 @@ export const termsSections = [
   {
     heading: 'Your account',
     body: [
-      'You sign in with a one-time code sent to your email, a magic link, or Google. Keep that email access secure. It\'s how you get back in.',
+      'You sign in with a one-time code sent to your email, a magic link, Google, or Sign in with Apple (iOS app). Keep that email and linked accounts secure — they\'re how you get back in.',
       'Pick a username you\'re comfortable sharing. You\'re responsible for activity on your account.',
-      'You can delete your account at any time in Settings.',
+      'You can delete your account at any time in Settings. Deleting frees your @username and removes your login and personal sleep data; comments and likes you left on friends\' posts may remain under an anonymized name.',
     ],
   },
   {
@@ -37,7 +37,7 @@ export const termsSections = [
     heading: 'Friends and visibility',
     body: [
       'Slumber uses mutual friend requests. Both people have to accept before either sees the other\'s posts.',
-      'Posts default to visible to friends. You can mark a post private (only you) or blur a dream entry.',
+      'Posts default to visible to friends. You can mark a post private (hidden from the feed; tagged sleep buddies can still see it) or blur a dream entry.',
       'Blocking someone removes them from your feed, search, and challenges.',
     ],
   },
