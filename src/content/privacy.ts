@@ -1,6 +1,6 @@
 export const privacyMeta = {
   title: 'Privacy Policy',
-  updated: 'July 2026',
+  updated: 'July 20, 2026',
 };
 
 export const privacySections = [
@@ -18,7 +18,7 @@ export const privacySections = [
       'Sleep data you create: sleep duration, bed and wake times, sleep stages (when available from a wearable), hypnogram samples, titles, location labels, vibes, tags, morning notes, dream journal entries, optional dream mood, and photos you attach to posts.',
       'Manual sleep logs: when you log a night without wearable data, we store the times and duration you enter. Manual logs appear in your social feed but are excluded from competitive stats, personal records, and challenge scoring.',
       'Apple Health data (with your permission): sleep duration and stage data read via HealthKit to populate wearable sleep logs. Slumber only reads Health data you authorize; we do not write to HealthKit on your behalf.',
-      'Google Health data (optional, with your permission): if you connect Google Health in Settings, we read sleep duration and stage data from your Google Health account via Google\'s API. OAuth tokens are stored securely on our servers so we can fetch sleep on your behalf. Slumber only reads sleep data you authorize; we do not write sleep data to Google Health.',
+      'Google Health data (optional, with your permission): if you connect Google Health in Settings, we read sleep duration and stage data from your Google Health account via Google\'s API using the restricted scope googlehealth.sleep.readonly. OAuth refresh tokens are stored on our servers (never on your device) so we can fetch sleep on your behalf. Slumber only reads sleep data you authorize; we do not write sleep data to Google Health. See "Data protection" below for how we safeguard this data.',
       'Social activity: friend relationships, comments, comment likes, kudos, sleep challenges, challenge progress, sleep buddy tags, notifications, and @mentions in notes, dreams, and comments.',
       'Safety and moderation: abuse reports you submit and block lists you maintain.',
       'Service data: standard diagnostics and error information needed to operate and secure the service (e.g. authentication events, API requests).',
@@ -50,6 +50,19 @@ export const privacySections = [
       'When you choose to connect Google Health, Slumber does not sell, trade, or share sleep data obtained from Google Health with advertising platforms, data brokers, or third-party information resellers.',
       'Google Health sleep data is used only inside Slumber to display sleep metrics, build hypnogram charts, compute stats, and score sleep challenges you join. We store an OAuth refresh token on our servers (Supabase) solely to read sleep on your behalf until you disconnect.',
       'You can disconnect Google Health at any time in Slumber Settings. You can also revoke Slumber\'s access in your Google account security settings.',
+    ],
+  },
+  {
+    heading: 'Data protection',
+    body: [
+      'We protect personal information and Google user data (including Google Health sleep data and OAuth credentials) with the following mechanisms:',
+      'Encryption in transit: All client–server and server–Google API traffic uses HTTPS / TLS.',
+      'Encryption at rest: Account data, sleep posts, and OAuth credentials are stored in our hosted database (Supabase / PostgreSQL), which encrypts data at rest.',
+      'Credential isolation: Google Health OAuth refresh tokens are never stored on your device or exposed to the mobile/web client. Tokens are stored server-side and usable only by authenticated backend services (Edge Functions with a service role). Database row-level security and revoked client grants prevent anonymous or signed-in users from reading other users\' tokens or Google Health credentials.',
+      'Least privilege: We request only the Google Health sleep read-only scope needed to sync sleep. We do not request write access to Google Health.',
+      'Access control: Sleep and account data are scoped to your authenticated account. Friend-visible content is limited by mutual friendship and per-post privacy settings. Administrative access to production systems is limited to authorized operators and used for security, reliability, and abuse investigation.',
+      'Deletion and revocation: Disconnecting Google Health clears the stored refresh token. Deleting your account removes your authentication record, personal sleep data, photos, and health connections. You may also revoke Slumber in your Google Account security settings.',
+      'We do not use Google user data for advertising, credit decisions, or sale to data brokers.',
     ],
   },
   {
