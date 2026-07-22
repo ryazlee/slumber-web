@@ -41,6 +41,11 @@ export type PostReportRow = {
   author_is_premium: boolean;
   author_report_count: number;
   title: string;
+  dream_log?: string | null;
+  morning_notes?: string | null;
+  vibe?: string | null;
+  tags?: string[] | null;
+  dream_mood?: string | null;
   post_id: string;
   post_sleep_date: string;
   post_created_at: string;

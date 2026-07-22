@@ -22,6 +22,7 @@ type SleepPostRow = ManualSleepRowFlags & {
   deep_minutes: number | null;
   rem_minutes: number | null;
   core_minutes: number | null;
+  awake_events?: number | null;
   bedtime?: string | null;
   wake_time?: string | null;
   session_breakdown?: SleepSessionData[] | null;
@@ -48,6 +49,25 @@ function buildTopNight(r: SleepPostRow): TopNight {
     remMinutes: r.rem_minutes ?? 0,
     coreMinutes: r.core_minutes ?? 0,
   };
+}
+
+function stagePct(stageMinutes: number, asleepMinutes: number): number {
+  if (asleepMinutes <= 0 || stageMinutes <= 0) return 0;
+  return (stageMinutes / asleepMinutes) * 100;
+}
+
+function topNightsByStagePct(
+  nights: TopNight[],
+  stage: 'deepMinutes' | 'remMinutes' | 'coreMinutes',
+  limit = 3,
+): TopNight[] {
+  return [...nights]
+    .filter((n) => n.asleepMinutes > 0 && n[stage] > 0)
+    .sort(
+      (a, b) =>
+        stagePct(b[stage], b.asleepMinutes) - stagePct(a[stage], a.asleepMinutes),
+    )
+    .slice(0, limit);
 }
 
 function findPR(prs: PRRow[], type: string) {
@@ -81,11 +101,14 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
     prMostDeep: findPR(prs, 'most_deep_sleep'),
     prMostRem: findPR(prs, 'most_rem'),
     prMostCore: findPR(prs, 'most_core_sleep'),
+    prHighestDeepPct: findPR(prs, 'highest_deep_pct'),
+    prHighestRemPct: findPR(prs, 'highest_rem_pct'),
+    prHighestCorePct: findPR(prs, 'highest_core_pct'),
   };
 }
 
 async function fetchLifetimeData(userId: string) {
-  const cols = 'id, sleep_date, asleep_minutes, deep_minutes, rem_minutes, core_minutes, is_custom, source_device';
+  const cols = 'id, sleep_date, asleep_minutes, deep_minutes, rem_minutes, core_minutes, awake_events, is_custom, source_device';
   const baseFilter = () => supabase.from('sleep_posts').select(cols)
     .eq('user_id', userId)
     .is('deleted_at', null)
@@ -108,13 +131,19 @@ async function fetchLifetimeData(userId: string) {
       .limit(400),
   ]);
 
+  const monthlyWearable = filterWearableSleepRows((monthlyRes.data ?? []) as SleepPostRow[]);
+  const stageNights = monthlyWearable.map(buildTopNight);
+
   return {
     bestNights: filterWearableSleepRows((bestRes.data ?? []) as SleepPostRow[]).map(buildTopNight),
     mostDeepNights: filterWearableSleepRows((deepRes.data ?? []) as SleepPostRow[]).map(buildTopNight),
     mostRemNights: filterWearableSleepRows((remRes.data ?? []) as SleepPostRow[]).map(buildTopNight),
     mostCoreNights: filterWearableSleepRows((coreRes.data ?? []) as SleepPostRow[]).map(buildTopNight),
+    highestDeepPctNights: topNightsByStagePct(stageNights, 'deepMinutes'),
+    highestRemPctNights: topNightsByStagePct(stageNights, 'remMinutes'),
+    highestCorePctNights: topNightsByStagePct(stageNights, 'coreMinutes'),
     allRows: filterWearableSleepRows((allRes.data ?? []) as SleepPostRow[]),
-    monthlyRows: filterWearableSleepRows((monthlyRes.data ?? []) as SleepPostRow[]),
+    monthlyRows: monthlyWearable,
   };
 }
 
@@ -144,8 +173,18 @@ function computeAggregateMetrics(
   };
 }
 
+function stageSharePct(stageMinutes: number, asleepMinutes: number): number | null {
+  if (asleepMinutes <= 0 || stageMinutes <= 0) return null;
+  return Math.round((stageMinutes / asleepMinutes) * 1000) / 10;
+}
+
 function computeMonthlyBests(rows: SleepPostRow[]): MonthBest[] {
-  type MonthAccum = MonthBest & { bedtimeSums: number[]; wakeTimeSums: number[] };
+  type MonthAccum = MonthBest & {
+    bedtimeSums: number[];
+    wakeTimeSums: number[];
+    awakeEventSums: number[];
+    nightCount: number;
+  };
   const monthMap = new Map<string, MonthAccum>();
 
   for (const r of rows) {
@@ -153,30 +192,51 @@ function computeMonthlyBests(rows: SleepPostRow[]): MonthBest[] {
     const existing = monthMap.get(month);
     const bt = extractBedtimeMinutes(r.bedtime, r.session_breakdown);
     const wt = extractWakeTimeMinutes(r.wake_time, r.session_breakdown);
+    const asleep = r.asleep_minutes ?? 0;
+    const deep = r.deep_minutes ?? 0;
+    const rem = r.rem_minutes ?? 0;
+    const core = r.core_minutes ?? 0;
+    const wakes = r.awake_events ?? 0;
 
     if (!existing) {
       monthMap.set(month, {
         month,
         label: new Date(`${month}-15T12:00:00`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-        asleepMinutes: r.asleep_minutes ?? 0,
-        deepMinutes: r.deep_minutes ?? 0,
-        remMinutes: r.rem_minutes ?? 0,
-        coreMinutes: r.core_minutes ?? 0,
+        asleepMinutes: asleep,
+        deepMinutes: deep,
+        remMinutes: rem,
+        coreMinutes: core,
+        deepPct: stageSharePct(deep, asleep),
+        remPct: stageSharePct(rem, asleep),
+        corePct: stageSharePct(core, asleep),
+        avgAwakeEvents: null,
         avgBedtime: null,
         avgWakeTime: null,
         bedtimeSums: bt != null ? [bt] : [],
         wakeTimeSums: wt != null ? [wt] : [],
+        awakeEventSums: [wakes],
+        nightCount: 1,
       });
-    } else {
-      if (bt != null) existing.bedtimeSums.push(bt);
-      if (wt != null) existing.wakeTimeSums.push(wt);
-      monthMap.set(month, {
-        ...existing,
-        asleepMinutes: Math.max(existing.asleepMinutes, r.asleep_minutes ?? 0),
-        deepMinutes: Math.max(existing.deepMinutes, r.deep_minutes ?? 0),
-        remMinutes: Math.max(existing.remMinutes, r.rem_minutes ?? 0),
-        coreMinutes: Math.max(existing.coreMinutes, r.core_minutes ?? 0),
-      });
+      continue;
+    }
+
+    if (bt != null) existing.bedtimeSums.push(bt);
+    if (wt != null) existing.wakeTimeSums.push(wt);
+    existing.awakeEventSums.push(wakes);
+    existing.nightCount += 1;
+
+    if (asleep > existing.asleepMinutes) existing.asleepMinutes = asleep;
+    if (deep > existing.deepMinutes) {
+      existing.deepMinutes = deep;
+      existing.deepPct = stageSharePct(deep, asleep);
+    }
+    if (rem > existing.remMinutes) {
+      existing.remMinutes = rem;
+      existing.remPct = stageSharePct(rem, asleep);
+    }
+    if (core > existing.coreMinutes) {
+      existing.coreMinutes = core;
+      existing.corePct = stageSharePct(core, asleep);
     }
   }
 
@@ -185,6 +245,9 @@ function computeMonthlyBests(rows: SleepPostRow[]): MonthBest[] {
     .map(([, v]) => {
       const btAvg = averageBedtimeMinutes(v.bedtimeSums);
       const wtAvg = averageWakeTimeMinutes(v.wakeTimeSums);
+      const wakesAvg = v.nightCount > 0
+        ? Math.round((v.awakeEventSums.reduce((a, b) => a + b, 0) / v.nightCount) * 10) / 10
+        : null;
       return {
         month: v.month,
         label: v.label,
@@ -192,6 +255,10 @@ function computeMonthlyBests(rows: SleepPostRow[]): MonthBest[] {
         deepMinutes: v.deepMinutes,
         remMinutes: v.remMinutes,
         coreMinutes: v.coreMinutes,
+        deepPct: v.deepPct,
+        remPct: v.remPct,
+        corePct: v.corePct,
+        avgAwakeEvents: wakesAvg,
         avgBedtime: btAvg != null ? formatSleepClockMinutes(btAvg) : null,
         avgWakeTime: wtAvg != null ? formatSleepClockMinutes(wtAvg) : null,
       };
@@ -206,6 +273,9 @@ export async function fetchLifetimeStats(userId: string): Promise<LifetimeStats>
     mostDeepNights: data.mostDeepNights,
     mostRemNights: data.mostRemNights,
     mostCoreNights: data.mostCoreNights,
+    highestDeepPctNights: data.highestDeepPctNights,
+    highestRemPctNights: data.highestRemPctNights,
+    highestCorePctNights: data.highestCorePctNights,
     monthlyBests: computeMonthlyBests(data.monthlyRows),
   };
 }

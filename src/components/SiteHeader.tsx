@@ -80,7 +80,7 @@ export default function SiteHeader() {
                 <>
                   <a
                     href={APP_STORE_URL}
-                    className="site-header-btn site-header-btn--ghost"
+                    className="site-header-btn site-header-btn--ghost site-header-btn--store"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -89,6 +89,9 @@ export default function SiteHeader() {
                   <NavLink to="/" end className="site-header-btn site-header-btn--primary">
                     Log in
                   </NavLink>
+                  <div className="site-header-mobile-menu">
+                    <HeaderMenu showAdmin={false} adminActive={false} />
+                  </div>
                 </>
               )}
             </div>

@@ -18,9 +18,9 @@ import {
   weekVsMonthInsight,
 } from '../../lib/statsInsights';
 import { buildMonthMetrics } from '../../lib/statsMetrics';
-import { resolvePr } from '../../lib/statsPr';
+import { resolvePctPr, resolvePr } from '../../lib/statsPr';
 import { stageColor } from '../../lib/stageColors';
-import { formatMins } from '../../lib/format';
+import { formatMins, formatPct } from '../../lib/format';
 import { getQueryErrorMessage } from '../../lib/queryError';
 
 export default function MyStats() {
@@ -69,11 +69,17 @@ export default function MyStats() {
     const deep = lifetime?.mostDeepNights[0];
     const rem = lifetime?.mostRemNights[0];
     const core = lifetime?.mostCoreNights[0];
+    const deepPct = lifetime?.highestDeepPctNights[0];
+    const remPct = lifetime?.highestRemPctNights[0];
+    const corePct = lifetime?.highestCorePctNights[0];
     return [
       { emoji: '🏆', label: 'Longest', pr: resolvePr(stats.prLongestSleep, best, 'asleepMinutes'), format: formatMins },
       { emoji: '💜', label: 'Most deep', pr: resolvePr(stats.prMostDeep, deep, 'deepMinutes'), format: formatMins },
       { emoji: '💗', label: 'Most REM', pr: resolvePr(stats.prMostRem, rem, 'remMinutes'), format: formatMins },
       { emoji: '💙', label: 'Most core', pr: resolvePr(stats.prMostCore, core, 'coreMinutes'), format: formatMins },
+      { emoji: '💜', label: 'Deep %', pr: resolvePctPr(stats.prHighestDeepPct, deepPct, 'deepMinutes'), format: formatPct },
+      { emoji: '💗', label: 'REM %', pr: resolvePctPr(stats.prHighestRemPct, remPct, 'remMinutes'), format: formatPct },
+      { emoji: '💙', label: 'Core %', pr: resolvePctPr(stats.prHighestCorePct, corePct, 'coreMinutes'), format: formatPct },
     ];
   }, [stats, lifetime]);
 
@@ -174,29 +180,41 @@ export default function MyStats() {
       {lifetime && lifetime.monthlyBests.length > 0 ? (
         <section className="stats-section">
           <h2 className="stats-section-label">Monthly Bests</h2>
-          <div className="stats-table-card">
-            <div className="stats-table-row stats-table-row--header">
-              <span className="stats-table-cell stats-table-cell--label">Month</span>
-              <span className="stats-table-cell" style={{ color: 'var(--accent)' }}>Sleep</span>
-              <span className="stats-table-cell" style={{ color: stageColor('core') }}>Core</span>
-              <span className="stats-table-cell" style={{ color: stageColor('deep') }}>Deep</span>
-              <span className="stats-table-cell" style={{ color: stageColor('rem') }}>REM</span>
-            </div>
-            {lifetime.monthlyBests.map((m) => (
-              <div key={m.month} className="stats-table-row">
-                <span className="stats-table-cell stats-table-cell--label">{m.label}</span>
-                <span className="stats-table-cell" style={{ color: 'var(--accent)' }}>{formatMins(m.asleepMinutes)}</span>
-                <span className="stats-table-cell" style={{ color: stageColor('core') }}>
-                  {m.coreMinutes > 0 ? formatMins(m.coreMinutes) : '—'}
-                </span>
-                <span className="stats-table-cell" style={{ color: stageColor('deep') }}>
-                  {m.deepMinutes > 0 ? formatMins(m.deepMinutes) : '—'}
-                </span>
-                <span className="stats-table-cell" style={{ color: stageColor('rem') }}>
-                  {m.remMinutes > 0 ? formatMins(m.remMinutes) : '—'}
-                </span>
+          <div className="stats-table-scroll">
+            <div className="stats-table-card stats-table-card--wide">
+              <div className="stats-table-row stats-table-row--header">
+                <span className="stats-table-cell stats-table-cell--label">Month</span>
+                <span className="stats-table-cell" style={{ color: 'var(--accent)' }}>Sleep</span>
+                <span className="stats-table-cell" style={{ color: stageColor('core') }}>Core</span>
+                <span className="stats-table-cell" style={{ color: stageColor('deep') }}>Deep</span>
+                <span className="stats-table-cell" style={{ color: stageColor('rem') }}>REM</span>
+                <span className="stats-table-cell">Wakes</span>
               </div>
-            ))}
+              {lifetime.monthlyBests.map((m) => (
+                <div key={m.month} className="stats-table-row">
+                  <span className="stats-table-cell stats-table-cell--label">{m.label}</span>
+                  <span className="stats-table-cell" style={{ color: 'var(--accent)' }}>{formatMins(m.asleepMinutes)}</span>
+                  <span className="stats-table-cell" style={{ color: stageColor('core') }}>
+                    {m.coreMinutes > 0
+                      ? `${formatMins(m.coreMinutes)}${m.corePct != null ? ` · ${formatPct(m.corePct)}` : ''}`
+                      : '—'}
+                  </span>
+                  <span className="stats-table-cell" style={{ color: stageColor('deep') }}>
+                    {m.deepMinutes > 0
+                      ? `${formatMins(m.deepMinutes)}${m.deepPct != null ? ` · ${formatPct(m.deepPct)}` : ''}`
+                      : '—'}
+                  </span>
+                  <span className="stats-table-cell" style={{ color: stageColor('rem') }}>
+                    {m.remMinutes > 0
+                      ? `${formatMins(m.remMinutes)}${m.remPct != null ? ` · ${formatPct(m.remPct)}` : ''}`
+                      : '—'}
+                  </span>
+                  <span className="stats-table-cell">
+                    {m.avgAwakeEvents != null ? m.avgAwakeEvents : '—'}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       ) : null}

@@ -92,28 +92,24 @@ export default function AdminReports() {
   };
 
   const dismissPost = (postId: string) => {
-    if (!window.confirm('Close all reports on this post? They will be removed from the queue.')) return;
     void runAction(`post:${postId}`, () => dismissPostMutation.mutateAsync(postId));
   };
 
   const dismissComment = (commentId: string) => {
-    if (!window.confirm('Close all reports on this comment? They will be removed from the queue.')) return;
     void runAction(`comment:${commentId}`, () => dismissCommentMutation.mutateAsync(commentId));
   };
 
   const removePost = (postId: string) => {
-    if (!window.confirm('Remove this post and close its reports? This cannot be undone.')) return;
     void runAction(`post:${postId}`, () => removePostMutation.mutateAsync(postId));
   };
 
   const removeComment = (commentId: string) => {
-    if (!window.confirm('Delete this comment and close its reports? This cannot be undone.')) return;
     void runAction(`comment:${commentId}`, () => removeCommentMutation.mutateAsync(commentId));
   };
 
   return (
     <AdminSection
-      lead="Review reported posts and comments. Each card groups reports on the same item — check reporter contact info, take action if needed, then close the reports when you're done."
+      lead="Review reported posts and comments in place — content is shown on each card. Close reports to clear the queue, or remove the content when it violates guidelines."
       error={errorMessage}
     >
       <AdminTabs

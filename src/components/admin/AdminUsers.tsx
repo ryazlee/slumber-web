@@ -24,8 +24,9 @@ type QuickFilter = 'new' | 'premium' | 'never-posted' | 'inactive' | null;
 export default function AdminUsers() {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlFilter = searchParams.get('filter') as QuickFilter;
+  const urlQuery = searchParams.get('q') ?? '';
 
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(urlQuery);
   const [roleFilter, setRoleFilter] = useState('');
   const [premiumOnly, setPremiumOnly] = useState(false);
   const [minPosts, setMinPosts] = useState('');
@@ -77,6 +78,10 @@ export default function AdminUsers() {
       setQuickFilter(urlFilter);
     }
   }, [urlFilter, quickFilter]);
+
+  useEffect(() => {
+    setQuery(urlQuery);
+  }, [urlQuery]);
 
   const resetFilters = () => {
     setQuery('');

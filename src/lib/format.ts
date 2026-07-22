@@ -17,6 +17,11 @@ export const formatMins = (mins: number): string => {
   return `${h}h ${m}m`;
 };
 
+export const formatPct = (pct: number): string => {
+  const rounded = Math.round(pct * 10) / 10;
+  return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
+};
+
 export const formatSleepDate = (dateISO: string): string => {
   const [year, month, day] = dateISO.split('-').map(Number);
   const d = new Date(year, month - 1, day);

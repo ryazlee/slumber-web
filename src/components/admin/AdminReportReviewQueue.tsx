@@ -1,8 +1,8 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { CommentReportGroup, PostReportGroup } from '../../lib/groupReports';
 import { formatRoleList } from '../../lib/userRoles';
 import AdminCopyButton from './AdminCopyButton';
-import AdminGridAction from './AdminGridAction';
 import { formatWhen } from './format';
 
 type Tab = 'posts' | 'comments';
@@ -25,9 +25,12 @@ function sleepDateLabel(value: string) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+function adminUserHref(username: string) {
+  return `/admin/users?q=${encodeURIComponent(username)}`;
+}
+
 function AuthorMeta({
   author,
-  authorId,
   authorJoined,
   authorPostsCount,
   authorReportCount,
@@ -45,7 +48,7 @@ function AuthorMeta({
       <div>
         <dt>Author</dt>
         <dd>
-          <Link to={`/profile/${authorId}`} className="admin-report-link">
+          <Link to={adminUserHref(author)} className="admin-report-link">
             @{author}
           </Link>
         </dd>
@@ -72,7 +75,6 @@ function AuthorMeta({
 
 function ReporterContact({
   reporter,
-  reporterId,
   reporterEmail,
 }: {
   reporter: string;
@@ -81,7 +83,7 @@ function ReporterContact({
 }) {
   return (
     <div className="admin-report-reporter">
-      <Link to={`/profile/${reporterId}`} className="admin-report-link">
+      <Link to={adminUserHref(reporter)} className="admin-report-link">
         @{reporter}
       </Link>
       {reporterEmail ? (
@@ -112,7 +114,7 @@ function ReportReasons({
 }) {
   return (
     <div className="admin-report-reasons-wrap">
-      <h4 className="admin-report-reasons-title">Reports</h4>
+      <h4 className="admin-report-reasons-title">Why it was reported</h4>
       <ul className="admin-report-reasons">
         {reports.map((report) => (
           <li key={report.id}>
@@ -124,10 +126,143 @@ function ReportReasons({
               />
               <time dateTime={report.created_at}>{formatWhen(report.created_at)}</time>
             </div>
-            <p className="admin-report-reason-text">{report.reason}</p>
+            <p className="admin-report-reason-text">{report.reason?.trim() || 'No reason given'}</p>
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+function ContentBlock({
+  label,
+  children,
+  empty,
+}: {
+  label: string;
+  children?: string | null;
+  empty?: string;
+}) {
+  const text = children?.trim();
+  return (
+    <section className="admin-report-content-block">
+      <h4 className="admin-report-content-label">{label}</h4>
+      {text ? (
+        <blockquote className="admin-report-quote">{text}</blockquote>
+      ) : (
+        <p className="admin-muted admin-report-content-empty">{empty ?? 'None'}</p>
+      )}
+    </section>
+  );
+}
+
+function PostContent({ group }: { group: PostReportGroup }) {
+  const chips = [
+    group.vibe ? `Vibe: ${group.vibe}` : null,
+    group.dreamMood ? `Dream mood: ${group.dreamMood}` : null,
+    ...(group.tags ?? []).map((tag) => `#${tag}`),
+  ].filter(Boolean) as string[];
+
+  const hasText = Boolean(group.dreamLog || group.morningNotes);
+
+  return (
+    <div className="admin-report-content">
+      <h4 className="admin-report-content-heading">Reported content</h4>
+      {chips.length > 0 ? (
+        <div className="admin-report-chips">
+          {chips.map((chip) => (
+            <span key={chip} className="admin-report-chip">{chip}</span>
+          ))}
+        </div>
+      ) : null}
+      <ContentBlock label="Dream log" empty="No dream text">
+        {group.dreamLog}
+      </ContentBlock>
+      <ContentBlock label="Morning notes" empty="No morning notes">
+        {group.morningNotes}
+      </ContentBlock>
+      {!hasText && !chips.length ? (
+        <p className="admin-muted">
+          This sleep post has no dream text or notes — only the title and sleep date are available.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+type ConfirmKind = 'dismiss' | 'remove' | null;
+
+function ReportActions({
+  acting,
+  confirmLabel,
+  removeLabel,
+  removeDisabled,
+  onDismiss,
+  onRemove,
+}: {
+  acting: boolean;
+  confirmLabel: string;
+  removeLabel: string;
+  removeDisabled?: boolean;
+  onDismiss: () => void;
+  onRemove: () => void;
+}) {
+  const [confirm, setConfirm] = useState<ConfirmKind>(null);
+
+  if (confirm) {
+    const isRemove = confirm === 'remove';
+    return (
+      <div className="admin-report-actions admin-report-actions--confirm">
+        <p className="admin-report-confirm-text">
+          {isRemove
+            ? `${removeLabel}? This cannot be undone, and reports will be closed.`
+            : `${confirmLabel}? Reports leave the queue; content stays up.`}
+        </p>
+        <div className="admin-report-actions-row">
+          <button
+            type="button"
+            className="admin-button admin-button-ghost"
+            disabled={acting}
+            onClick={() => setConfirm(null)}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className={isRemove ? 'admin-button admin-button-danger' : 'admin-button'}
+            disabled={acting}
+            onClick={() => {
+              if (isRemove) onRemove();
+              else onDismiss();
+            }}
+          >
+            {acting ? 'Working…' : isRemove ? `Yes, ${removeLabel.toLowerCase()}` : 'Yes, close reports'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="admin-report-actions">
+      <button
+        type="button"
+        className="admin-button"
+        disabled={acting}
+        onClick={() => setConfirm('dismiss')}
+      >
+        Close reports
+      </button>
+      {!removeDisabled ? (
+        <button
+          type="button"
+          className="admin-button admin-button-danger"
+          disabled={acting}
+          onClick={() => setConfirm('remove')}
+        >
+          {removeLabel}
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -170,6 +305,8 @@ function PostReportCard({
         </div>
       </header>
 
+      <PostContent group={group} />
+
       <AuthorMeta
         author={group.author}
         authorId={group.authorId}
@@ -181,19 +318,14 @@ function PostReportCard({
 
       <ReportReasons reports={group.reports} />
 
-      <div className="admin-report-actions">
-        <Link to={`/post/${group.postId}`} className="admin-action-btn admin-action-btn--ghost">
-          View post
-        </Link>
-        <AdminGridAction variant="ghost" onClick={onDismiss} disabled={acting}>
-          Close reports
-        </AdminGridAction>
-        {!group.postDeleted ? (
-          <AdminGridAction variant="danger" onClick={onRemove} disabled={acting}>
-            Remove post
-          </AdminGridAction>
-        ) : null}
-      </div>
+      <ReportActions
+        acting={acting}
+        confirmLabel="Close all reports on this post"
+        removeLabel="Remove post"
+        removeDisabled={group.postDeleted}
+        onDismiss={onDismiss}
+        onRemove={onRemove}
+      />
     </article>
   );
 }
@@ -229,7 +361,12 @@ function CommentReportCard({
         </div>
       </header>
 
-      <blockquote className="admin-report-quote">{group.commentText}</blockquote>
+      <div className="admin-report-content">
+        <h4 className="admin-report-content-heading">Reported comment</h4>
+        <blockquote className="admin-report-quote">
+          {group.commentText?.trim() || 'Comment text unavailable'}
+        </blockquote>
+      </div>
 
       <AuthorMeta
         author={group.author}
@@ -242,17 +379,13 @@ function CommentReportCard({
 
       <ReportReasons reports={group.reports} />
 
-      <div className="admin-report-actions">
-        <Link to={`/post/${group.postId}`} className="admin-action-btn admin-action-btn--ghost">
-          View post
-        </Link>
-        <AdminGridAction variant="ghost" onClick={onDismiss} disabled={acting}>
-          Close reports
-        </AdminGridAction>
-        <AdminGridAction variant="danger" onClick={onRemove} disabled={acting}>
-          Remove comment
-        </AdminGridAction>
-      </div>
+      <ReportActions
+        acting={acting}
+        confirmLabel="Close all reports on this comment"
+        removeLabel="Remove comment"
+        onDismiss={onDismiss}
+        onRemove={onRemove}
+      />
     </article>
   );
 }

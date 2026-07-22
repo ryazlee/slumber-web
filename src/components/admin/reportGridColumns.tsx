@@ -82,6 +82,22 @@ export function buildPostReportColumns(): GridColDef<PostReportRow>[] {
       valueGetter: (_value, row) => row.title?.trim() || '',
       valueFormatter: (value) => (value ? String(value) : '—'),
     },
+    {
+      field: 'dream_log',
+      headerName: 'Dream',
+      flex: 2,
+      minWidth: 180,
+      valueGetter: (_value, row) => row.dream_log?.trim() || '',
+      valueFormatter: (value) => (value ? String(value) : '—'),
+    },
+    {
+      field: 'morning_notes',
+      headerName: 'Notes',
+      flex: 1.5,
+      minWidth: 140,
+      valueGetter: (_value, row) => row.morning_notes?.trim() || '',
+      valueFormatter: (value) => (value ? String(value) : '—'),
+    },
     sleepDateColumn<PostReportRow>('post_sleep_date', 'Sleep date'),
     loggedAtColumn<PostReportRow>('post_created_at', 'Post logged'),
     {

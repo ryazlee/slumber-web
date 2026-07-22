@@ -69,7 +69,11 @@ function navLinkClass({ isActive }: { isActive: boolean }) {
   return `admin-nav-link${isActive ? ' admin-nav-link--active' : ''}`;
 }
 
-export default function AdminNav() {
+type Props = {
+  onNavigate?: () => void;
+};
+
+export default function AdminNav({ onNavigate }: Props) {
   const { metrics } = useAdmin();
   const pendingReports = (metrics?.pending_post_reports ?? 0) + (metrics?.pending_comment_reports ?? 0);
   const groups = buildAdminNavGroups(pendingReports);
@@ -82,7 +86,12 @@ export default function AdminNav() {
           <ul className="admin-nav-list">
             {group.items.map((item) => (
               <li key={item.to}>
-                <NavLink to={item.to} end={item.end} className={navLinkClass}>
+                <NavLink
+                  to={item.to}
+                  end={item.end}
+                  className={navLinkClass}
+                  onClick={onNavigate}
+                >
                   <span>{item.label}</span>
                   {item.badge != null ? (
                     <span className="admin-nav-badge">{item.badge}</span>

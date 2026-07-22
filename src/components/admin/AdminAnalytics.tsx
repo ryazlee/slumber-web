@@ -11,6 +11,7 @@ import { ADMIN_GRID_CLIENT_FILTER_HINT } from '../../lib/adminCopy';
 import { Link } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext';
 import { useAdminAnalyticsBundle, useAdminRecentUsers, useAppVersions } from '../../hooks/useAdmin';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { usePaginatedFilters } from '../../hooks/usePaginatedFilters';
 import type { AdminAnalyticsScreenProps } from './adminAnalyticsTypes';
 import AdminActivityChart from './AdminActivityChart';
@@ -20,6 +21,7 @@ import AdminMetricCard from './AdminMetricCard';
 import AdminSection, { AdminTableSummary } from './AdminSection';
 import AdminSubsection from './AdminSubsection';
 import AdminTabs from './AdminTabs';
+import { formatWhen } from './format';
 import { buildRecentSignupColumns } from './userGridColumns';
 
 type AnalyticsTab = 'overview' | 'users' | 'social' | 'tags';
@@ -96,7 +98,7 @@ export default function AdminAnalytics({
         appVersion={appVersion}
         versions={versions}
         versionsLoading={versionsLoading}
-        loading={loading || fetching || refreshing}
+        loading={(loading || fetching || refreshing) && !metrics}
         onPresetChange={onPresetChange}
         onRangeChange={onRangeChange}
         onAppVersionChange={onAppVersionChange}
@@ -111,11 +113,14 @@ export default function AdminAnalytics({
 
       {error ? <p className="admin-error admin-error-banner">{error}</p> : null}
 
-      {!loading && metrics && (
-        <>
+      {loading && !metrics ? <p className="admin-muted">Loading analytics…</p> : null}
+
+      {metrics ? (
+        <div className={fetching || refreshing ? 'admin-analytics-panel-wrap--refreshing' : undefined}>
           {tab === 'overview' && (
             <OverviewPanel
               metrics={metrics}
+              activity={activity}
               rangeLabel={rangeLabel}
               versionLabel={versionLabel}
               postsPerActive={postsPerActive}
@@ -146,20 +151,22 @@ export default function AdminAnalytics({
           {tab === 'tags' && (
             <TagsPanel tags={tags} rangeLabel={rangeLabel} versionLabel={versionLabel} />
           )}
-        </>
-      )}
+        </div>
+      ) : null}
     </AdminSection>
   );
 }
 
 function OverviewPanel({
   metrics,
+  activity,
   rangeLabel,
   versionLabel,
   postsPerActive,
   appliedVersion,
 }: {
   metrics: AnalyticsMetrics;
+  activity: DailyActivityRow[];
   rangeLabel: string;
   versionLabel: string;
   postsPerActive: string;
@@ -169,10 +176,11 @@ function OverviewPanel({
     <div className="admin-analytics-panel">
       <FilterSummary rangeLabel={rangeLabel} versionLabel={versionLabel} metrics={metrics} />
       <p className="admin-muted admin-panel-lead">
-        Headline metrics for the selected range. Browse and fix individual posts on{' '}
+        Headline metrics and daily trends for the selected range. Browse and fix individual posts on{' '}
         <Link to="/admin/posts">Posts</Link>.
       </p>
-      <div className="admin-metric-grid admin-metric-grid--dense">
+
+      <div className="admin-metric-grid admin-metric-grid--hero">
         <AdminMetricCard label="Signups" value={metrics.signups} sub={`Joined ${rangeLabel}`} />
         <AdminMetricCard
           label="Active posters"
@@ -180,6 +188,9 @@ function OverviewPanel({
           sub={`${postsPerActive} posts per active user`}
         />
         <AdminMetricCard label="Sleep posts" value={metrics.posts} sub={rangeLabel} />
+      </div>
+
+      <div className="admin-metric-grid admin-metric-grid--dense">
         <AdminMetricCard label="Comments" value={metrics.comments} sub={rangeLabel} />
         <AdminMetricCard label="Kudos" value={metrics.kudos} sub={rangeLabel} />
         <AdminMetricCard
@@ -201,6 +212,35 @@ function OverviewPanel({
           />
         )}
       </div>
+
+      {activity.length > 0 ? (
+        <div className="admin-chart-grid admin-chart-grid--pair">
+          <AdminActivityChart
+            title="Daily active posters"
+            rows={activity}
+            series="active_users"
+            color="var(--accent)"
+          />
+          <AdminActivityChart
+            title="Daily sleep posts"
+            rows={activity}
+            series="posts"
+            color="var(--deep)"
+          />
+          <AdminActivityChart
+            title="Daily signups"
+            rows={activity}
+            series="signups"
+            color="var(--rem)"
+          />
+          <AdminActivityChart
+            title="Daily comments"
+            rows={activity}
+            series="comments"
+            color="var(--text-muted)"
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -238,7 +278,7 @@ function UsersPanel({
       </div>
 
       {activity.length > 0 && (
-        <div className="admin-chart-grid admin-chart-grid--single">
+        <div className="admin-chart-grid admin-chart-grid--pair">
           <AdminActivityChart title="Daily signups" rows={activity} series="signups" color="var(--deep)" />
           <AdminActivityChart title="Daily active posters" rows={activity} series="active_users" color="var(--accent)" />
         </div>
@@ -252,7 +292,7 @@ function UsersPanel({
         {usersTotal === 0 ? (
           <p className="admin-muted">No signups match your filters.</p>
         ) : (
-          <RecentSignupsGrid
+          <RecentSignupsList
             users={users}
             usersTotal={usersTotal}
             showVersion={showVersion}
@@ -334,6 +374,128 @@ function TagsPanel({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function RecentSignupsList({
+  users,
+  usersTotal,
+  showVersion,
+  paginationModel,
+  onPaginationModelChange,
+  loading,
+}: {
+  users: RecentUserRow[];
+  usersTotal: number;
+  showVersion: boolean;
+  paginationModel: { page: number; pageSize: number };
+  onPaginationModelChange: (model: { page: number; pageSize: number }) => void;
+  loading: boolean;
+}) {
+  const isNarrow = useMediaQuery('(max-width: 720px)');
+
+  if (isNarrow) {
+    return (
+      <SignupMobileCards
+        users={users}
+        usersTotal={usersTotal}
+        showVersion={showVersion}
+        paginationModel={paginationModel}
+        onPaginationModelChange={onPaginationModelChange}
+        loading={loading}
+      />
+    );
+  }
+
+  return (
+    <RecentSignupsGrid
+      users={users}
+      usersTotal={usersTotal}
+      showVersion={showVersion}
+      paginationModel={paginationModel}
+      onPaginationModelChange={onPaginationModelChange}
+      loading={loading}
+    />
+  );
+}
+
+function SignupMobileCards({
+  users,
+  usersTotal,
+  showVersion,
+  paginationModel,
+  onPaginationModelChange,
+  loading,
+}: {
+  users: RecentUserRow[];
+  usersTotal: number;
+  showVersion: boolean;
+  paginationModel: { page: number; pageSize: number };
+  onPaginationModelChange: (model: { page: number; pageSize: number }) => void;
+  loading: boolean;
+}) {
+  const pageCount = Math.max(1, Math.ceil(usersTotal / paginationModel.pageSize));
+  const canPrev = paginationModel.page > 0;
+  const canNext = paginationModel.page + 1 < pageCount;
+
+  return (
+    <div className={`admin-mobile-card-list${loading ? ' admin-mobile-card-list--loading' : ''}`}>
+      <ul className="admin-mobile-card-list-items">
+        {users.map((user) => (
+          <li key={user.id} className="admin-mobile-card">
+            <div className="admin-mobile-card-header">
+              <Link to={`/admin/users?q=${encodeURIComponent(user.username)}`} className="admin-mobile-card-title">
+                @{user.username}
+              </Link>
+              <span className="admin-mobile-card-meta">{formatWhen(user.created_at)}</span>
+            </div>
+            <dl className="admin-mobile-card-facts">
+              <div>
+                <dt>Posts</dt>
+                <dd>{user.posts_count}</dd>
+              </div>
+              {user.is_premium ? (
+                <div>
+                  <dt>Premium</dt>
+                  <dd>Yes</dd>
+                </div>
+              ) : null}
+              {showVersion && user.last_app_version ? (
+                <div>
+                  <dt>Version</dt>
+                  <dd>v{user.last_app_version}</dd>
+                </div>
+              ) : null}
+            </dl>
+            {user.email ? <p className="admin-mobile-card-email">{user.email}</p> : null}
+          </li>
+        ))}
+      </ul>
+
+      {pageCount > 1 ? (
+        <div className="admin-mobile-card-pager">
+          <button
+            type="button"
+            className="admin-button admin-button-ghost admin-button-sm"
+            disabled={!canPrev || loading}
+            onClick={() => onPaginationModelChange({ ...paginationModel, page: paginationModel.page - 1 })}
+          >
+            Previous
+          </button>
+          <span className="admin-muted">
+            Page {paginationModel.page + 1} of {pageCount}
+          </span>
+          <button
+            type="button"
+            className="admin-button admin-button-ghost admin-button-sm"
+            disabled={!canNext || loading}
+            onClick={() => onPaginationModelChange({ ...paginationModel, page: paginationModel.page + 1 })}
+          >
+            Next
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

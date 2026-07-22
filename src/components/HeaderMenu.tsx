@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { APP_STORE_URL } from '../lib/deepLinks';
 
 type Props = {
   showAdmin: boolean;
@@ -8,13 +9,14 @@ type Props = {
 };
 
 export default function HeaderMenu({ showAdmin, adminActive }: Props) {
-  const { signOut } = useAuth();
+  const { session, signOut } = useAuth();
+  const isLoggedIn = Boolean(session);
   const [open, setOpen] = useState(false);
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) return undefined;
     const onDoc = (e: MouseEvent) => {
       if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
     };
@@ -37,6 +39,7 @@ export default function HeaderMenu({ showAdmin, adminActive }: Props) {
         aria-expanded={open}
         aria-haspopup="menu"
         aria-controls={menuId}
+        aria-label="Menu"
         onClick={() => setOpen((v) => !v)}
       >
         ···
@@ -62,17 +65,41 @@ export default function HeaderMenu({ showAdmin, adminActive }: Props) {
           <NavLink to="/terms" role="menuitem" className="header-menu-item" onClick={() => setOpen(false)}>
             Terms
           </NavLink>
-          <button
-            type="button"
-            role="menuitem"
-            className="header-menu-item header-menu-item--button"
-            onClick={() => {
-              setOpen(false);
-              signOut();
-            }}
-          >
-            Log out
-          </button>
+          {!isLoggedIn ? (
+            <a
+              href={APP_STORE_URL}
+              role="menuitem"
+              className="header-menu-item header-menu-item--store"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setOpen(false)}
+            >
+              App Store
+            </a>
+          ) : null}
+          {isLoggedIn ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="header-menu-item header-menu-item--button"
+              onClick={() => {
+                setOpen(false);
+                void signOut();
+              }}
+            >
+              Log out
+            </button>
+          ) : (
+            <NavLink
+              to="/"
+              end
+              role="menuitem"
+              className="header-menu-item"
+              onClick={() => setOpen(false)}
+            >
+              Log in
+            </NavLink>
+          )}
         </div>
       ) : null}
     </div>

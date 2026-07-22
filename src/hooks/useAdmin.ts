@@ -1,4 +1,4 @@
-import { useIsFetching, useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useIsFetching, useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import {
   deleteAdminRoleDefinition,
@@ -137,7 +137,7 @@ export function usePostReportsPage(filters: ReportListFilters, enabled = true) {
     queryKey: queryKeys.admin.postReportsPage(filters),
     queryFn: () => fetchPostReports(filters),
     enabled,
-    placeholderData: (previous) => previous,
+    placeholderData: keepPreviousData,
     staleTime: ADMIN_REPORTS_STALE_MS,
     gcTime: ADMIN_QUERY_GC_MS,
   });
@@ -148,7 +148,7 @@ export function useCommentReportsPage(filters: ReportListFilters, enabled = true
     queryKey: queryKeys.admin.commentReportsPage(filters),
     queryFn: () => fetchCommentReports(filters),
     enabled,
-    placeholderData: (previous) => previous,
+    placeholderData: keepPreviousData,
     staleTime: ADMIN_REPORTS_STALE_MS,
     gcTime: ADMIN_QUERY_GC_MS,
   });
@@ -221,7 +221,7 @@ export function useAdminUserSearch(filters: UserSearchFilters, enabled = true) {
     queryKey: queryKeys.admin.userSearch(filters),
     queryFn: () => searchAdminUsers(filters),
     enabled,
-    placeholderData: (previous) => previous,
+    placeholderData: keepPreviousData,
     ...adminQueryOptions,
   });
 }
@@ -230,7 +230,7 @@ export function useAdminRecentUsers(filters: AnalyticsFilters) {
   return useQuery({
     queryKey: queryKeys.admin.analyticsUsers(filters),
     queryFn: () => fetchRecentUsers(filters),
-    placeholderData: (previous) => previous,
+    placeholderData: keepPreviousData,
     ...adminQueryOptions,
   });
 }
@@ -241,23 +241,26 @@ export function useAdminPostsPageData(filters: AnalyticsFilters) {
       {
         queryKey: queryKeys.admin.postsPageMetrics(filters),
         queryFn: () => fetchAnalyticsMetrics(filters),
+        placeholderData: keepPreviousData,
         ...adminQueryOptions,
       },
       {
         queryKey: queryKeys.admin.postsPageActivity(filters),
         queryFn: () => fetchDailyActivity(filters),
+        placeholderData: keepPreviousData,
         ...adminQueryOptions,
       },
       {
         queryKey: queryKeys.admin.recentPosts(filters),
         queryFn: () => fetchRecentPosts(filters),
+        placeholderData: keepPreviousData,
         ...adminQueryOptions,
       },
     ],
   });
 
   const [metricsQ, activityQ, postsQ] = results;
-  const loading = results.some((r) => r.isLoading);
+  const loading = results.some((r) => r.isLoading && r.data === undefined);
   const fetching = results.some((r) => r.isFetching);
 
   let error: string | null = null;
@@ -291,16 +294,19 @@ export function useAdminAnalyticsBundle(filters: AnalyticsFilters) {
       {
         queryKey: queryKeys.admin.analyticsMetrics(filters),
         queryFn: () => fetchAnalyticsMetrics(filters),
+        placeholderData: keepPreviousData,
         ...adminQueryOptions,
       },
       {
         queryKey: queryKeys.admin.analyticsActivity(filters),
         queryFn: () => fetchDailyActivity(filters),
+        placeholderData: keepPreviousData,
         ...adminQueryOptions,
       },
       {
         queryKey: queryKeys.admin.analyticsTags(tagFilters),
         queryFn: () => fetchAdminTags(tagFilters),
+        placeholderData: keepPreviousData,
         ...catalogQueryOptions,
       },
     ],
@@ -308,7 +314,9 @@ export function useAdminAnalyticsBundle(filters: AnalyticsFilters) {
 
   const [metricsQ, activityQ, tagsQ] = results;
 
-  const loading = results.some((r) => r.isLoading);
+  // With placeholderData, isLoading is false while showing prior range — treat as
+  // "no data yet" only when we have nothing to render.
+  const loading = results.some((r) => r.isLoading && r.data === undefined);
   const fetching = results.some((r) => r.isFetching);
 
   let error: string | null = null;
@@ -434,7 +442,7 @@ export function usePremiumUsers(filters: PremiumUserFilters, enabled = true) {
     queryKey: queryKeys.admin.premiumUsers(filters),
     queryFn: () => fetchPremiumUsers(filters),
     enabled,
-    placeholderData: (previous) => previous,
+    placeholderData: keepPreviousData,
     ...adminQueryOptions,
   });
 }
@@ -520,7 +528,7 @@ export function useAdminChallenges(filters: ChallengeListFilters, enabled = true
     queryKey: queryKeys.admin.challenges(filters),
     queryFn: () => fetchAdminChallenges(filters),
     enabled,
-    placeholderData: (previous) => previous,
+    placeholderData: keepPreviousData,
     ...adminQueryOptions,
   });
 }
@@ -530,7 +538,7 @@ export function useAdminClubs(filters: PaginationFilters, enabled = true) {
     queryKey: queryKeys.admin.clubs(filters),
     queryFn: () => fetchAdminClubs(filters),
     enabled,
-    placeholderData: (previous) => previous,
+    placeholderData: keepPreviousData,
     ...adminQueryOptions,
   });
 }
@@ -540,7 +548,7 @@ export function useDataIssues(filters: DataIssueFilters, enabled = true) {
     queryKey: queryKeys.admin.dataIssues(filters),
     queryFn: () => fetchDataIssues(filters),
     enabled,
-    placeholderData: (previous) => previous,
+    placeholderData: keepPreviousData,
     ...adminQueryOptions,
   });
 }

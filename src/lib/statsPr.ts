@@ -11,3 +11,19 @@ export function resolvePr(dbPr: PR, topNight?: TopNight, valueKey?: keyof TopNig
     postId: topNight.postId,
   };
 }
+
+export function resolvePctPr(
+  dbPr: PR,
+  topNight?: TopNight,
+  stageKey?: 'deepMinutes' | 'remMinutes' | 'coreMinutes',
+): PR {
+  if (dbPr?.value) return dbPr;
+  if (!topNight || !stageKey || topNight.asleepMinutes <= 0) return null;
+  const stage = topNight[stageKey];
+  if (!stage || stage <= 0) return null;
+  return {
+    value: (stage / topNight.asleepMinutes) * 100,
+    date: topNight.sleepDate,
+    postId: topNight.postId,
+  };
+}

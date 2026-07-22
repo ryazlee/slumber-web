@@ -1,7 +1,5 @@
 import type { AppVersionRow } from '../../lib/admin';
 import {
-  presetForRange,
-  rangeForPreset,
   todayISO,
   type DateRange,
   type RangePreset,
@@ -40,17 +38,6 @@ export default function AdminAnalyticsFilters({
 }: Props) {
   const showVersion = versions.length > 0;
 
-  const handlePreset = (next: Exclude<RangePreset, 'custom'>) => {
-    onPresetChange(next);
-    onRangeChange(rangeForPreset(next, todayISO()));
-  };
-
-  const handleDateChange = (part: 'start' | 'end', value: string) => {
-    const nextRange = { ...range, [part]: value };
-    onRangeChange(nextRange);
-    onPresetChange(presetForRange(nextRange));
-  };
-
   return (
     <div
       className={`admin-analytics-bar${loading ? ' admin-analytics-bar--loading' : ''}`}
@@ -62,7 +49,7 @@ export default function AdminAnalyticsFilters({
             key={item.id}
             type="button"
             className={preset === item.id ? 'admin-tab active' : 'admin-tab'}
-            onClick={() => handlePreset(item.id)}
+            onClick={() => onPresetChange(item.id)}
           >
             {item.label}
           </button>
@@ -76,7 +63,7 @@ export default function AdminAnalyticsFilters({
           value={range.start}
           max={range.end}
           aria-label="Start date"
-          onChange={(e) => handleDateChange('start', e.target.value)}
+          onChange={(e) => onRangeChange({ ...range, start: e.target.value })}
         />
         <span className="admin-analytics-date-sep" aria-hidden>–</span>
         <input
@@ -86,7 +73,7 @@ export default function AdminAnalyticsFilters({
           min={range.start}
           max={todayISO()}
           aria-label="End date"
-          onChange={(e) => handleDateChange('end', e.target.value)}
+          onChange={(e) => onRangeChange({ ...range, end: e.target.value })}
         />
       </div>
 

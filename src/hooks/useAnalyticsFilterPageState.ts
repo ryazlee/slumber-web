@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { loadAnalyticsFilters, saveAnalyticsFilters } from '../lib/analyticsFilterState';
-import { rangeForPreset, type DateRange, type RangePreset } from '../lib/analyticsRange';
+import {
+  presetForRange,
+  rangeForPreset,
+  type DateRange,
+  type RangePreset,
+} from '../lib/analyticsRange';
 import type { AdminAnalyticsScreenProps } from '../components/admin/adminAnalyticsTypes';
 
 type AnalyticsFilterState = {
@@ -38,8 +43,19 @@ export function useAnalyticsFilterPageState(): AdminAnalyticsScreenProps {
     range,
     preset,
     appVersion,
-    onPresetChange: (next) => setFilters((prev) => ({ ...prev, preset: next })),
-    onRangeChange: (next) => setFilters((prev) => ({ ...prev, range: next })),
+    onPresetChange: (next) => setFilters((prev) => {
+      if (next === 'custom') return { ...prev, preset: next };
+      return {
+        ...prev,
+        preset: next,
+        range: rangeForPreset(next),
+      };
+    }),
+    onRangeChange: (next) => setFilters((prev) => ({
+      ...prev,
+      range: next,
+      preset: presetForRange(next),
+    })),
     onAppVersionChange: (next) => setFilters((prev) => ({ ...prev, appVersion: next })),
   };
 }

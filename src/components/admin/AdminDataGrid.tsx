@@ -10,6 +10,7 @@ import {
   saveAdminGridState,
 } from '../../lib/adminGridState';
 import { ADMIN_SEARCH_DEBOUNCE_MS } from '../../lib/adminSearch';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const PERSIST_DEBOUNCE_MS = 300;
 
@@ -91,6 +92,7 @@ export default function AdminDataGrid({
   const apiRef = useGridApiRef();
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const lastSerializedRef = useRef<string | null>(null);
+  const isNarrow = useMediaQuery('(max-width: 720px)');
 
   const [restoredInitialState] = useState(() => {
     const defaults = buildDefaultInitialState(initialState);
@@ -166,6 +168,7 @@ export default function AdminDataGrid({
         onStateChange={handleStateChange}
         {...paginationProps}
         {...props}
+        density={props.density ?? (isNarrow ? 'compact' : 'standard')}
       />
     </div>
   );

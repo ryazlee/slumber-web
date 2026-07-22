@@ -3,7 +3,20 @@ export const PR_LABELS: Record<string, string> = {
   most_deep_sleep: 'Most Deep',
   most_rem: 'Most REM',
   most_core_sleep: 'Most Core',
+  highest_deep_pct: 'Highest Deep %',
+  highest_rem_pct: 'Highest REM %',
+  highest_core_pct: 'Highest Core %',
 };
+
+export const PERCENT_PR_TYPES = new Set([
+  'highest_deep_pct',
+  'highest_rem_pct',
+  'highest_core_pct',
+]);
+
+export function isPercentPrType(type: string): boolean {
+  return PERCENT_PR_TYPES.has(type);
+}
 
 // Maps record_type → diff vs #2 in the user's own lifetime top-3
 export type PRDiffs = Record<string, number>;

@@ -12,6 +12,9 @@ export type UserStats = {
   prMostDeep: PR;
   prMostRem: PR;
   prMostCore: PR;
+  prHighestDeepPct: PR;
+  prHighestRemPct: PR;
+  prHighestCorePct: PR;
 };
 
 export type TopNight = {
@@ -30,6 +33,10 @@ export type MonthBest = {
   deepMinutes: number;
   remMinutes: number;
   coreMinutes: number;
+  deepPct: number | null;
+  remPct: number | null;
+  corePct: number | null;
+  avgAwakeEvents: number | null;
   avgBedtime: string | null;
   avgWakeTime: string | null;
 };
@@ -43,6 +50,9 @@ export type LifetimeStats = {
   mostDeepNights: TopNight[];
   mostRemNights: TopNight[];
   mostCoreNights: TopNight[];
+  highestDeepPctNights: TopNight[];
+  highestRemPctNights: TopNight[];
+  highestCorePctNights: TopNight[];
   monthlyBests: MonthBest[];
 };
 

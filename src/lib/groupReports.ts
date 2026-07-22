@@ -12,6 +12,11 @@ export type PostReportEntry = {
 export type PostReportGroup = {
   postId: string;
   title: string;
+  dreamLog: string | null;
+  morningNotes: string | null;
+  vibe: string | null;
+  tags: string[] | null;
+  dreamMood: string | null;
   postSleepDate: string;
   postCreatedAt: string;
   postDeleted: boolean;
@@ -62,6 +67,11 @@ export function groupPostReports(rows: PostReportRow[]): PostReportGroup[] {
       group = {
         postId: row.post_id,
         title: row.title,
+        dreamLog: row.dream_log?.trim() || null,
+        morningNotes: row.morning_notes?.trim() || null,
+        vibe: row.vibe?.trim() || null,
+        tags: row.tags?.length ? row.tags : null,
+        dreamMood: row.dream_mood?.trim() || null,
         postSleepDate: row.post_sleep_date,
         postCreatedAt: row.post_created_at,
         postDeleted: row.post_deleted,
