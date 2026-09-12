@@ -33,6 +33,7 @@ import SocialFriends from './pages/app/SocialFriends';
 import SocialGlobal from './pages/app/SocialGlobal';
 import SocialLayout from './pages/app/SocialLayout';
 import StatsLayout from './pages/app/StatsLayout';
+import Contact from './pages/Contact';
 import DeleteAccount from './pages/DeleteAccount';
 import DeleteData from './pages/DeleteData';
 import Download from './pages/Download';
@@ -120,6 +121,7 @@ export default function App() {
           <Route index element={<IndexRoute />} />
           <Route path="home" element={<HomeAliasRoute />} />
           <Route path="download" element={<Download />} />
+          <Route path="contact" element={<Contact />} />
           <Route path="privacy" element={<Privacy />} />
           <Route path="terms" element={<Terms />} />
           <Route path="delete-account" element={<DeleteAccount />} />

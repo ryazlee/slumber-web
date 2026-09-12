@@ -19,6 +19,7 @@ const STATIC_SPA_ROUTES = [
   'delete-data',
   'home',
   'download',
+  'contact',
 ];
 
 function appLinkPath(basePath: string, route: string): string {

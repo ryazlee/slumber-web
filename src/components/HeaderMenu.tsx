@@ -74,6 +74,9 @@ export default function HeaderMenu({ showAdmin, adminActive, variant = 'dots' }:
               Download
             </NavLink>
           ) : null}
+          <NavLink to="/contact" role="menuitem" className="header-menu-item" onClick={() => setOpen(false)}>
+            Contact
+          </NavLink>
           <NavLink to="/privacy" role="menuitem" className="header-menu-item" onClick={() => setOpen(false)}>
             Privacy
           </NavLink>
@@ -86,14 +89,6 @@ export default function HeaderMenu({ showAdmin, adminActive, variant = 'dots' }:
           <NavLink to="/delete-data" role="menuitem" className="header-menu-item" onClick={() => setOpen(false)}>
             Delete data
           </NavLink>
-          <a
-            href="mailto:useslumber@gmail.com"
-            role="menuitem"
-            className="header-menu-item"
-            onClick={() => setOpen(false)}
-          >
-            Contact
-          </a>
           {isLoggedIn ? (
             <button
               type="button"

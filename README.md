@@ -38,6 +38,7 @@ npm install && npm run dev
 | `/challenges` | Yes | Active and completed challenges |
 | `/home` | No | Same marketing home as `/` (About / legacy links) |
 | `/download` | No | Dedicated App Store + Google Play download page |
+| `/contact` | No | Support email + developer contact |
 | `*` (unknown) | No | Not-found page (Home / Download CTAs) |
 | `/privacy` | No | Privacy policy (App Store / Play link) |
 | `/terms` | No | Terms of service |
@@ -87,7 +88,7 @@ Crawlers do not run React. Open Graph tags are injected at build time into `inde
 
 **Mitigations in this repo:**
 
-1. **Build-time static shells** — `vite` copies `index.html` into `privacy/`, `terms/`, `delete-account/`, `delete-data/`, `home/`, and `download/` so those URLs return **HTTP 200** on GitHub Pages (required for Play Console).
+1. **Build-time static shells** — `vite` copies `index.html` into `privacy/`, `terms/`, `delete-account/`, `delete-data/`, `home/`, `download/`, and `contact/` so those URLs return **HTTP 200** on GitHub Pages (required for Play Console).
 2. **Cloudflare Pages** (optional) — deploy `dist/` with `public/_redirects` (`/* /index.html 200`). Previews use `index.html` meta + logo.
 3. **Cloudflare Worker** (optional, keep GitHub Pages) — deploy `cloudflare/link-preview-worker.mjs` on `useslumber.com/*` to re-serve `404.html` with status **200** for deep-link + legal paths. See `cloudflare/README.md`.
 4. **Verify after deploy** — `curl -sI https://useslumber.com/privacy` and `curl -sI https://useslumber.com/invite/TOKEN` should be `200`; `og-image.png` must return `200`.
