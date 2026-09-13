@@ -36,6 +36,7 @@ import {
   fetchAdminChallenges,
   fetchAdminClubs,
   fetchAdminUserDetail,
+  fetchAdminUserConnections,
   fetchCohortRetention,
   fetchCommunityMetrics,
   fetchDataIssues,
@@ -535,6 +536,15 @@ export function useAdminUserDetail(userId: string | null) {
   return useQuery({
     queryKey: queryKeys.admin.userDetail(userId ?? ''),
     queryFn: () => fetchAdminUserDetail(userId!),
+    enabled: Boolean(userId),
+    ...adminQueryOptions,
+  });
+}
+
+export function useAdminUserConnections(userId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.admin.userConnections(userId ?? ''),
+    queryFn: () => fetchAdminUserConnections(userId!),
     enabled: Boolean(userId),
     ...adminQueryOptions,
   });

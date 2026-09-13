@@ -14,6 +14,7 @@ import { getCachedRoleOptions } from '../../lib/userRoles';
 import AdminCopyButton from './AdminCopyButton';
 import AdminGridAction from './AdminGridAction';
 import AdminPanel from './AdminPanel';
+import AdminUserConnections from './AdminUserConnections';
 import AdminUserRoleEditor from './AdminUserRoleEditor';
 import { formatWhen } from './format';
 import { ADMIN_CATALOG_FORM_ID } from './adminScroll';
@@ -21,9 +22,18 @@ import { ADMIN_CATALOG_FORM_ID } from './adminScroll';
 type Props = {
   user: RecentUserRow;
   onClose: () => void;
+  onOpenUser: (user: { id: string; username: string }) => void;
+  onBack?: () => void;
+  backLabel?: string;
 };
 
-export default function AdminUserDetailPanel({ user, onClose }: Props) {
+export default function AdminUserDetailPanel({
+  user,
+  onClose,
+  onOpenUser,
+  onBack,
+  backLabel,
+}: Props) {
   const detailQuery = useAdminUserDetail(user.id);
   const postsQuery = useAdminUserPosts(
     { userId: user.id, page: 0, pageSize: 10 },
@@ -125,9 +135,16 @@ export default function AdminUserDetailPanel({ user, onClose }: Props) {
       ].filter(Boolean).join(' · ') || undefined}
       highlighted
       headerAction={(
-        <button type="button" className="admin-button admin-button-ghost" onClick={onClose}>
-          Close
-        </button>
+        <div className="admin-user-detail-header-actions">
+          {onBack ? (
+            <button type="button" className="admin-button admin-button-ghost" onClick={onBack}>
+              {backLabel ?? 'Back'}
+            </button>
+          ) : null}
+          <button type="button" className="admin-button admin-button-ghost" onClick={onClose}>
+            Close
+          </button>
+        </div>
       )}
     >
       {error ? <p className="admin-error">{error}</p> : null}
@@ -196,6 +213,8 @@ export default function AdminUserDetailPanel({ user, onClose }: Props) {
           embedded
         />
       ) : null}
+
+      <AdminUserConnections userId={user.id} onOpenUser={onOpenUser} />
 
       <div className="admin-user-detail-posts">
         <h3 className="admin-subsection-title">Recent posts</h3>

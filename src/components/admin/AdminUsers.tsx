@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { type GridRowParams } from '@mui/x-data-grid';
 import type { RecentUserRow, UserSearchFilters } from '../../lib/admin';
@@ -82,6 +82,7 @@ export default function AdminUsers() {
   const error = getOptionalQueryErrorMessage(usersQuery.error, 'Could not load users.');
 
   const [selectedUser, setSelectedUser] = useState<RecentUserRow | null>(null);
+  const [detailHistory, setDetailHistory] = useState<RecentUserRow[]>([]);
 
   const hasFilters = Boolean(query || roleFilter || premiumOnly || minPosts || joinedWithin || quickFilter);
 
@@ -115,15 +116,52 @@ export default function AdminUsers() {
     setSearchParams({});
   };
 
-  const closeDetail = () => {
+  const closeDetail = useCallback(() => {
     setSelectedUser(null);
+    setDetailHistory([]);
+  }, []);
+
+  const goBack = useCallback(() => {
+    setDetailHistory((history) => {
+      const prev = history[history.length - 1] ?? null;
+      setSelectedUser(prev);
+      return history.slice(0, -1);
+    });
+  }, []);
+
+  const dismissDetail = useCallback(() => {
+    if (detailHistory.length > 0) goBack();
+    else closeDetail();
+  }, [detailHistory.length, goBack, closeDetail]);
+
+  useEscapeKey(Boolean(selectedUser), dismissDetail);
+
+  const openDetail = (user: RecentUserRow, fromGraph = false) => {
+    if (fromGraph) {
+      setSelectedUser((current) => {
+        if (current && current.id !== user.id) {
+          setDetailHistory((history) => [...history, current]);
+        }
+        return user;
+      });
+    } else {
+      setDetailHistory([]);
+      setSelectedUser(user);
+    }
+    scrollAdminPanelIntoView(ADMIN_CATALOG_FORM_ID);
   };
 
-  useEscapeKey(Boolean(selectedUser), closeDetail);
-
-  const openDetail = (user: RecentUserRow) => {
-    setSelectedUser(user);
-    scrollAdminPanelIntoView(ADMIN_CATALOG_FORM_ID);
+  const openConnectedUser = (user: { id: string; username: string }) => {
+    if (selectedUser?.id === user.id) return;
+    const known = users.find((row) => row.id === user.id);
+    openDetail(known ?? {
+      id: user.id,
+      username: user.username,
+      created_at: '',
+      user_roles: null,
+      is_premium: false,
+      posts_count: 0,
+    }, true);
   };
 
   const toggleQuickFilter = (next: QuickFilter) => {
@@ -259,7 +297,17 @@ export default function AdminUsers() {
       </AdminListToolbar>
 
       {selectedUser ? (
-        <AdminUserDetailPanel user={selectedUser} onClose={closeDetail} />
+        <AdminUserDetailPanel
+          user={selectedUser}
+          onClose={closeDetail}
+          onOpenUser={openConnectedUser}
+          onBack={detailHistory.length > 0 ? goBack : undefined}
+          backLabel={
+            detailHistory.length > 0
+              ? `Back to @${detailHistory[detailHistory.length - 1].username}`
+              : undefined
+          }
+        />
       ) : null}
 
       <AdminDataGrid

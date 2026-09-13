@@ -247,6 +247,61 @@ export type AdminUserDetail = {
   device_tokens: number;
 };
 
+export type AdminConnectionUser = {
+  id: string;
+  username: string;
+};
+
+export type AdminUserFriendRow = AdminConnectionUser & {
+  since: string;
+};
+
+export type AdminPendingFriendRow = AdminConnectionUser & {
+  direction: 'incoming' | 'outgoing' | string;
+  created_at: string;
+};
+
+export type AdminUserClubRow = {
+  id: string;
+  name: string;
+  emoji: string | null;
+  role: string;
+  invite_status: string;
+  joined_at: string | null;
+  created_at: string;
+  member_count: number;
+};
+
+export type AdminUserChallengeRow = {
+  id: string;
+  status: string;
+  title: string | null;
+  is_group: boolean;
+  goal_minutes: number;
+  role: string;
+  invite_status: string;
+  club_id: string | null;
+  club_name: string | null;
+  club_emoji: string | null;
+  participant_count: number;
+  others: AdminConnectionUser[];
+  created_at: string;
+  started_at: string | null;
+  expires_at: string | null;
+};
+
+export type AdminConnectionList<T> = {
+  total: number;
+  rows: T[];
+};
+
+export type AdminUserConnections = {
+  friends: AdminConnectionList<AdminUserFriendRow>;
+  pending_friends: AdminConnectionList<AdminPendingFriendRow>;
+  clubs: AdminConnectionList<AdminUserClubRow>;
+  challenges: AdminConnectionList<AdminUserChallengeRow>;
+};
+
 export type AdminUserOpResult = {
   ok: boolean;
   user_id: string;
@@ -864,6 +919,43 @@ export async function fetchAdminUserDetail(userId: string): Promise<AdminUserDet
   });
   if (error) throw error;
   return data as AdminUserDetail;
+}
+
+export async function fetchAdminUserConnections(userId: string): Promise<AdminUserConnections> {
+  const { data, error } = await supabase.rpc('admin_get_user_connections', {
+    p_user_id: userId,
+  });
+  if (error) throw error;
+  return normalizeAdminUserConnections(data);
+}
+
+function asConnectionList<T>(value: unknown): AdminConnectionList<T> {
+  if (value && typeof value === 'object' && 'rows' in value) {
+    const row = value as { total?: unknown; rows?: unknown };
+    return {
+      total: typeof row.total === 'number' ? row.total : Array.isArray(row.rows) ? row.rows.length : 0,
+      rows: Array.isArray(row.rows) ? (row.rows as T[]) : [],
+    };
+  }
+  return { total: 0, rows: [] };
+}
+
+function normalizeAdminUserConnections(data: unknown): AdminUserConnections {
+  const row = (data && typeof data === 'object' ? data : {}) as Record<string, unknown>;
+  const challenges = asConnectionList<AdminUserChallengeRow>(row.challenges);
+  return {
+    friends: asConnectionList<AdminUserFriendRow>(row.friends),
+    pending_friends: asConnectionList<AdminPendingFriendRow>(row.pending_friends),
+    clubs: asConnectionList<AdminUserClubRow>(row.clubs),
+    challenges: {
+      ...challenges,
+      rows: challenges.rows.map((challenge) => ({
+        ...challenge,
+        others: Array.isArray(challenge.others) ? challenge.others : [],
+        is_group: Boolean(challenge.is_group),
+      })),
+    },
+  };
 }
 
 export async function resetUserStreak(userId: string): Promise<AdminUserOpResult> {

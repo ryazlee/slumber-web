@@ -62,6 +62,7 @@ export const queryKeys = {
     clubs: (filters: PaginationFilters) => ['admin', 'community', 'clubs', filters] as const,
     dataIssues: (filters: DataIssueFilters) => ['admin', 'data-issues', filters] as const,
     userDetail: (userId: string) => ['admin', 'user-detail', userId] as const,
+    userConnections: (userId: string) => ['admin', 'user-connections', userId] as const,
     postRaw: (postId: string) => ['admin', 'post-raw', postId] as const,
     userPosts: (filters: AnalyticsFilters) => ['admin', 'user-posts', filters] as const,
   },
