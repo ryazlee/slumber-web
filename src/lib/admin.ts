@@ -128,9 +128,11 @@ export type RecentUserRow = {
   is_premium: boolean;
   premium_until?: string | null;
   posts_count: number;
+  friends_count?: number;
   last_app_version?: string | null;
   is_suspended?: boolean;
   last_post_at?: string | null;
+  last_activity_at?: string | null;
 };
 
 export type HealthWindowActivation = {

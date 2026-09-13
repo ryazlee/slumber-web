@@ -20,12 +20,22 @@ export function buildAdminUserSearchColumns(
     usernameColumn<RecentUserRow>('Username', { minWidth: 140 }),
     emailColumn<RecentUserRow>(),
     loggedAtColumn<RecentUserRow>('created_at', 'Joined'),
+    loggedAtColumn<RecentUserRow>('last_activity_at', 'Last activity', { minWidth: 170 }),
     {
       field: 'posts_count',
       headerName: 'Posts',
       type: 'number',
       width: 90,
       valueGetter: (_value, row) => Number(row.posts_count ?? 0),
+    },
+    {
+      field: 'friends_count',
+      headerName: 'Friends',
+      type: 'number',
+      width: 100,
+      valueGetter: (_value, row) => (
+        row.friends_count == null ? null : Number(row.friends_count)
+      ),
     },
     {
       field: 'user_roles',
