@@ -24,6 +24,7 @@ export const ADMIN_PAGE_TITLES: Record<string, string> = {
   '/admin/community': 'Clubs',
   '/admin/premium': 'Premium',
   '/admin/notify': 'Notify',
+  '/admin/campaigns': 'Campaigns',
   '/admin/configure/tags': 'Tag catalog',
   '/admin/configure/roles': 'Roles',
 };
@@ -51,6 +52,7 @@ function buildAdminNavGroups(pendingReports = 0): AdminNavGroup[] {
       label: 'Actions',
       items: [
         { to: '/admin/notify', label: 'Notify' },
+        { to: '/admin/campaigns', label: 'Campaigns' },
       ],
     },
     {

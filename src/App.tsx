@@ -14,6 +14,7 @@ import AdminPostsPage from './pages/admin/AdminPostsPage';
 import AdminTagUsagePage from './pages/admin/AdminTagUsagePage';
 import AdminPremiumPage from './pages/admin/AdminPremiumPage';
 import AdminNotifyPage from './pages/admin/AdminNotifyPage';
+import AdminCampaignsPage from './pages/admin/AdminCampaignsPage';
 import AdminReportsPage from './pages/admin/AdminReportsPage';
 import AdminRolesPage from './pages/admin/AdminRolesPage';
 import AdminTagsPage from './pages/admin/AdminTagsPage';
@@ -91,6 +92,7 @@ export default function App() {
           <Route path="community" element={<AdminCommunityPage />} />
           <Route path="premium" element={<AdminPremiumPage />} />
           <Route path="notify" element={<AdminNotifyPage />} />
+          <Route path="campaigns" element={<AdminCampaignsPage />} />
           <Route path="configure">
             <Route index element={<Navigate to="tags" replace />} />
             <Route path="tags" element={<AdminTagsPage />} />

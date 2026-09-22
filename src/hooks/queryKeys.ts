@@ -65,5 +65,6 @@ export const queryKeys = {
     userConnections: (userId: string) => ['admin', 'user-connections', userId] as const,
     postRaw: (postId: string) => ['admin', 'post-raw', postId] as const,
     userPosts: (filters: AnalyticsFilters) => ['admin', 'user-posts', filters] as const,
+    campaigns: ['admin', 'campaigns'] as const,
   },
 };

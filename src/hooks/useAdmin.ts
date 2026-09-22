@@ -32,6 +32,9 @@ import {
   repairDoubledSleepPostStages,
   repairDoubledSleepPostStagesBulk,
   broadcastAdminNotification,
+  fetchAdminCampaigns,
+  upsertAdminCampaign,
+  setAdminCampaignEnabled,
   adminCancelChallenge,
   fetchAdminChallenges,
   fetchAdminClubs,
@@ -53,6 +56,7 @@ import {
   type ReportListFilters,
   type UserSearchFilters,
   type CatalogListFilters,
+  type AdminCampaignDraft,
 } from '../lib/admin';
 import {
   ADMIN_CATALOG_STALE_MS,
@@ -618,6 +622,35 @@ export function useBroadcastAdminNotification() {
       joinedWithinDays?: number | null;
       limit?: number;
     }) => broadcastAdminNotification(message, { role, joinedWithinDays, limit }),
+  });
+}
+
+export function useAdminCampaigns() {
+  return useQuery({
+    queryKey: queryKeys.admin.campaigns,
+    queryFn: fetchAdminCampaigns,
+    ...adminQueryOptions,
+  });
+}
+
+export function useUpsertAdminCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (draft: AdminCampaignDraft) => upsertAdminCampaign(draft),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.admin.campaigns });
+    },
+  });
+}
+
+export function useSetAdminCampaignEnabled() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
+      setAdminCampaignEnabled(id, enabled),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.admin.campaigns });
+    },
   });
 }
 

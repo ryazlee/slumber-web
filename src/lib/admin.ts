@@ -998,3 +998,69 @@ export async function broadcastAdminNotification(
   const row = data as BroadcastNotificationResult | null;
   return row ?? { sent: 0, device_tokens: 0 };
 }
+
+export type AdminCampaignRow = {
+  id: string;
+  title: string;
+  body: string;
+  emoji: string | null;
+  cta_label: string;
+  challenge_id: string;
+  challenge_title: string | null;
+  join_token: string | null;
+  open_link_enabled: boolean;
+  challenge_status: string;
+  target_roles: string[];
+  starts_at: string | null;
+  ends_at: string | null;
+  enabled: boolean;
+  priority: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AdminCampaignDraft = {
+  id?: string | null;
+  title: string;
+  body: string;
+  emoji: string;
+  cta_label: string;
+  challenge_id: string;
+  target_roles: string[];
+  starts_at: string | null;
+  ends_at: string | null;
+  enabled: boolean;
+  priority: number;
+};
+
+export async function fetchAdminCampaigns(): Promise<AdminCampaignRow[]> {
+  const { data, error } = await supabase.rpc('admin_list_app_campaigns');
+  if (error) throw error;
+  return (data ?? []) as AdminCampaignRow[];
+}
+
+export async function upsertAdminCampaign(draft: AdminCampaignDraft): Promise<string> {
+  const { data, error } = await supabase.rpc('admin_upsert_app_campaign', {
+    p_id: draft.id || null,
+    p_title: draft.title,
+    p_body: draft.body,
+    p_emoji: draft.emoji || null,
+    p_cta_label: draft.cta_label || 'Join',
+    p_challenge_id: draft.challenge_id,
+    p_target_roles: draft.target_roles,
+    p_starts_at: draft.starts_at,
+    p_ends_at: draft.ends_at,
+    p_enabled: draft.enabled,
+    p_priority: draft.priority,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+export async function setAdminCampaignEnabled(id: string, enabled: boolean): Promise<void> {
+  const { error } = await supabase.rpc('admin_set_app_campaign_enabled', {
+    p_id: id,
+    p_enabled: enabled,
+  });
+  if (error) throw error;
+}
