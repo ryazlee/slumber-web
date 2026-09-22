@@ -999,17 +999,29 @@ export async function broadcastAdminNotification(
   return row ?? { sent: 0, device_tokens: 0 };
 }
 
+export const ADMIN_CAMPAIGN_ACTION_KINDS = ['challenge', 'message', 'url'] as const;
+
+export type AdminCampaignActionKind = (typeof ADMIN_CAMPAIGN_ACTION_KINDS)[number];
+
+export function defaultAdminCampaignCta(kind: AdminCampaignActionKind): string {
+  if (kind === 'message') return 'Got it';
+  if (kind === 'url') return 'Open';
+  return 'Join';
+}
+
 export type AdminCampaignRow = {
   id: string;
   title: string;
   body: string;
   emoji: string | null;
   cta_label: string;
-  challenge_id: string;
+  action_kind?: AdminCampaignActionKind | null;
+  challenge_id: string | null;
   challenge_title: string | null;
   join_token: string | null;
-  open_link_enabled: boolean;
-  challenge_status: string;
+  cta_url?: string | null;
+  open_link_enabled: boolean | null;
+  challenge_status: string | null;
   target_roles: string[];
   starts_at: string | null;
   ends_at: string | null;
@@ -1025,7 +1037,9 @@ export type AdminCampaignDraft = {
   body: string;
   emoji: string;
   cta_label: string;
+  action_kind: AdminCampaignActionKind;
   challenge_id: string;
+  cta_url: string;
   target_roles: string[];
   starts_at: string | null;
   ends_at: string | null;
@@ -1045,13 +1059,15 @@ export async function upsertAdminCampaign(draft: AdminCampaignDraft): Promise<st
     p_title: draft.title,
     p_body: draft.body,
     p_emoji: draft.emoji || null,
-    p_cta_label: draft.cta_label || 'Join',
-    p_challenge_id: draft.challenge_id,
+    p_cta_label: draft.cta_label || defaultAdminCampaignCta(draft.action_kind),
+    p_challenge_id: draft.action_kind === 'challenge' ? draft.challenge_id || null : null,
     p_target_roles: draft.target_roles,
     p_starts_at: draft.starts_at,
     p_ends_at: draft.ends_at,
     p_enabled: draft.enabled,
     p_priority: draft.priority,
+    p_action_kind: draft.action_kind,
+    p_cta_url: draft.action_kind === 'url' ? draft.cta_url || null : null,
   });
   if (error) throw error;
   return data as string;
