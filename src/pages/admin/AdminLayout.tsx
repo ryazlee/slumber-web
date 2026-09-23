@@ -34,6 +34,14 @@ function AdminShell() {
   useEscapeKey(navOpen && isNarrow, closeNav);
 
   useEffect(() => {
+    const root = document.documentElement;
+    root.classList.add('admin-app');
+    return () => {
+      root.classList.remove('admin-app');
+    };
+  }, []);
+
+  useEffect(() => {
     if (!(navOpen && isNarrow)) return undefined;
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';

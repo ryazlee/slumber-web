@@ -126,6 +126,9 @@ export default function ChallengeDetail() {
             {formatChallengeStatus(challenge.status)}
           </span>
         </div>
+        {challenge.hostedBy === 'slumber' ? (
+          <p className="challenge-meta">Hosted by Slumber</p>
+        ) : null}
         <p className="challenge-meta">
           {formatChallengeRaceType(challenge)}
           {challenge.startedAt && (

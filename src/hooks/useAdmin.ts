@@ -35,13 +35,14 @@ import {
   fetchAdminCampaigns,
   upsertAdminCampaign,
   setAdminCampaignEnabled,
+  createAdminSlumberChallenge,
+  startAdminSlumberChallenge,
   adminCancelChallenge,
   fetchAdminChallenges,
   fetchAdminClubs,
   fetchAdminClubRoster,
   fetchAdminUserDetail,
   fetchAdminUserConnections,
-  fetchCohortRetention,
   fetchCommunityMetrics,
   fetchDataIssues,
   fetchHealthMetrics,
@@ -480,20 +481,15 @@ export function useRepairDoubledSleepPostStagesBulk() {
   });
 }
 
-export function useHealthMetrics(days = 7, enabled = true) {
+export function useHealthMetrics(
+  range: { start: string; end: string },
+  enabled = true,
+) {
+  const ready = Boolean(range.start && range.end && range.start <= range.end);
   return useQuery({
-    queryKey: queryKeys.admin.healthMetrics(days),
-    queryFn: () => fetchHealthMetrics(days),
-    enabled,
-    ...adminQueryOptions,
-  });
-}
-
-export function useCohortRetention(weeks = 8, enabled = true) {
-  return useQuery({
-    queryKey: queryKeys.admin.cohortRetention(weeks),
-    queryFn: () => fetchCohortRetention(weeks),
-    enabled,
+    queryKey: queryKeys.admin.healthMetrics(range),
+    queryFn: () => fetchHealthMetrics(range),
+    enabled: enabled && ready,
     ...adminQueryOptions,
   });
 }
@@ -658,6 +654,22 @@ export function useSetAdminCampaignEnabled() {
   return useMutation({
     mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
       setAdminCampaignEnabled(id, enabled),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.admin.campaigns });
+    },
+  });
+}
+
+export function useCreateAdminSlumberChallenge() {
+  return useMutation({
+    mutationFn: createAdminSlumberChallenge,
+  });
+}
+
+export function useStartAdminSlumberChallenge() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (challengeId: string) => startAdminSlumberChallenge(challengeId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.admin.campaigns });
     },

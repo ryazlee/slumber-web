@@ -164,8 +164,16 @@ export type HealthWindowEngagement = {
   buddy_tags?: number;
 };
 
+export type HealthMetricsRange = {
+  start: string;
+  end: string;
+};
+
 export type HealthMetrics = {
   days: number;
+  /** Inclusive calendar bounds when returned by the range RPC. */
+  start?: string;
+  end?: string;
   activation: HealthWindowActivation & {
     never_posted_total: number;
     inactive_posters: number;
@@ -190,14 +198,6 @@ export type HealthMetrics = {
       mau: number;
     };
   };
-};
-
-export type CohortRetentionRow = {
-  week_start: string;
-  signups: number;
-  posted_week_0: number;
-  posted_week_2: number;
-  retention_week_2_pct: number;
 };
 
 export type CommunityMetrics = {
@@ -886,16 +886,13 @@ export async function sendAdminNotification(
   };
 }
 
-export async function fetchHealthMetrics(days = 7): Promise<HealthMetrics> {
-  const { data, error } = await supabase.rpc('admin_get_health_metrics', { p_days: days });
+export async function fetchHealthMetrics(range: HealthMetricsRange): Promise<HealthMetrics> {
+  const { data, error } = await supabase.rpc('admin_get_health_metrics', {
+    p_start: range.start,
+    p_end: range.end,
+  });
   if (error) throw error;
   return data as HealthMetrics;
-}
-
-export async function fetchCohortRetention(weeks = 8): Promise<CohortRetentionRow[]> {
-  const { data, error } = await supabase.rpc('admin_get_cohort_retention', { p_weeks: weeks });
-  if (error) throw error;
-  return (data as CohortRetentionRow[] | null) ?? [];
 }
 
 export async function fetchCommunityMetrics(): Promise<CommunityMetrics> {
@@ -1081,6 +1078,7 @@ export type AdminCampaignRow = {
   image_url?: string | null;
   open_link_enabled: boolean | null;
   challenge_status: string | null;
+  hosted_by?: string | null;
   target_roles: string[];
   starts_at: string | null;
   ends_at: string | null;
@@ -1155,6 +1153,39 @@ export async function uploadAdminCampaignImage(file: File): Promise<string> {
   });
   if (error) throw error;
   return supabase.storage.from(CAMPAIGN_IMAGE_BUCKET).getPublicUrl(path).data.publicUrl;
+}
+
+export type AdminSlumberChallenge = {
+  id: string;
+  joinToken: string;
+  title: string;
+};
+
+export async function createAdminSlumberChallenge(input: {
+  title: string;
+  goalMinutes: number;
+  noExpiration: boolean;
+  expiresInDays: number;
+  maxParticipants: number | null;
+}): Promise<AdminSlumberChallenge> {
+  const { data, error } = await supabase.rpc('admin_create_slumber_challenge', {
+    p_title: input.title,
+    p_goal_minutes: input.goalMinutes,
+    p_no_expiration: input.noExpiration,
+    p_expires_in_days: input.expiresInDays,
+    p_max_participants: input.maxParticipants,
+  });
+  if (error) throw error;
+  const row = data as AdminSlumberChallenge | null;
+  if (!row?.id) throw new Error('Could not create challenge.');
+  return row;
+}
+
+export async function startAdminSlumberChallenge(challengeId: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_start_slumber_challenge', {
+    p_challenge_id: challengeId,
+  });
+  if (error) throw error;
 }
 
 export async function setAdminCampaignEnabled(id: string, enabled: boolean): Promise<void> {

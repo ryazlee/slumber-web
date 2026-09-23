@@ -55,8 +55,8 @@ export const queryKeys = {
     userSearch: (filters: UserSearchFilters) => ['admin', 'user-search', filters] as const,
     premiumMetrics: ['admin', 'premium', 'metrics'] as const,
     premiumUsers: (filters: PremiumUserFilters) => ['admin', 'premium', 'users', filters] as const,
-    healthMetrics: (days: number) => ['admin', 'health', days] as const,
-    cohortRetention: (weeks: number) => ['admin', 'cohort', weeks] as const,
+    healthMetrics: (range: { start: string; end: string }) =>
+      ['admin', 'health', range.start, range.end] as const,
     communityMetrics: ['admin', 'community', 'metrics'] as const,
     challenges: (filters: ChallengeListFilters) => ['admin', 'community', 'challenges', filters] as const,
     clubs: (filters: PaginationFilters) => ['admin', 'community', 'clubs', filters] as const,

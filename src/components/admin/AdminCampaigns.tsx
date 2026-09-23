@@ -5,7 +5,9 @@ import { defaultAdminCampaignCta, uploadAdminCampaignImage } from '../../lib/adm
 import { getOptionalQueryErrorMessage } from '../../lib/queryError';
 import {
   useAdminCampaigns,
+  useCreateAdminSlumberChallenge,
   useSetAdminCampaignEnabled,
+  useStartAdminSlumberChallenge,
   useUpsertAdminCampaign,
 } from '../../hooks/useAdmin';
 import { useAssignableRoles } from '../../hooks/useCatalog';
@@ -30,6 +32,14 @@ const EMPTY_DRAFT: AdminCampaignDraft = {
   ends_at: null,
   enabled: true,
   priority: 0,
+};
+
+const EMPTY_SLUMBER = {
+  title: '',
+  goalHours: '40',
+  days: '10',
+  noExpiration: false,
+  maxParticipants: '',
 };
 
 const DEFAULT_EMOJI: Record<AdminCampaignActionKind, string> = {
@@ -71,11 +81,16 @@ export default function AdminCampaigns() {
   const campaignsQuery = useAdminCampaigns();
   const upsertMutation = useUpsertAdminCampaign();
   const enabledMutation = useSetAdminCampaignEnabled();
+  const createSlumberMutation = useCreateAdminSlumberChallenge();
+  const startSlumberMutation = useStartAdminSlumberChallenge();
   const rolesQuery = useAssignableRoles();
   const roleOptions = rolesQuery.data ?? getCachedRoleOptions();
 
   const [draft, setDraft] = useState<AdminCampaignDraft>(EMPTY_DRAFT);
+  const [slumber, setSlumber] = useState(EMPTY_SLUMBER);
+  const [slumberNote, setSlumberNote] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [listError, setListError] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
 
   const campaigns = campaignsQuery.data ?? [];
@@ -124,7 +139,75 @@ export default function AdminCampaigns() {
 
   const handleReset = () => {
     setDraft(EMPTY_DRAFT);
+    setSlumber(EMPTY_SLUMBER);
+    setSlumberNote(null);
     setFormError(null);
+  };
+
+  const handleCreateSlumber = async () => {
+    setFormError(null);
+    setSlumberNote(null);
+    const title = slumber.title.trim() || draft.title.trim();
+    const goalHours = Number(slumber.goalHours);
+    const days = Number(slumber.days);
+    const maxRaw = slumber.maxParticipants.trim();
+    const maxParticipants = maxRaw ? Number(maxRaw) : null;
+    if (!title) {
+      setFormError('Add a title for the Slumber challenge.');
+      return;
+    }
+    if (!Number.isFinite(goalHours) || goalHours < 10 || goalHours > 100) {
+      setFormError('Goal must be between 10 and 100 hours.');
+      return;
+    }
+    if (!slumber.noExpiration && (!Number.isFinite(days) || days < 1 || days > 100)) {
+      setFormError('Duration must be between 1 and 100 days.');
+      return;
+    }
+    if (maxParticipants != null && (!Number.isInteger(maxParticipants) || maxParticipants < 2)) {
+      setFormError('Max racers must be at least 2, or left blank.');
+      return;
+    }
+    try {
+      const created = await createSlumberMutation.mutateAsync({
+        title,
+        goalMinutes: Math.round(goalHours * 60),
+        noExpiration: slumber.noExpiration,
+        expiresInDays: slumber.noExpiration ? 10 : days,
+        maxParticipants,
+      });
+      setDraft((prev) => ({ ...prev, challenge_id: created.id }));
+      setSlumberNote(`Created “${created.title}”. Save the campaign to publish it. You are not a racer, so the join banner can show on your phone.`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Could not create challenge.';
+      if (message.includes('invalid_goal')) {
+        setFormError('Goal must be between 10 and 100 hours.');
+      } else if (message.includes('invalid_title')) {
+        setFormError('Challenge title must be 1–80 characters.');
+      } else if (message.includes('invalid_expiration_days')) {
+        setFormError('Duration must be between 1 and 100 days.');
+      } else if (message.includes('invalid_max_participants')) {
+        setFormError('Max racers must be between 2 and 10,000.');
+      } else {
+        setFormError(message);
+      }
+    }
+  };
+
+  const handleStartSlumber = async (challengeId: string) => {
+    setListError(null);
+    try {
+      await startSlumberMutation.mutateAsync(challengeId);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Could not start challenge.';
+      if (message.includes('insufficient_participants')) {
+        setListError('Need at least one racer before starting.');
+      } else if (message.includes('challenge_not_pending')) {
+        setListError('That race has already started.');
+      } else {
+        setListError(message);
+      }
+    }
   };
 
   const toggleRole = (key: string) => {
@@ -181,7 +264,7 @@ export default function AdminCampaigns() {
 
   return (
     <AdminSection
-      lead="Popup + header icon + Feed banner + pinned Notifications row. Optional promo image (upload or paste https). Challenge campaigns stay after join with You're in / View."
+      lead="Popup, header chip, Feed banner, and a pinned Notifications row. They only show when this page has an enabled campaign in its window for that person’s roles. A race you personally host counts as already joined, so the Feed banner stays off on your phone."
       error={error}
     >
       <AdminPanel
@@ -319,13 +402,83 @@ export default function AdminCampaigns() {
 
           {draft.action_kind === 'challenge' ? (
             <>
+              <AdminFieldGroup title="Slumber challenge">
+                <p className="admin-muted">
+                  Creates an open-link race hosted by Slumber. You are not added as a racer.
+                </p>
+                <label className="admin-label" htmlFor="slumber-title">Challenge title</label>
+                <input
+                  id="slumber-title"
+                  className="admin-input"
+                  maxLength={80}
+                  value={slumber.title}
+                  onChange={(e) => setSlumber((prev) => ({ ...prev, title: e.target.value }))}
+                  placeholder={draft.title.trim() || 'Same as the campaign title if left blank'}
+                />
+                <AdminFilterBar nested>
+                  <AdminFilterField label="Goal (hours)" htmlFor="slumber-goal">
+                    <input
+                      id="slumber-goal"
+                      className="admin-input"
+                      type="number"
+                      min={10}
+                      max={100}
+                      value={slumber.goalHours}
+                      onChange={(e) => setSlumber((prev) => ({ ...prev, goalHours: e.target.value }))}
+                    />
+                  </AdminFilterField>
+                  <AdminFilterField label="Days" htmlFor="slumber-days">
+                    <input
+                      id="slumber-days"
+                      className="admin-input"
+                      type="number"
+                      min={1}
+                      max={100}
+                      disabled={slumber.noExpiration}
+                      value={slumber.days}
+                      onChange={(e) => setSlumber((prev) => ({ ...prev, days: e.target.value }))}
+                    />
+                  </AdminFilterField>
+                  <AdminFilterField label="Max racers" htmlFor="slumber-max">
+                    <input
+                      id="slumber-max"
+                      className="admin-input"
+                      type="number"
+                      min={2}
+                      value={slumber.maxParticipants}
+                      onChange={(e) => setSlumber((prev) => ({ ...prev, maxParticipants: e.target.value }))}
+                      placeholder="No cap"
+                    />
+                  </AdminFilterField>
+                </AdminFilterBar>
+                <label className="admin-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={slumber.noExpiration}
+                    onChange={(e) => setSlumber((prev) => ({ ...prev, noExpiration: e.target.checked }))}
+                  />
+                  <span>No end date</span>
+                </label>
+                <div className="admin-form-actions">
+                  <button
+                    type="button"
+                    className="admin-button admin-button-ghost"
+                    disabled={createSlumberMutation.isPending}
+                    onClick={() => { void handleCreateSlumber(); }}
+                  >
+                    {createSlumberMutation.isPending ? 'Creating…' : 'Create Slumber challenge'}
+                  </button>
+                </div>
+                {slumberNote ? <p className="admin-muted">{slumberNote}</p> : null}
+              </AdminFieldGroup>
+
               <label className="admin-label" htmlFor="campaign-challenge">Challenge id</label>
               <input
                 id="campaign-challenge"
                 className="admin-input"
                 value={draft.challenge_id}
                 onChange={(e) => setDraft((prev) => ({ ...prev, challenge_id: e.target.value }))}
-                placeholder="uuid from the open-link race"
+                placeholder="Filled in when you create a Slumber challenge, or paste an existing open-link id"
               />
             </>
           ) : null}
@@ -399,6 +552,7 @@ export default function AdminCampaigns() {
       </AdminPanel>
 
       <AdminPanel title="Campaigns">
+        {listError ? <p className="admin-error">{listError}</p> : null}
         {campaignsQuery.isLoading ? (
           <p className="admin-muted">Loading…</p>
         ) : campaigns.length === 0 ? (
@@ -445,6 +599,8 @@ export default function AdminCampaigns() {
                           <>
                             {row.challenge_title || row.challenge_id || '—'}
                             <div className="admin-muted">
+                              {row.hosted_by === 'slumber' ? 'Slumber' : 'User'}
+                              {' · '}
                               {row.open_link_enabled ? 'Open link' : 'Link off'}
                               {row.challenge_status ? ` · ${row.challenge_status}` : ''}
                             </div>
@@ -460,6 +616,16 @@ export default function AdminCampaigns() {
                         <button type="button" className="admin-button admin-button-ghost admin-button-sm" onClick={() => handleEdit(row)}>
                           Edit
                         </button>
+                        {row.hosted_by === 'slumber' && row.challenge_status === 'pending' && row.challenge_id ? (
+                          <button
+                            type="button"
+                            className="admin-button admin-button-ghost admin-button-sm"
+                            disabled={startSlumberMutation.isPending}
+                            onClick={() => { void handleStartSlumber(row.challenge_id as string); }}
+                          >
+                            Start
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           className="admin-button admin-button-ghost admin-button-sm"

@@ -158,6 +158,7 @@ export type Challenge = {
   goalReachedBy: string | null;
   graceEndsAt: string | null;
   winnerId: string | null;
+  hostedBy?: 'user' | 'slumber';
   participants: ChallengeParticipant[];
 };
 

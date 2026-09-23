@@ -25,6 +25,7 @@ type ChallengePreview = {
   title?: string | null;
   goalMinutes?: number;
   hostUsername?: string;
+  hostedBy?: string;
   isGroup?: boolean;
   status?: string;
   participantCount?: number;
@@ -179,7 +180,11 @@ export default function ContentLandingPage() {
 
   const title = challengePreview?.title?.trim()
     || (challengePreview?.isGroup ? 'Group challenge' : 'Sleep challenge');
-  const host = challengePreview?.hostUsername ? `@${challengePreview.hostUsername}` : 'a friend';
+  const host = challengePreview?.hostedBy === 'slumber'
+    ? 'Slumber'
+    : challengePreview?.hostUsername
+      ? `@${challengePreview.hostUsername}`
+      : 'a friend';
 
   return (
     <DeepLinkLanding

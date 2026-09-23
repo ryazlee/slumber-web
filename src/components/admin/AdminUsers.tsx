@@ -6,14 +6,17 @@ import { getOptionalQueryErrorMessage } from '../../lib/queryError';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { usePaginatedFilters } from '../../hooks/usePaginatedFilters';
-import { useAdminUserSearch } from '../../hooks/useAdmin';
+import { useAdminUserSearch, useHealthMetrics } from '../../hooks/useAdmin';
 import { useAssignableRoles } from '../../hooks/useCatalog';
+import { rangeForPreset } from '../../lib/analyticsRange';
 import { getCachedRoleOptions } from '../../lib/userRoles';
 import AdminDataGrid from './AdminDataGrid';
 import AdminFilterBar, { AdminFilterField } from './AdminFilterBar';
 import AdminGridClientFilterHint from './AdminGridClientFilterHint';
 import AdminListToolbar from './AdminListToolbar';
+import AdminMetricCard from './AdminMetricCard';
 import AdminSection, { AdminTableSummary } from './AdminSection';
+import AdminSubsection from './AdminSubsection';
 import AdminUserDetailPanel from './AdminUserDetailPanel';
 import { pluralCount } from './format';
 import { ADMIN_CATALOG_FORM_ID, scrollAdminPanelIntoView } from './adminScroll';
@@ -75,6 +78,9 @@ export default function AdminUsers() {
   const rolesQuery = useAssignableRoles();
   const roleOptions = rolesQuery.data ?? getCachedRoleOptions();
   const usersQuery = useAdminUserSearch(appliedFilters);
+  const standingRange = useMemo(() => rangeForPreset('today'), []);
+  const healthQuery = useHealthMetrics(standingRange);
+  const activation = healthQuery.data?.activation;
 
   const users = usersQuery.data?.rows ?? [];
   const usersTotal = usersQuery.data?.total ?? 0;
@@ -189,6 +195,27 @@ export default function AdminUsers() {
       error={error}
       lead="Search anyone, or tap a chip to slice the list. Active chips toggle off — or use All users."
     >
+      {activation ? (
+        <AdminSubsection title="Not posting">
+          <div className="admin-metric-grid admin-metric-grid--dense">
+            <AdminMetricCard
+              label="Inactive posters"
+              value={activation.inactive_posters}
+              sub="No post in 14 days"
+              to="/admin/users?filter=inactive"
+            />
+            <AdminMetricCard
+              label="Never posted"
+              value={activation.never_posted_total}
+              sub="Accounts with zero sleep logs"
+              to="/admin/users?filter=never-posted"
+            />
+          </div>
+        </AdminSubsection>
+      ) : healthQuery.isLoading ? (
+        <p className="admin-muted">Loading account metrics…</p>
+      ) : null}
+
       <AdminFilterBar
         showReset={hasFilters}
         onReset={resetFilters}

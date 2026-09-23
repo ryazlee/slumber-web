@@ -14,7 +14,7 @@ export type AdminNavGroup = {
 };
 
 export const ADMIN_PAGE_TITLES: Record<string, string> = {
-  '/admin': 'Health',
+  '/admin': 'Engagement',
   '/admin/analytics': 'Activity',
   '/admin/tag-usage': 'Tag usage',
   '/admin/dreams': 'Dreams',
@@ -22,6 +22,7 @@ export const ADMIN_PAGE_TITLES: Record<string, string> = {
   '/admin/reports': 'Reports',
   '/admin/users': 'Users',
   '/admin/community': 'Clubs',
+  '/admin/challenges': 'Challenges',
   '/admin/premium': 'Premium',
   '/admin/notify': 'Notify',
   '/admin/campaigns': 'Campaigns',
@@ -32,9 +33,9 @@ export const ADMIN_PAGE_TITLES: Record<string, string> = {
 function buildAdminNavGroups(pendingReports = 0): AdminNavGroup[] {
   return [
     {
-      label: 'Health',
+      label: 'Engagement',
       items: [
-        { to: '/admin', label: 'Snapshot', end: true },
+        { to: '/admin', label: 'Overview', end: true },
       ],
     },
     {
@@ -45,6 +46,7 @@ function buildAdminNavGroups(pendingReports = 0): AdminNavGroup[] {
         { to: '/admin/tag-usage', label: 'Tag usage' },
         { to: '/admin/dreams', label: 'Dreams' },
         { to: '/admin/community', label: 'Clubs' },
+        { to: '/admin/challenges', label: 'Challenges' },
         { to: '/admin/premium', label: 'Premium' },
       ],
     },

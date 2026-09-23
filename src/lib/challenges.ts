@@ -11,7 +11,8 @@ import type {
 
 const BASE_CHALLENGE_SELECT = `
   id, creator_id, title, is_group, goal_minutes, no_expiration, scoring_mode, status,
-  created_at, started_at, expires_at, winner_id, goal_reached_at, goal_reached_by, grace_ends_at
+  created_at, started_at, expires_at, winner_id, goal_reached_at, goal_reached_by, grace_ends_at,
+  hosted_by
 `;
 
 function withOneDayStartGrace(isoTimestamp: string): string {
@@ -85,6 +86,7 @@ function attachParticipants(challenges: Record<string, unknown>[], participantRo
       goalReachedBy: (c.goal_reached_by as string | null) ?? null,
       graceEndsAt: (c.grace_ends_at as string | null) ?? null,
       winnerId: (c.winner_id as string | null) ?? null,
+      hostedBy: c.hosted_by === 'slumber' ? 'slumber' : 'user',
       participants,
     };
   });

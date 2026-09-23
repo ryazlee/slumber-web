@@ -5,7 +5,7 @@ export default function AdminAnalyticsPage() {
   return (
     <AdminSection
       className="admin-overview"
-      lead="Are people joining, posting, coming back, and using friends, clubs, and challenges? Day / Week / Month are rolling windows. Deltas compare this window to the one before it."
+      lead="Counts for the window you pick, compared with the window before it. Right now is the current total."
     >
       <AdminHealthSnapshot />
     </AdminSection>

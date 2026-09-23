@@ -14,6 +14,7 @@ type ChallengePreview = {
   title?: string | null;
   goalMinutes?: number;
   hostUsername?: string;
+  hostedBy?: string;
   participantCount?: number;
   joinable?: boolean;
   joinableReason?: string;
@@ -150,7 +151,11 @@ export default function InviteLandingPage() {
 
   if (target.kind === 'challenge') {
     const title = challengePreview?.title?.trim() || 'Sleep challenge';
-    const host = challengePreview?.hostUsername ? `@${challengePreview.hostUsername}` : 'a friend';
+    const host = challengePreview?.hostedBy === 'slumber'
+      ? 'Slumber'
+      : challengePreview?.hostUsername
+        ? `@${challengePreview.hostUsername}`
+        : 'a friend';
     const racers = challengePreview?.participantCount ?? 0;
 
     return (

@@ -1122,23 +1122,55 @@ h1 {
 }
 
 /* ── Admin app shell ── */
+/* Authenticated admin shell: lock document scroll so only .admin-main scrolls. */
+html.admin-app,
+html.admin-app body {
+  height: 100%;
+  overflow: hidden;
+}
+
+html.admin-app #root,
+html.admin-app .site-shell {
+  height: 100%;
+  max-height: 100vh;
+  max-height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Admin has its own chrome; hide the app bottom tabs so they don't cover main. */
+html.admin-app .app-bottom-nav {
+  display: none !important;
+}
+
+html.admin-app .admin-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  /* Fill remaining viewport under SiteHeader (not a second full 100dvh). */
+  height: auto;
+  max-height: none;
+}
+
 .admin-shell {
   display: grid;
   grid-template-columns: 236px minmax(0, 1fr);
-  min-height: 100vh;
+  align-items: stretch;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   background: var(--bg);
 }
 
 .admin-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   padding: 22px 14px;
   border-right: 1px solid var(--border);
   background: linear-gradient(180deg, #141416 0%, #101012 100%);
-  position: sticky;
-  top: 0;
-  height: 100vh;
+  align-self: stretch;
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
   box-sizing: border-box;
 }
@@ -1212,8 +1244,8 @@ h1 {
 
 .admin-sidebar-footer {
   flex-shrink: 0;
-  margin-top: 0;
-  padding-top: 16px;
+  margin-top: auto;
+  padding-top: 14px;
   border-top: 1px solid var(--border);
   display: grid;
   gap: 10px;
@@ -1240,11 +1272,18 @@ h1 {
 
 .admin-main {
   min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
 }
 
 .admin-main-header {
+  flex-shrink: 0;
   padding: 28px 32px 0;
 }
 
@@ -3086,6 +3125,112 @@ a.admin-metric-card--link:focus-visible {
   max-width: 100%;
 }
 
+.admin-engage {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+
+.admin-engage-range-note {
+  margin: -4px 0 12px;
+  font-size: 13px;
+  color: var(--text-dim);
+  min-width: 0;
+}
+
+.admin-engage-section {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.admin-engage-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+  min-width: 0;
+}
+
+.admin-engage-now {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.admin-engage-now-label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
+@media (min-width: 720px) {
+  .admin-engage-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  .admin-engage-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 719px) {
+  .admin-engage-grid .admin-metric-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 12px;
+    row-gap: 2px;
+    align-items: center;
+    padding: 12px 14px;
+  }
+
+  .admin-engage-grid .admin-metric-label {
+    grid-column: 1;
+    grid-row: 1;
+    margin: 0;
+    align-self: end;
+  }
+
+  .admin-engage-grid .admin-metric-sub {
+    grid-column: 1;
+    grid-row: 2;
+    margin: 0;
+    align-self: start;
+  }
+
+  .admin-engage-grid .admin-metric-value {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0;
+    text-align: right;
+    font-size: 1.35rem;
+    align-self: end;
+  }
+
+  .admin-engage-grid .admin-metric-delta {
+    grid-column: 2;
+    grid-row: 2;
+    margin: 0;
+    text-align: right;
+    align-self: start;
+  }
+
+  .admin-engage-grid .admin-metric-card:not(:has(.admin-metric-delta)) .admin-metric-value {
+    grid-row: 1 / -1;
+    align-self: center;
+  }
+
+  .admin-engage-grid .admin-metric-card:not(:has(.admin-metric-sub)) .admin-metric-label {
+    align-self: center;
+  }
+}
+
 .admin-panel-lead {
   margin: -8px 0 0;
 }
@@ -3131,76 +3276,6 @@ a.admin-metric-card--link:focus-visible {
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-}
-
-.admin-version-list,
-.admin-cohort-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 10px;
-}
-
-.admin-version-row,
-.admin-cohort-row {
-  display: grid;
-  grid-template-columns: 88px 1fr auto;
-  gap: 10px;
-  align-items: center;
-  font-size: 13px;
-}
-
-.admin-version-label,
-.admin-cohort-label {
-  color: var(--text-muted);
-  font-weight: 600;
-}
-
-.admin-version-bar-wrap,
-.admin-cohort-bar-wrap {
-  height: 8px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--border) 70%, transparent);
-  overflow: hidden;
-}
-
-.admin-version-bar {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--deep);
-}
-
-.admin-cohort-bar {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--accent);
-}
-
-.admin-version-count {
-  display: flex;
-  gap: 8px;
-  align-items: baseline;
-  justify-content: flex-end;
-  min-width: 72px;
-  font-variant-numeric: tabular-nums;
-}
-
-.admin-version-pct,
-.admin-cohort-sub {
-  color: var(--text-dim);
-  font-size: 12px;
-}
-
-.admin-cohort-meta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  min-width: 72px;
-  font-variant-numeric: tabular-nums;
 }
 
 .admin-user-detail-grid {
@@ -4248,6 +4323,7 @@ a.admin-user-rel-row:hover {
 
   .admin-shell {
     grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
   }
 
   .admin-mobile-bar {
@@ -4255,6 +4331,8 @@ a.admin-user-rel-row:hover {
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    grid-column: 1;
+    grid-row: 1;
     position: sticky;
     top: 0;
     z-index: 30;
@@ -4291,6 +4369,8 @@ a.admin-user-rel-row:hover {
     position: fixed;
     inset: 0;
     z-index: 40;
+    grid-column: 1;
+    grid-row: 1;
     border: 0;
     padding: 0;
     margin: 0;
@@ -4301,11 +4381,16 @@ a.admin-user-rel-row:hover {
   .admin-sidebar {
     position: fixed;
     top: 0;
+    bottom: 0;
     left: 0;
     right: auto;
     z-index: 50;
+    grid-column: 1;
+    grid-row: 1;
     width: min(304px, calc(100vw - 48px));
+    height: 100vh;
     height: 100dvh;
+    max-height: 100vh;
     max-height: 100dvh;
     overflow: hidden;
     padding: 20px 14px;
@@ -4323,6 +4408,8 @@ a.admin-user-rel-row:hover {
   }
 
   .admin-nav {
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
@@ -4330,6 +4417,13 @@ a.admin-user-rel-row:hover {
 
   .admin-nav-link {
     min-height: 44px;
+  }
+
+  .admin-main {
+    grid-column: 1;
+    grid-row: 2;
+    height: auto;
+    min-height: 0;
   }
 
   .admin-main-header {
