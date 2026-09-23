@@ -264,7 +264,7 @@ export default function AdminCampaigns() {
 
   return (
     <AdminSection
-      lead="Popup, header chip, Feed banner, and a pinned Notifications row. They only show when this page has an enabled campaign in its window for that person’s roles. A race you personally host counts as already joined, so the Feed banner stays off on your phone."
+      lead="The header shows every enabled campaign that is inside its dates and whose audience includes you. Leave audience empty to include everyone. The Feed banner only stays up while there is still something to do."
       error={error}
     >
       <AdminPanel
