@@ -6,6 +6,7 @@ import { getOptionalQueryErrorMessage } from '../../lib/queryError';
 import {
   useAdminCampaigns,
   useCreateAdminSlumberChallenge,
+  useDeleteAdminCampaign,
   useSetAdminCampaignEnabled,
   useStartAdminSlumberChallenge,
   useUpsertAdminCampaign,
@@ -48,18 +49,32 @@ const DEFAULT_EMOJI: Record<AdminCampaignActionKind, string> = {
   url: '🔗',
 };
 
-function toLocalInput(iso: string | null): string {
+function toDateInput(iso: string | null): string {
   if (!iso) return '';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-function fromLocalInput(value: string): string | null {
-  if (!value) return null;
-  const d = new Date(value);
+function fromDateInput(value: string, edge: 'start' | 'end'): string | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  const d = edge === 'start'
+    ? new Date(year, month, day, 0, 0, 0, 0)
+    : new Date(year, month, day, 23, 59, 59, 999);
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+function formatWindow(startsAt: string | null, endsAt: string | null): string {
+  const fmt = (iso: string) => new Date(iso).toLocaleDateString();
+  if (startsAt && endsAt) return `${fmt(startsAt)} – ${fmt(endsAt)}`;
+  if (startsAt) return `From ${fmt(startsAt)}`;
+  if (endsAt) return `Until ${fmt(endsAt)}`;
+  return 'Indefinite';
 }
 
 function audienceLabel(roles: string[]): string {
@@ -81,6 +96,7 @@ export default function AdminCampaigns() {
   const campaignsQuery = useAdminCampaigns();
   const upsertMutation = useUpsertAdminCampaign();
   const enabledMutation = useSetAdminCampaignEnabled();
+  const deleteMutation = useDeleteAdminCampaign();
   const createSlumberMutation = useCreateAdminSlumberChallenge();
   const startSlumberMutation = useStartAdminSlumberChallenge();
   const rolesQuery = useAssignableRoles();
@@ -194,6 +210,18 @@ export default function AdminCampaigns() {
     }
   };
 
+  const handleDelete = async (row: AdminCampaignRow) => {
+    const msg = `Delete “${row.title}”? This removes it from the app. A linked race is left as-is.`;
+    if (!window.confirm(msg)) return;
+    setListError(null);
+    try {
+      await deleteMutation.mutateAsync(row.id);
+      if (draft.id === row.id) handleReset();
+    } catch (err: unknown) {
+      setListError(err instanceof Error ? err.message : 'Could not delete campaign.');
+    }
+  };
+
   const handleStartSlumber = async (challengeId: string) => {
     setListError(null);
     try {
@@ -234,6 +262,10 @@ export default function AdminCampaigns() {
       setFormError('Paste a URL for the button to open.');
       return;
     }
+    if (draft.starts_at && draft.ends_at && draft.ends_at <= draft.starts_at) {
+      setFormError('End date must be on or after the start date.');
+      return;
+    }
     try {
       await upsertMutation.mutateAsync({
         ...draft,
@@ -264,7 +296,7 @@ export default function AdminCampaigns() {
 
   return (
     <AdminSection
-      lead="The header shows every enabled campaign that is inside its dates and whose audience includes you. Leave audience empty to include everyone. The Feed banner only stays up while there is still something to do."
+      lead="The header shows every enabled campaign whose audience includes you. Leave the dates blank to keep it up until you turn it off. The Feed banner only stays up while there is still something to do."
       error={error}
     >
       <AdminPanel
@@ -511,26 +543,50 @@ export default function AdminCampaigns() {
             </div>
           </AdminFieldGroup>
 
-          <AdminFilterBar nested>
-            <AdminFilterField label="Starts" htmlFor="campaign-starts">
-              <input
-                id="campaign-starts"
-                className="admin-input"
-                type="datetime-local"
-                value={toLocalInput(draft.starts_at)}
-                onChange={(e) => setDraft((prev) => ({ ...prev, starts_at: fromLocalInput(e.target.value) }))}
-              />
-            </AdminFilterField>
-            <AdminFilterField label="Ends" htmlFor="campaign-ends">
-              <input
-                id="campaign-ends"
-                className="admin-input"
-                type="datetime-local"
-                value={toLocalInput(draft.ends_at)}
-                onChange={(e) => setDraft((prev) => ({ ...prev, ends_at: fromLocalInput(e.target.value) }))}
-              />
-            </AdminFilterField>
-          </AdminFilterBar>
+          <AdminFieldGroup title="Schedule">
+            <p className="admin-muted">
+              Optional. Leave both blank for an indefinite announcement, or set only a start or only an end.
+            </p>
+            <AdminFilterBar nested>
+              <AdminFilterField label="Starts" htmlFor="campaign-starts">
+                <input
+                  id="campaign-starts"
+                  className="admin-input"
+                  type="date"
+                  value={toDateInput(draft.starts_at)}
+                  max={toDateInput(draft.ends_at) || undefined}
+                  onChange={(e) => setDraft((prev) => ({
+                    ...prev,
+                    starts_at: fromDateInput(e.target.value, 'start'),
+                  }))}
+                />
+              </AdminFilterField>
+              <AdminFilterField label="Ends" htmlFor="campaign-ends">
+                <input
+                  id="campaign-ends"
+                  className="admin-input"
+                  type="date"
+                  value={toDateInput(draft.ends_at)}
+                  min={toDateInput(draft.starts_at) || undefined}
+                  onChange={(e) => setDraft((prev) => ({
+                    ...prev,
+                    ends_at: fromDateInput(e.target.value, 'end'),
+                  }))}
+                />
+              </AdminFilterField>
+            </AdminFilterBar>
+            {draft.starts_at || draft.ends_at ? (
+              <div className="admin-form-actions">
+                <button
+                  type="button"
+                  className="admin-button admin-button-ghost admin-button-sm"
+                  onClick={() => setDraft((prev) => ({ ...prev, starts_at: null, ends_at: null }))}
+                >
+                  Clear dates
+                </button>
+              </div>
+            ) : null}
+          </AdminFieldGroup>
 
           <label className="admin-checkbox-label">
             <input
@@ -608,9 +664,7 @@ export default function AdminCampaigns() {
                         )}
                       </td>
                       <td>
-                        {row.starts_at || row.ends_at
-                          ? `${row.starts_at ? new Date(row.starts_at).toLocaleString() : 'now'} → ${row.ends_at ? new Date(row.ends_at).toLocaleString() : 'open'}`
-                          : 'Open-ended'}
+                        {formatWindow(row.starts_at, row.ends_at)}
                       </td>
                       <td>
                         <button type="button" className="admin-button admin-button-ghost admin-button-sm" onClick={() => handleEdit(row)}>
@@ -633,6 +687,14 @@ export default function AdminCampaigns() {
                           onClick={() => void enabledMutation.mutateAsync({ id: row.id, enabled: !row.enabled })}
                         >
                           {row.enabled ? 'Disable' : 'Enable'}
+                        </button>
+                        <button
+                          type="button"
+                          className="admin-button admin-button-danger admin-button-sm"
+                          disabled={deleteMutation.isPending}
+                          onClick={() => { void handleDelete(row); }}
+                        >
+                          Delete
                         </button>
                       </td>
                     </tr>

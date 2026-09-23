@@ -1195,3 +1195,8 @@ export async function setAdminCampaignEnabled(id: string, enabled: boolean): Pro
   });
   if (error) throw error;
 }
+
+export async function deleteAdminCampaign(id: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_delete_app_campaign', { p_id: id });
+  if (error) throw error;
+}

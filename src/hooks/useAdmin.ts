@@ -35,6 +35,7 @@ import {
   fetchAdminCampaigns,
   upsertAdminCampaign,
   setAdminCampaignEnabled,
+  deleteAdminCampaign,
   createAdminSlumberChallenge,
   startAdminSlumberChallenge,
   adminCancelChallenge,
@@ -654,6 +655,16 @@ export function useSetAdminCampaignEnabled() {
   return useMutation({
     mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
       setAdminCampaignEnabled(id, enabled),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.admin.campaigns });
+    },
+  });
+}
+
+export function useDeleteAdminCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteAdminCampaign(id),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.admin.campaigns });
     },
