@@ -3308,13 +3308,67 @@ a.admin-metric-card--link:focus-visible {
   text-align: left;
 }
 
-.admin-user-rel-row--button {
+.admin-user-rel-row--button,
+a.admin-user-rel-row {
   cursor: pointer;
   font: inherit;
+  text-decoration: none;
+  color: inherit;
 }
 
-.admin-user-rel-row--button:hover {
+.admin-user-rel-row--button:hover,
+a.admin-user-rel-row:hover {
   border-color: var(--accent);
+}
+
+.admin-inline-link {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.admin-inline-link:hover {
+  text-decoration: underline;
+}
+
+.admin-live-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+}
+
+.admin-live-list {
+  max-height: 420px;
+}
+
+.admin-club-roster {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+}
+
+.admin-club-roster-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-club-roster-head .admin-subsection-title {
+  margin: 0;
+}
+
+.admin-club-roster-meta,
+.admin-club-roster-description {
+  margin: 0;
+}
+
+.MuiDataGrid-row.admin-grid-row--selected {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 .admin-user-rel-main {

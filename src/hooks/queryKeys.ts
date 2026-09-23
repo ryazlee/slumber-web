@@ -60,6 +60,7 @@ export const queryKeys = {
     communityMetrics: ['admin', 'community', 'metrics'] as const,
     challenges: (filters: ChallengeListFilters) => ['admin', 'community', 'challenges', filters] as const,
     clubs: (filters: PaginationFilters) => ['admin', 'community', 'clubs', filters] as const,
+    clubRoster: (clubId: string) => ['admin', 'community', 'club-roster', clubId] as const,
     dataIssues: (filters: DataIssueFilters) => ['admin', 'data-issues', filters] as const,
     userDetail: (userId: string) => ['admin', 'user-detail', userId] as const,
     userConnections: (userId: string) => ['admin', 'user-connections', userId] as const,

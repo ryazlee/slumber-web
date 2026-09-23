@@ -9,6 +9,7 @@ import {
 } from '../../hooks/useAdmin';
 import AdminCohortChart from './AdminCohortChart';
 import AdminMetricCard from './AdminMetricCard';
+import AdminSnapshotCommunity from './AdminSnapshotCommunity';
 import AdminSubsection from './AdminSubsection';
 import AdminVersionChart from './AdminVersionChart';
 import { formatNumber, metricDelta } from './format';
@@ -65,6 +66,21 @@ export default function AdminHealthSnapshot() {
   const dreamRate = health && health.engagement.posts > 0
     ? pct(health.engagement.posts_with_dreams, health.engagement.posts)
     : '—';
+  const commentedRate = health
+    && typeof health.engagement.posts_with_comments === 'number'
+    && health.engagement.posts > 0
+    ? pct(health.engagement.posts_with_comments, health.engagement.posts)
+    : null;
+  const kudosRate = health
+    && typeof health.engagement.posts_with_kudos === 'number'
+    && health.engagement.posts > 0
+    ? pct(health.engagement.posts_with_kudos, health.engagement.posts)
+    : null;
+  const privateRate = health
+    && typeof health.engagement.private_posts === 'number'
+    && health.engagement.posts > 0
+    ? pct(health.engagement.private_posts, health.engagement.posts)
+    : null;
   const postsPerActive = health && health.engagement.active_posters > 0
     ? (health.engagement.posts / health.engagement.active_posters).toFixed(1)
     : '—';
@@ -203,6 +219,41 @@ export default function AdminHealthSnapshot() {
                 to="/admin/dreams"
               />
               <AdminMetricCard
+                label="Comments"
+                value={health.engagement.comments}
+                sub={[
+                  commentedRate ? `${commentedRate} of nights` : null,
+                  typeof health.engagement.commenters === 'number'
+                    ? `${formatNumber(health.engagement.commenters)} people`
+                    : null,
+                ].filter(Boolean).join(' · ') || windowLabel}
+                {...deltaProps(health.engagement.comments, previous?.engagement.comments, vsPrior)}
+              />
+              <AdminMetricCard
+                label="Kudos"
+                value={health.engagement.kudos}
+                sub={kudosRate ? `${kudosRate} of nights got kudos` : windowLabel}
+                {...deltaProps(health.engagement.kudos, previous?.engagement.kudos, vsPrior)}
+              />
+              {typeof health.engagement.nap_posts === 'number' ? (
+                <AdminMetricCard
+                  label="Naps"
+                  value={health.engagement.nap_posts}
+                  sub={typeof health.engagement.overnight_posts === 'number'
+                    ? `${formatNumber(health.engagement.overnight_posts)} overnight`
+                    : windowLabel}
+                  {...deltaProps(health.engagement.nap_posts, previous?.engagement.nap_posts, vsPrior)}
+                />
+              ) : null}
+              {typeof health.engagement.private_posts === 'number' ? (
+                <AdminMetricCard
+                  label="Private logs"
+                  value={health.engagement.private_posts}
+                  sub={privateRate ? `${privateRate} of nights` : windowLabel}
+                  {...deltaProps(health.engagement.private_posts, previous?.engagement.private_posts, vsPrior)}
+                />
+              ) : null}
+              <AdminMetricCard
                 label="Push enabled"
                 value={health.engagement.users_with_push}
                 sub="Users with device tokens"
@@ -217,6 +268,62 @@ export default function AdminHealthSnapshot() {
                 value={wauMau}
                 sub={`${health.retention.wau} weekly · ${health.retention.mau} monthly posters`}
               />
+              {typeof health.engagement.friendships_accepted === 'number' ? (
+                <AdminMetricCard
+                  label="New friendships"
+                  value={health.engagement.friendships_accepted}
+                  sub="Accepted in this window"
+                  {...deltaProps(
+                    health.engagement.friendships_accepted,
+                    previous?.engagement.friendships_accepted,
+                    vsPrior,
+                  )}
+                />
+              ) : null}
+              {typeof health.engagement.friend_requests === 'number' ? (
+                <AdminMetricCard
+                  label="Friend requests"
+                  value={health.engagement.friend_requests}
+                  sub="Still waiting, sent in this window"
+                  {...deltaProps(
+                    health.engagement.friend_requests,
+                    previous?.engagement.friend_requests,
+                    vsPrior,
+                  )}
+                />
+              ) : null}
+              {typeof health.engagement.club_joins === 'number' ? (
+                <AdminMetricCard
+                  label="Club joins"
+                  value={health.engagement.club_joins}
+                  sub={typeof health.engagement.clubs_created === 'number'
+                    ? `${formatNumber(health.engagement.clubs_created)} new clubs`
+                    : windowLabel}
+                  to="/admin/community"
+                  {...deltaProps(health.engagement.club_joins, previous?.engagement.club_joins, vsPrior)}
+                />
+              ) : null}
+              {typeof health.engagement.challenges_created === 'number' ? (
+                <AdminMetricCard
+                  label="New challenges"
+                  value={health.engagement.challenges_created}
+                  sub="Created in this window"
+                  to="/admin/community"
+                  {...deltaProps(
+                    health.engagement.challenges_created,
+                    previous?.engagement.challenges_created,
+                    vsPrior,
+                  )}
+                />
+              ) : null}
+              {typeof health.engagement.buddy_tags === 'number' ? (
+                <AdminMetricCard
+                  label="Sleep buddy tags"
+                  value={health.engagement.buddy_tags}
+                  sub="Friends tagged on a night"
+                  {...deltaProps(health.engagement.buddy_tags, previous?.engagement.buddy_tags, vsPrior)}
+                />
+              ) : null}
               {metrics ? (
                 <>
                   <AdminMetricCard
@@ -244,6 +351,8 @@ export default function AdminHealthSnapshot() {
       ) : (
         <p className="admin-muted">Loading health metrics…</p>
       )}
+
+      <AdminSnapshotCommunity />
 
       <div className="admin-chart-grid admin-chart-grid--pair">
         <AdminVersionChart versions={versions} />

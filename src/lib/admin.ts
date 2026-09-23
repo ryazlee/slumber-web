@@ -149,6 +149,19 @@ export type HealthWindowEngagement = {
   active_posters: number;
   comments: number;
   kudos: number;
+  /** Present after migration 166. */
+  commenters?: number;
+  posts_with_comments?: number;
+  posts_with_kudos?: number;
+  nap_posts?: number;
+  overnight_posts?: number;
+  private_posts?: number;
+  friendships_accepted?: number;
+  friend_requests?: number;
+  clubs_created?: number;
+  club_joins?: number;
+  challenges_created?: number;
+  buddy_tags?: number;
 };
 
 export type HealthMetrics = {
@@ -196,13 +209,24 @@ export type CommunityMetrics = {
   pending_club_invites: number;
 };
 
+export type AdminChallengeParticipant = {
+  id: string;
+  username: string;
+};
+
 export type AdminChallengeRow = {
   id: string;
   status: string;
+  title?: string | null;
+  is_group?: boolean;
   goal_minutes: number;
   creator_username: string;
   creator_id: string;
+  club_id?: string | null;
+  club_name?: string | null;
+  club_emoji?: string | null;
   participant_count: number;
+  participants?: AdminChallengeParticipant[];
   created_at: string;
   started_at: string | null;
   expires_at: string | null;
@@ -212,11 +236,37 @@ export type AdminClubRow = {
   id: string;
   name: string;
   emoji: string | null;
+  description?: string | null;
   owner_username: string;
   owner_id: string;
   member_count: number;
   pending_invites: number;
+  active_members_7d?: number;
+  posts_7d?: number;
   created_at: string;
+};
+
+export type AdminClubRosterMember = {
+  id: string;
+  username: string;
+  role: string;
+  invite_status: string;
+  joined_at: string | null;
+  posts_7d: number;
+};
+
+export type AdminClubRoster = {
+  id: string;
+  name: string;
+  emoji: string | null;
+  description: string | null;
+  owner_username: string;
+  owner_id: string;
+  created_at: string;
+  member_count: number;
+  pending_invites: number;
+  active_members_7d: number;
+  members: AdminClubRosterMember[];
 };
 
 export type DataIssueRow = {
@@ -881,6 +931,14 @@ export async function fetchAdminClubs(
   return parsePaginatedResult<AdminClubRow>(data);
 }
 
+export async function fetchAdminClubRoster(clubId: string): Promise<AdminClubRoster> {
+  const { data, error } = await supabase.rpc('admin_get_club_roster', {
+    p_club_id: clubId,
+  });
+  if (error) throw error;
+  return data as AdminClubRoster;
+}
+
 export async function adminCancelChallenge(challengeId: string): Promise<void> {
   const { error } = await supabase.rpc('admin_cancel_challenge', {
     p_challenge_id: challengeId,
@@ -1020,6 +1078,7 @@ export type AdminCampaignRow = {
   challenge_title: string | null;
   join_token: string | null;
   cta_url?: string | null;
+  image_url?: string | null;
   open_link_enabled: boolean | null;
   challenge_status: string | null;
   target_roles: string[];
@@ -1040,6 +1099,7 @@ export type AdminCampaignDraft = {
   action_kind: AdminCampaignActionKind;
   challenge_id: string;
   cta_url: string;
+  image_url: string;
   target_roles: string[];
   starts_at: string | null;
   ends_at: string | null;
@@ -1068,9 +1128,33 @@ export async function upsertAdminCampaign(draft: AdminCampaignDraft): Promise<st
     p_priority: draft.priority,
     p_action_kind: draft.action_kind,
     p_cta_url: draft.action_kind === 'url' ? draft.cta_url || null : null,
+    p_image_url: draft.image_url.trim() || null,
   });
   if (error) throw error;
   return data as string;
+}
+
+export const CAMPAIGN_IMAGE_BUCKET = 'campaign-images';
+
+export async function uploadAdminCampaignImage(file: File): Promise<string> {
+  const { data: sessionData } = await supabase.auth.getUser();
+  const userId = sessionData.user?.id;
+  if (!userId) throw new Error('not_authenticated');
+  if (!file.type.startsWith('image/')) throw new Error('image_required');
+  if (file.size > 5 * 1024 * 1024) throw new Error('image_too_large');
+
+  const ext = file.name.split('.').pop()?.toLowerCase() === 'png'
+    ? 'png'
+    : file.name.split('.').pop()?.toLowerCase() === 'webp'
+      ? 'webp'
+      : 'jpg';
+  const path = `${userId}/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from(CAMPAIGN_IMAGE_BUCKET).upload(path, file, {
+    contentType: file.type || `image/${ext === 'jpg' ? 'jpeg' : ext}`,
+    upsert: false,
+  });
+  if (error) throw error;
+  return supabase.storage.from(CAMPAIGN_IMAGE_BUCKET).getPublicUrl(path).data.publicUrl;
 }
 
 export async function setAdminCampaignEnabled(id: string, enabled: boolean): Promise<void> {

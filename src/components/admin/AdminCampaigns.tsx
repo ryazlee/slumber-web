@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import type { AdminCampaignActionKind, AdminCampaignDraft, AdminCampaignRow } from '../../lib/admin';
-import { defaultAdminCampaignCta } from '../../lib/admin';
+import { defaultAdminCampaignCta, uploadAdminCampaignImage } from '../../lib/admin';
 import { getOptionalQueryErrorMessage } from '../../lib/queryError';
 import {
   useAdminCampaigns,
@@ -24,6 +24,7 @@ const EMPTY_DRAFT: AdminCampaignDraft = {
   action_kind: 'challenge',
   challenge_id: '',
   cta_url: '',
+  image_url: '',
   target_roles: [],
   starts_at: null,
   ends_at: null,
@@ -75,6 +76,7 @@ export default function AdminCampaigns() {
 
   const [draft, setDraft] = useState<AdminCampaignDraft>(EMPTY_DRAFT);
   const [formError, setFormError] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const campaigns = campaignsQuery.data ?? [];
   const error = getOptionalQueryErrorMessage(campaignsQuery.error, 'Could not load campaigns.');
@@ -110,6 +112,7 @@ export default function AdminCampaigns() {
       action_kind,
       challenge_id: row.challenge_id ?? '',
       cta_url: row.cta_url ?? '',
+      image_url: row.image_url ?? '',
       target_roles: row.target_roles ?? [],
       starts_at: row.starts_at,
       ends_at: row.ends_at,
@@ -157,6 +160,7 @@ export default function AdminCampaigns() {
         cta_label: draft.cta_label.trim() || defaultAdminCampaignCta(draft.action_kind),
         challenge_id: draft.challenge_id.trim(),
         cta_url: draft.cta_url.trim(),
+        image_url: draft.image_url.trim(),
       });
       handleReset();
     } catch (err: unknown) {
@@ -167,6 +171,8 @@ export default function AdminCampaigns() {
         setFormError('Challenge not found.');
       } else if (message.includes('cta_url_required')) {
         setFormError('Use an http(s), slumber://, or / path.');
+      } else if (message.includes('image_url_invalid')) {
+        setFormError('Promo image must be an https URL.');
       } else {
         setFormError(message);
       }
@@ -175,7 +181,7 @@ export default function AdminCampaigns() {
 
   return (
     <AdminSection
-      lead="Popup once, then a Feed/Challenge banner and a pinned Notifications row. Challenge campaigns hide after join; message and link campaigns hide after they tap the button or dismiss."
+      lead="Popup + header icon + Feed banner + pinned Notifications row. Optional promo image (upload or paste https). Challenge campaigns stay after join with You're in / View."
       error={error}
     >
       <AdminPanel
@@ -224,6 +230,62 @@ export default function AdminCampaigns() {
                 : 'A short note for the popup, banner, and inbox row.'
             }
           />
+
+          <label className="admin-label" htmlFor="campaign-image">Promo image</label>
+          <input
+            id="campaign-image"
+            className="admin-input"
+            value={draft.image_url}
+            onChange={(e) => setDraft((prev) => ({ ...prev, image_url: e.target.value }))}
+            placeholder="https://… or upload below"
+          />
+          <div className="admin-form-actions">
+            <label className="admin-button admin-button-ghost">
+              {uploadingImage ? 'Uploading…' : 'Upload image'}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                hidden
+                disabled={uploadingImage}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = '';
+                  if (!file) return;
+                  setUploadingImage(true);
+                  setFormError(null);
+                  try {
+                    const url = await uploadAdminCampaignImage(file);
+                    setDraft((prev) => ({ ...prev, image_url: url }));
+                  } catch (err: unknown) {
+                    const message = err instanceof Error ? err.message : 'Could not upload image.';
+                    if (message.includes('image_too_large')) {
+                      setFormError('Image must be 5 MB or smaller.');
+                    } else {
+                      setFormError(message);
+                    }
+                  } finally {
+                    setUploadingImage(false);
+                  }
+                }}
+              />
+            </label>
+            {draft.image_url ? (
+              <button
+                type="button"
+                className="admin-button admin-button-ghost"
+                onClick={() => setDraft((prev) => ({ ...prev, image_url: '' }))}
+              >
+                Remove image
+              </button>
+            ) : null}
+          </div>
+          {draft.image_url ? (
+            <img
+              src={draft.image_url}
+              alt=""
+              style={{ maxWidth: 280, maxHeight: 160, objectFit: 'cover', borderRadius: 8 }}
+            />
+          ) : null}
 
           <AdminFilterBar nested>
             <AdminFilterField label="Emoji" htmlFor="campaign-emoji">
@@ -359,8 +421,15 @@ export default function AdminCampaigns() {
                   return (
                     <tr key={row.id}>
                       <td>
-                        {row.emoji ? `${row.emoji} ` : ''}
-                        {row.title}
+                      {row.image_url ? (
+                        <img
+                          src={row.image_url}
+                          alt=""
+                          style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 6, marginRight: 8, verticalAlign: 'middle' }}
+                        />
+                      ) : null}
+                      {row.emoji ? `${row.emoji} ` : ''}
+                      {row.title}
                         <div className="admin-muted">{row.enabled ? 'On' : 'Off'} · p{row.priority} · {actionLabel(kind)}</div>
                       </td>
                       <td>{audienceLabel(row.target_roles ?? [])}</td>

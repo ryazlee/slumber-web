@@ -1,4 +1,5 @@
 import type { PostgrestError } from '@supabase/supabase-js';
+import { Link } from 'react-router-dom';
 import type {
   AdminConnectionUser,
   AdminUserChallengeRow,
@@ -180,12 +181,13 @@ function ClubsSection({ data }: { data: Connections }) {
         <ul className="admin-user-rel-list">
           {clubs.map((row) => (
             <li key={row.id}>
-              <div className="admin-user-rel-row">
-                <div className="admin-user-rel-main">
+              <Link to={`/admin/community?club=${row.id}`} className="admin-user-rel-row">
+                <span className="admin-user-rel-main">
                   <span className="admin-user-rel-title">{clubTitle(row)}</span>
                   <span className="admin-user-rel-meta">{clubMeta(row)}</span>
-                </div>
-              </div>
+                </span>
+                <span className="admin-user-rel-go">Members</span>
+              </Link>
             </li>
           ))}
         </ul>

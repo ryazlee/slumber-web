@@ -38,6 +38,7 @@ import {
   adminCancelChallenge,
   fetchAdminChallenges,
   fetchAdminClubs,
+  fetchAdminClubRoster,
   fetchAdminUserDetail,
   fetchAdminUserConnections,
   fetchCohortRetention,
@@ -522,6 +523,15 @@ export function useAdminClubs(filters: PaginationFilters, enabled = true) {
     queryFn: () => fetchAdminClubs(filters),
     enabled,
     placeholderData: keepPreviousData,
+    ...adminQueryOptions,
+  });
+}
+
+export function useAdminClubRoster(clubId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.admin.clubRoster(clubId ?? ''),
+    queryFn: () => fetchAdminClubRoster(clubId!),
+    enabled: Boolean(clubId),
     ...adminQueryOptions,
   });
 }

@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import type { GridColDef } from '@mui/x-data-grid';
 import type { AdminChallengeRow, AdminClubRow } from '../../lib/admin';
+import { formatAdminChallengeTitle } from '../../lib/format';
 import { getOptionalQueryErrorMessage } from '../../lib/queryError';
 import { usePaginatedFilters } from '../../hooks/usePaginatedFilters';
 import {
@@ -9,6 +11,7 @@ import {
   useAdminClubs,
   useCommunityMetrics,
 } from '../../hooks/useAdmin';
+import AdminClubRoster from './AdminClubRoster';
 import AdminDataGrid from './AdminDataGrid';
 import AdminGridAction from './AdminGridAction';
 import AdminGridActions from './AdminGridActions';
@@ -32,9 +35,27 @@ function formatGoalMinutes(minutes: number): string {
 }
 
 export default function AdminCommunity() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const clubId = searchParams.get('club');
   const [tab, setTab] = useState<Tab>('clubs');
   const [statusFilter, setStatusFilter] = useState('');
   const [actingId, setActingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (clubId) setTab('clubs');
+  }, [clubId]);
+
+  const openClub = (id: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('club', id);
+    setSearchParams(next);
+  };
+
+  const closeClub = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('club');
+    setSearchParams(next);
+  };
 
   const metricsQuery = useCommunityMetrics();
   const cancelMutation = useAdminCancelChallenge();
@@ -73,9 +94,21 @@ export default function AdminCommunity() {
 
   const challengeColumns = useMemo<GridColDef<AdminChallengeRow>[]>(() => [
     {
+      field: 'title',
+      headerName: 'Challenge',
+      flex: 1.2,
+      minWidth: 160,
+      valueGetter: (_v, row) => formatAdminChallengeTitle(row),
+      renderCell: ({ row }) => (
+        <Link to={`/challenge/${row.id}`} className="admin-inline-link">
+          {formatAdminChallengeTitle(row)}
+        </Link>
+      ),
+    },
+    {
       field: 'status',
       headerName: 'Status',
-      width: 100,
+      width: 110,
     },
     {
       field: 'creator_username',
@@ -148,6 +181,13 @@ export default function AdminCommunity() {
       width: 96,
     },
     {
+      field: 'active_members_7d',
+      headerName: 'Posted 7d',
+      type: 'number',
+      width: 100,
+      valueGetter: (_v, row) => row.active_members_7d ?? null,
+    },
+    {
       field: 'pending_invites',
       headerName: 'Pending',
       type: 'number',
@@ -160,7 +200,7 @@ export default function AdminCommunity() {
     <AdminSection
       className="admin-community"
       error={error}
-      lead="Clubs people belong to, and the sleep challenges they’re running."
+      lead="Clubs people belong to, and the sleep challenges they’re running. Click a club to see who is in it and who posted this week."
     >
       <AdminTabs
         ariaLabel="Community sections"
@@ -221,22 +261,28 @@ export default function AdminCommunity() {
       ) : null}
 
       {tab === 'clubs' ? (
-        <AdminDataGrid
-          persistKey="admin-community-clubs"
-          rows={clubs}
-          columns={clubColumns}
-          getRowId={(row) => row.id}
-          loading={clubsQuery.isFetching}
-          label="Clubs"
-          serverPagination={{
-            rowCount: clubsTotal,
-            paginationModel: clubPage,
-            onPaginationModelChange: setClubPage,
-          }}
-          initialState={{
-            sorting: { sortModel: [{ field: 'created_at', sort: 'desc' }] },
-          }}
-        />
+        <>
+          {clubId ? <AdminClubRoster clubId={clubId} onClose={closeClub} /> : null}
+          <AdminDataGrid
+            persistKey="admin-community-clubs"
+            rows={clubs}
+            columns={clubColumns}
+            getRowId={(row) => row.id}
+            loading={clubsQuery.isFetching}
+            label="Clubs"
+            onRowClick={({ row }) => openClub(row.id)}
+            getRowClassName={({ row }) => (row.id === clubId ? 'admin-grid-row--selected' : '')}
+            sx={{ '& .MuiDataGrid-row': { cursor: 'pointer' } }}
+            serverPagination={{
+              rowCount: clubsTotal,
+              paginationModel: clubPage,
+              onPaginationModelChange: setClubPage,
+            }}
+            initialState={{
+              sorting: { sortModel: [{ field: 'created_at', sort: 'desc' }] },
+            }}
+          />
+        </>
       ) : null}
 
       {metricsQuery.isLoading && !metrics ? (

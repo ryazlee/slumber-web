@@ -38,6 +38,25 @@ export function pluralCount(count: number, singular: string, plural = `${singula
 
 export const goalHours = (minutes: number): string => `${minutes / 60}h`;
 
+export function formatAdminChallengeTitle(row: {
+  title?: string | null;
+  club_name?: string | null;
+  club_emoji?: string | null;
+  is_group?: boolean;
+  goal_minutes: number;
+  creator_username?: string;
+}): string {
+  const title = row.title?.trim();
+  if (title) return title;
+  if (row.club_name) {
+    return `${row.club_emoji ? `${row.club_emoji} ` : ''}${row.club_name}`;
+  }
+  const hours = `${Math.round(row.goal_minutes / 60)}h`;
+  if (row.is_group === true) return `Group · ${hours}`;
+  if (row.is_group === false) return `1v1 · ${hours}`;
+  return row.creator_username ? `${hours} · @${row.creator_username}` : `${hours} race`;
+}
+
 export function formatChallengeStatus(status: string): string {
   switch (status) {
     case 'pending': return 'Pending';
