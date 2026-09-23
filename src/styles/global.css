@@ -3180,56 +3180,6 @@ a.admin-metric-card--link:focus-visible {
   }
 }
 
-@media (max-width: 719px) {
-  .admin-engage-grid .admin-metric-card {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    column-gap: 12px;
-    row-gap: 2px;
-    align-items: center;
-    padding: 12px 14px;
-  }
-
-  .admin-engage-grid .admin-metric-label {
-    grid-column: 1;
-    grid-row: 1;
-    margin: 0;
-    align-self: end;
-  }
-
-  .admin-engage-grid .admin-metric-sub {
-    grid-column: 1;
-    grid-row: 2;
-    margin: 0;
-    align-self: start;
-  }
-
-  .admin-engage-grid .admin-metric-value {
-    grid-column: 2;
-    grid-row: 1;
-    margin: 0;
-    text-align: right;
-    font-size: 1.35rem;
-    align-self: end;
-  }
-
-  .admin-engage-grid .admin-metric-delta {
-    grid-column: 2;
-    grid-row: 2;
-    margin: 0;
-    text-align: right;
-    align-self: start;
-  }
-
-  .admin-engage-grid .admin-metric-card:not(:has(.admin-metric-delta)) .admin-metric-value {
-    grid-row: 1 / -1;
-    align-self: center;
-  }
-
-  .admin-engage-grid .admin-metric-card:not(:has(.admin-metric-sub)) .admin-metric-label {
-    align-self: center;
-  }
-}
 
 .admin-panel-lead {
   margin: -8px 0 0;
@@ -4623,18 +4573,6 @@ a.admin-user-rel-row:hover {
     padding: 12px 14px max(36px, env(safe-area-inset-bottom));
   }
 
-  .admin-metric-value {
-    font-size: 1.45rem;
-  }
-
-  .admin-metric-card {
-    padding: 14px;
-  }
-
-  .admin-metric-grid--hero {
-    grid-template-columns: 1fr;
-  }
-
   .admin-tabs {
     margin-inline: -2px;
     padding-inline: 2px;
@@ -4987,4 +4925,70 @@ a.admin-user-rel-row:hover {
 .deeplink-footer a:hover {
   color: var(--text);
   text-decoration: underline;
+}
+
+/* Phone: metric cards match the health snapshot — label left, value right. */
+@media (max-width: 719px) {
+  .admin-metric-grid,
+  .admin-metric-grid--hero,
+  .admin-metric-grid--dense,
+  .admin-engage-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-metric-grid .admin-metric-card,
+  .admin-engage-grid .admin-metric-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 12px;
+    row-gap: 2px;
+    align-items: center;
+    padding: 12px 14px;
+  }
+
+  .admin-metric-grid .admin-metric-label,
+  .admin-engage-grid .admin-metric-label {
+    grid-column: 1;
+    grid-row: 1;
+    margin: 0;
+    align-self: end;
+  }
+
+  .admin-metric-grid .admin-metric-sub,
+  .admin-engage-grid .admin-metric-sub {
+    grid-column: 1;
+    grid-row: 2;
+    margin: 0;
+    align-self: start;
+  }
+
+  .admin-metric-grid .admin-metric-value,
+  .admin-engage-grid .admin-metric-value {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0;
+    text-align: right;
+    font-size: 1.35rem;
+    align-self: end;
+  }
+
+  .admin-metric-grid .admin-metric-delta,
+  .admin-engage-grid .admin-metric-delta {
+    grid-column: 2;
+    grid-row: 2;
+    margin: 0;
+    text-align: right;
+    align-self: start;
+  }
+
+  .admin-metric-grid .admin-metric-card:not(:has(.admin-metric-delta)) .admin-metric-value,
+  .admin-engage-grid .admin-metric-card:not(:has(.admin-metric-delta)) .admin-metric-value {
+    grid-row: 1 / -1;
+    align-self: center;
+  }
+
+  .admin-metric-grid .admin-metric-card:not(:has(.admin-metric-sub)) .admin-metric-label,
+  .admin-engage-grid .admin-metric-card:not(:has(.admin-metric-sub)) .admin-metric-label {
+    align-self: center;
+  }
 }
