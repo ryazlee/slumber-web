@@ -3619,28 +3619,41 @@ a.admin-user-rel-row:hover {
 }
 
 .admin-chart-xaxis {
-  display: flex;
-  gap: 1px;
-  padding: 8px 0 2px;
+  position: relative;
+  height: 32px;
+  margin-top: 2px;
+  width: 100%;
   min-width: 0;
-  width: 100%;
-}
-
-.admin-chart-xaxis--fit {
-  display: grid;
-  width: 100%;
 }
 
 .admin-chart-xaxis-tick {
-  flex: 0 0 auto;
-  text-align: center;
-  font-size: 10px;
+  position: absolute;
+  top: 0;
+  width: 1px;
+  height: 6px;
+  background: var(--border);
+}
+
+.admin-chart-xaxis-label {
+  position: absolute;
+  top: 8px;
+  font-size: 11px;
   line-height: 1.2;
-  color: var(--text-dim);
+  color: var(--text-muted);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: clip;
-  min-width: 0;
+}
+
+.admin-chart-xaxis-label--start {
+  left: 0;
+}
+
+.admin-chart-xaxis-label--center {
+  left: 0;
+  transform: translateX(-50%);
+}
+
+.admin-chart-xaxis-label--end {
+  right: 0;
 }
 
 .admin-chart-bar-col--hovered .admin-chart-bar {
@@ -4934,4 +4947,38 @@ a.admin-user-rel-row:hover {
 .admin-engage-grid {
   grid-template-columns: repeat(auto-fill, minmax(148px, 210px));
   justify-content: start;
+}
+
+/* Phones: a bit smaller so two or three cards fit on a row. */
+@media (max-width: 640px) {
+  .admin-metric-grid,
+  .admin-metric-grid--dense,
+  .admin-metric-grid--hero,
+  .admin-engage-grid {
+    grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+    gap: 8px;
+  }
+
+  .admin-metric-card,
+  .admin-metric-grid--hero .admin-metric-card {
+    padding: 10px 12px;
+    border-radius: 10px;
+  }
+
+  .admin-metric-label {
+    margin-bottom: 4px;
+    font-size: 10px;
+    letter-spacing: 0.03em;
+  }
+
+  .admin-metric-value,
+  .admin-metric-grid--hero .admin-metric-value {
+    font-size: 1.25rem;
+  }
+
+  .admin-metric-sub,
+  .admin-metric-delta {
+    margin-top: 4px;
+    font-size: 11px;
+  }
 }

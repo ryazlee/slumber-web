@@ -20,12 +20,18 @@ function parseDay(day: string): Date {
   return new Date(`${day.slice(0, 10)}T12:00:00`);
 }
 
-function formatAxisLabel(day: string, spanDays: number, withYear: boolean): string {
+function formatAxisLabel(day: string, spanDays: number, edge: boolean, withYear: boolean): string {
   const d = parseDay(day);
-  if (spanDays <= 14) {
-    return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' });
+  if (spanDays <= 10) {
+    return d.toLocaleDateString(undefined, { weekday: 'narrow', day: 'numeric' });
   }
-  if (withYear) {
+  if (spanDays > 45) {
+    const month = d.getMonth() + 1;
+    const date = d.getDate();
+    if (withYear && edge) return `${month}/${date}/${String(d.getFullYear()).slice(2)}`;
+    return `${month}/${date}`;
+  }
+  if (withYear && edge) {
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' });
   }
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -41,17 +47,20 @@ function formatDayTooltip(day: string): string {
   });
 }
 
-function labelStep(count: number): number {
-  if (count <= 7) return 1;
-  if (count <= 14) return 2;
-  if (count <= 31) return 4;
-  if (count <= 60) return 7;
-  return 14;
-}
+/** Pick dates far enough apart that the labels do not collide. */
+function axisLabelIndexes(count: number, containerWidth: number): number[] {
+  if (count <= 0 || containerWidth <= 0) return [];
+  const minGap = containerWidth < 480 ? 52 : 68;
+  const maxLabels = Math.max(2, Math.floor(containerWidth / minGap));
+  if (count <= maxLabels) return Array.from({ length: count }, (_, i) => i);
 
-function shouldShowLabel(index: number, total: number): boolean {
-  const step = labelStep(total);
-  return index === 0 || index === total - 1 || index % step === 0;
+  const indexes = [0];
+  const inner = Math.max(0, maxLabels - 2);
+  for (let i = 1; i <= inner; i += 1) {
+    indexes.push(Math.round((i * (count - 1)) / (inner + 1)));
+  }
+  indexes.push(count - 1);
+  return [...new Set(indexes)].sort((a, b) => a - b);
 }
 
 function computeLayout(count: number, containerWidth: number) {
@@ -110,6 +119,10 @@ export default function AdminActivityChart({ title, rows, series, color = 'var(-
   const layout = useMemo(
     () => computeLayout(rows.length, containerWidth),
     [rows.length, containerWidth],
+  );
+  const labelIndexes = useMemo(
+    () => axisLabelIndexes(rows.length, layout.trackWidth || containerWidth),
+    [rows.length, layout.trackWidth, containerWidth],
   );
 
   const gridStyle = layout.mode === 'fit' && rows.length > 0
@@ -185,22 +198,24 @@ export default function AdminActivityChart({ title, rows, series, color = 'var(-
               })}
             </div>
 
-            <div
-              className={`admin-chart-xaxis${layout.mode === 'fit' ? ' admin-chart-xaxis--fit' : ''}`}
-              style={gridStyle}
-              aria-hidden
-            >
-              {rows.map((row, index) => (
-                <div
-                  key={`${row.day}-tick`}
-                  className="admin-chart-xaxis-tick"
-                  style={colStyle}
-                >
-                  {shouldShowLabel(index, rows.length)
-                    ? formatAxisLabel(row.day, rows.length, spansYear && (index === 0 || index === rows.length - 1))
-                    : null}
-                </div>
-              ))}
+            <div className="admin-chart-xaxis" aria-hidden>
+              {labelIndexes.map((index) => {
+                const row = rows[index];
+                const edge = index === 0 || index === rows.length - 1;
+                const align = index === 0 ? 'start' : index === rows.length - 1 ? 'end' : 'center';
+                const left = rows.length <= 1 ? 50 : ((index + 0.5) / rows.length) * 100;
+                return (
+                  <div
+                    key={`${row.day}-tick`}
+                    className="admin-chart-xaxis-tick"
+                    style={{ left: `${left}%` }}
+                  >
+                    <span className={`admin-chart-xaxis-label admin-chart-xaxis-label--${align}`}>
+                      {formatAxisLabel(row.day, rows.length, edge, spansYear)}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         ) : (
