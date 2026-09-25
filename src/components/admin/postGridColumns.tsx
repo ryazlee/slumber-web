@@ -2,12 +2,14 @@ import type { GridColDef } from '@mui/x-data-grid';
 import type { RecentPostRow } from '../../lib/admin';
 import AdminGridAction from './AdminGridAction';
 import AdminGridActions from './AdminGridActions';
+import AdminPostRawCell from './AdminPostRawCell';
 import { dateColumn } from './dateColumn';
 import { gridActionsColumn, idCodeColumn } from './gridColumnHelpers';
 
 export type RecentPostColumnOptions = {
   actingPostId?: string | null;
-  onViewRaw?: (post: RecentPostRow) => void;
+  expandedRawIds?: ReadonlySet<string>;
+  onToggleRaw?: (postId: string) => void;
   onRepair?: (post: RecentPostRow) => void;
   onSoftDelete?: (post: RecentPostRow) => void;
 };
@@ -55,7 +57,7 @@ function postSourceLabel(row: RecentPostRow): string {
 export function buildRecentPostColumns(
   options: RecentPostColumnOptions = {},
 ): GridColDef<RecentPostRow>[] {
-  const { actingPostId = null, onViewRaw, onRepair, onSoftDelete } = options;
+  const { actingPostId = null, expandedRawIds, onToggleRaw, onRepair, onSoftDelete } = options;
 
   const cols: GridColDef<RecentPostRow>[] = [
     idCodeColumn<RecentPostRow>('id', 'Post ID'),
@@ -134,14 +136,29 @@ export function buildRecentPostColumns(
       valueGetter: (_value, row) => Number(row.comments_count ?? 0),
     },
     dateColumn('created_at', 'Logged'),
+    {
+      field: 'raw',
+      headerName: 'Raw',
+      width: 220,
+      sortable: false,
+      valueGetter: (_value, row) => JSON.stringify(row),
+      renderCell: ({ row, value }) => (
+        <AdminPostRawCell
+          postId={row.id}
+          preview={String(value ?? '')}
+          open={expandedRawIds?.has(row.id) ?? false}
+          onToggle={() => onToggleRaw?.(row.id)}
+        />
+      ),
+    },
   ];
 
-  if (onViewRaw || onRepair || onSoftDelete) {
+  if (onRepair || onSoftDelete) {
     cols.push({
       field: 'post_actions',
       headerName: 'Actions',
       ...gridActionsColumn,
-      width: onSoftDelete ? (onRepair ? 196 : 156) : (onRepair ? 156 : 88),
+      width: onSoftDelete && onRepair ? 156 : 88,
       renderCell: ({ row }) => {
         const wearable = isWearablePost(row);
         const busy = actingPostId === row.id;
@@ -172,18 +189,6 @@ export function buildRecentPostColumns(
                 }}
               >
                 {busy ? '…' : 'Repair'}
-              </AdminGridAction>
-            ) : null}
-            {onViewRaw ? (
-              <AdminGridAction
-                disabled={busy}
-                title="Inspect the stored sleep_posts row"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onViewRaw(row);
-                }}
-              >
-                Raw
               </AdminGridAction>
             ) : null}
           </AdminGridActions>

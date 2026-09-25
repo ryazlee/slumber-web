@@ -53,6 +53,12 @@ const GRID_CONTAINMENT_SX = {
     overflow: 'visible',
     whiteSpace: 'normal',
   },
+  '& .MuiDataGrid-cell:has(.admin-raw-cell--open)': {
+    alignItems: 'flex-start',
+    overflow: 'visible',
+    whiteSpace: 'normal',
+    lineHeight: 1.4,
+  },
 } as const;
 
 type AdminDataGridProps = DataGridProps & {
@@ -142,7 +148,7 @@ export default function AdminDataGrid({
         rowCount: serverPagination.rowCount,
         paginationModel: serverPagination.paginationModel,
         onPaginationModelChange: serverPagination.onPaginationModelChange,
-        disableColumnSorting: disableColumnSortingProp ?? true,
+        disableColumnSorting: disableColumnSortingProp ?? false,
       }
     : {
         paginationMode: paginationModeProp,

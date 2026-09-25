@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { AdminChallengeRow, AdminClubRow } from '../../lib/admin';
 import { formatAdminChallengeTitle, formatChallengeStatus, pluralCount } from '../../lib/format';
@@ -13,18 +13,6 @@ const STATUS_RANK: Record<string, number> = {
   pending_completion: 1,
   pending: 2,
 };
-
-function challengeMeta(row: AdminChallengeRow): string {
-  const parts = [
-    formatChallengeStatus(row.status),
-    `${Math.round(row.goal_minutes / 60)}h`,
-    pluralCount(row.participant_count, 'player'),
-  ];
-  if (row.club_name && row.title?.trim()) {
-    parts.push(`${row.club_emoji ? `${row.club_emoji} ` : ''}${row.club_name}`);
-  }
-  return parts.join(' · ');
-}
 
 function clubMeta(row: AdminClubRow): string {
   const parts = [pluralCount(row.member_count, 'member'), `@${row.owner_username}`];
@@ -89,6 +77,33 @@ export function AdminCurrentChallenges({
     ?? getOptionalQueryErrorMessage(activeQuery.error, 'Could not load challenges.');
 
   const shownChallenges = challenges.slice(0, limit);
+  const [sortKey, setSortKey] = useState<'title' | 'status' | 'goal' | 'players' | 'created'>('created');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const tableRows = useMemo(() => {
+    const copy = [...shownChallenges];
+    const dir = sortDir === 'asc' ? 1 : -1;
+    copy.sort((a, b) => {
+      const cmp = (() => {
+        if (sortKey === 'title') return formatAdminChallengeTitle(a).localeCompare(formatAdminChallengeTitle(b));
+        if (sortKey === 'status') return a.status.localeCompare(b.status);
+        if (sortKey === 'goal') return a.goal_minutes - b.goal_minutes;
+        if (sortKey === 'players') return a.participant_count - b.participant_count;
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      })();
+      return cmp * dir;
+    });
+    return copy;
+  }, [shownChallenges, sortKey, sortDir]);
+
+  const toggleSort = (key: typeof sortKey) => {
+    if (sortKey === key) setSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'));
+    else {
+      setSortKey(key);
+      setSortDir(key === 'title' || key === 'status' ? 'asc' : 'desc');
+    }
+  };
+
+  const sortMark = (key: typeof sortKey) => (sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : '');
 
   return (
     <AdminSubsection
@@ -105,23 +120,41 @@ export function AdminCurrentChallenges({
       {!challengesLoading && !challengeError && shownChallenges.length === 0 ? (
         <p className="admin-muted">No active or pending challenges.</p>
       ) : null}
-      {shownChallenges.length > 0 ? (
-        <ul className="admin-user-rel-list admin-live-list">
-          {shownChallenges.map((row) => (
-            <li key={row.id}>
-              <div className="admin-user-rel-row">
-                <div className="admin-user-rel-main">
-                  <Link to={`/challenge/${row.id}`} className="admin-user-rel-title admin-inline-link">
-                    {formatAdminChallengeTitle(row)}
-                  </Link>
-                  <span className="admin-user-rel-meta">{challengeMeta(row)}</span>
-                  <ChallengePeople row={row} />
-                </div>
-                <Link to={`/challenge/${row.id}`} className="admin-user-rel-go">Open</Link>
-              </div>
-            </li>
-          ))}
-        </ul>
+      {tableRows.length > 0 ? (
+        <div className="admin-table-wrap">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th><button type="button" className="admin-sort-btn" onClick={() => toggleSort('title')}>Challenge{sortMark('title')}</button></th>
+                <th><button type="button" className="admin-sort-btn" onClick={() => toggleSort('status')}>Status{sortMark('status')}</button></th>
+                <th><button type="button" className="admin-sort-btn" onClick={() => toggleSort('goal')}>Goal{sortMark('goal')}</button></th>
+                <th><button type="button" className="admin-sort-btn" onClick={() => toggleSort('players')}>Players{sortMark('players')}</button></th>
+                <th>People</th>
+                <th><button type="button" className="admin-sort-btn" onClick={() => toggleSort('created')}>Created{sortMark('created')}</button></th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {tableRows.map((row) => (
+                <tr key={row.id}>
+                  <td>
+                    <Link to={`/challenge/${row.id}`} className="admin-inline-link">
+                      {formatAdminChallengeTitle(row)}
+                    </Link>
+                  </td>
+                  <td>{formatChallengeStatus(row.status)}</td>
+                  <td>{Math.round(row.goal_minutes / 60)}h</td>
+                  <td>{row.participant_count}</td>
+                  <td className="admin-td-wrap"><ChallengePeople row={row} /></td>
+                  <td>{new Date(row.created_at).toLocaleDateString()}</td>
+                  <td>
+                    <Link to={`/challenge/${row.id}`} className="admin-inline-link">Open</Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : null}
     </AdminSubsection>
   );

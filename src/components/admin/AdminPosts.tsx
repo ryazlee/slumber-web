@@ -58,6 +58,7 @@ export default function AdminPosts({
   const [postIdLookup, setPostIdLookup] = useState('');
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [rawPost, setRawPost] = useState<RawPostTarget | null>(null);
+  const [expandedRawIds, setExpandedRawIds] = useState<ReadonlySet<string>>(() => new Set());
 
   const baseFilters = useMemo(() => ({
     start: range.start,
@@ -172,13 +173,14 @@ export default function AdminPosts({
     });
   }, [openRaw, parsePostId, posts]);
 
-  const viewRawPost = useCallback((post: RecentPostRow) => {
-    openRaw({
-      id: post.id,
-      title: post.title,
-      username: post.username,
+  const toggleRaw = useCallback((postId: string) => {
+    setExpandedRawIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(postId)) next.delete(postId);
+      else next.add(postId);
+      return next;
     });
-  }, [openRaw]);
+  }, []);
 
   const repairLoadedInflated = async () => {
     const ids = inflatedWearablePosts.map((post) => post.id);
@@ -226,7 +228,8 @@ export default function AdminPosts({
   const columns = useMemo<GridColDef<RecentPostRow>[]>(() => [
     ...buildRecentPostColumns({
       actingPostId,
-      onViewRaw: viewRawPost,
+      expandedRawIds,
+      onToggleRaw: toggleRaw,
       onRepair: repairPost,
       onSoftDelete: softDeletePost,
     }),
@@ -247,7 +250,7 @@ export default function AdminPosts({
         </AdminGridActions>
       ),
     },
-  ], [actingPostId, viewRawPost, repairPost, softDeletePost]);
+  ], [actingPostId, expandedRawIds, toggleRaw, repairPost, softDeletePost]);
 
   return (
     <AdminSection
@@ -410,7 +413,7 @@ export default function AdminPosts({
               loading={fetching || refreshing}
               label="Sleep posts"
               ignoreDiacritics
-              getRowClassName={(params) => (params.id === rawPost?.id ? 'admin-grid-row-editing' : '')}
+              getRowHeight={(params) => (expandedRawIds.has(String(params.id)) ? 'auto' : undefined)}
               serverPagination={{
                 rowCount: postsTotal,
                 paginationModel,

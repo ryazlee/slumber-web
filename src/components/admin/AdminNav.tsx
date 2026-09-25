@@ -42,6 +42,7 @@ function buildAdminNavGroups(pendingReports = 0): AdminNavGroup[] {
       label: 'People',
       items: [
         { to: '/admin/users', label: 'Users' },
+        { to: '/admin/posts', label: 'Posts' },
         { to: '/admin/analytics', label: 'Activity' },
         { to: '/admin/tag-usage', label: 'Tag usage' },
         { to: '/admin/dreams', label: 'Dreams' },
@@ -65,7 +66,6 @@ function buildAdminNavGroups(pendingReports = 0): AdminNavGroup[] {
           label: 'Reports',
           badge: pendingReports > 0 ? pendingReports : undefined,
         },
-        { to: '/admin/posts', label: 'Posts' },
       ],
     },
     {
