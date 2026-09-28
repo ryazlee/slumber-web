@@ -59,3 +59,41 @@ export function formatTagChip(tagKey: string): string {
   const resolved = getCachedTagLabelMap()[tagKey];
   return resolved ? `${resolved.emoji} ${resolved.label}` : tagKey;
 }
+
+export type VisiblePostTag = {
+  value: string;
+  text: string;
+  pending: boolean;
+};
+
+/** Public catalog tags, plus the viewer's own pending suggestions. */
+export function visiblePostTags(
+  tags: string[],
+  catalog: TagDefinition[] | undefined,
+  pending: TagDefinition[],
+): VisiblePostTag[] {
+  const knownList = catalog ?? FALLBACK_TAGS;
+  const known = new Map(knownList.map((tag) => [tag.value, tag]));
+  const pendingByValue = new Map(pending.map((tag) => [tag.value, tag]));
+  const chips: VisiblePostTag[] = [];
+
+  for (const value of tags) {
+    const pub = known.get(value);
+    if (pub) {
+      chips.push({ value, text: `${pub.emoji} ${pub.label}`, pending: false });
+      continue;
+    }
+    const mine = pendingByValue.get(value);
+    if (mine) {
+      chips.push({ value, text: `${mine.emoji} ${mine.label}`, pending: true });
+    }
+  }
+
+  return chips;
+}
+
+export async function loadMyPendingTags(): Promise<TagDefinition[]> {
+  const { data, error } = await supabase.rpc('get_my_pending_tags');
+  if (error || !data) return [];
+  return data as TagDefinition[];
+}

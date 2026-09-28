@@ -446,6 +446,17 @@ export type TagDraft = {
   sort_order: number;
 };
 
+export type TagSuggestionRow = {
+  id: string;
+  value: string;
+  label: string;
+  emoji: string;
+  created_at: string;
+  submitter_count: number;
+  submitters: string | null;
+  post_count: number;
+};
+
 export type AdminRoleDefinitionRow = {
   key: string;
   label: string;
@@ -743,6 +754,28 @@ export async function upsertAdminTag(tag: TagDraft): Promise<void> {
 
 export async function deleteAdminTag(value: string): Promise<void> {
   const { error } = await supabase.rpc('admin_delete_tag', { p_value: value });
+  if (error) throw error;
+}
+
+export async function fetchAdminTagSuggestions(): Promise<TagSuggestionRow[]> {
+  const { data, error } = await supabase.rpc('admin_list_tag_suggestions');
+  if (error) throw error;
+  return (data ?? []) as TagSuggestionRow[];
+}
+
+export async function approveAdminTagSuggestion(id: string, tag: TagDraft): Promise<void> {
+  const { error } = await supabase.rpc('admin_approve_tag_suggestion', {
+    p_id: id,
+    p_value: tag.value,
+    p_emoji: tag.emoji,
+    p_label: tag.label,
+    p_sort_order: tag.sort_order,
+  });
+  if (error) throw error;
+}
+
+export async function denyAdminTagSuggestion(id: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_deny_tag_suggestion', { p_id: id });
   if (error) throw error;
 }
 

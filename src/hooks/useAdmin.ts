@@ -3,7 +3,9 @@ import { useCallback, useMemo } from 'react';
 import {
   deleteAdminRoleDefinition,
   deleteAdminTag,
+  denyAdminTagSuggestion,
   fetchAdminRoleDefinitions,
+  fetchAdminTagSuggestions,
   fetchAdminTags,
   fetchAnalyticsMetrics,
   fetchAppVersions,
@@ -21,6 +23,7 @@ import {
   updateUserPremium,
   updateUserRoles,
   upsertAdminRoleDefinition,
+  approveAdminTagSuggestion,
   upsertAdminTag,
   dismissPostReports,
   dismissCommentReports,
@@ -362,6 +365,38 @@ export function useDeleteAdminTag() {
       void qc.invalidateQueries({ queryKey: ['admin', 'analytics', 'tags'] });
       void qc.invalidateQueries({ queryKey: queryKeys.tags });
     },
+  });
+}
+
+export function useAdminTagSuggestions() {
+  return useQuery({
+    queryKey: queryKeys.admin.tagSuggestions,
+    queryFn: fetchAdminTagSuggestions,
+    staleTime: 15_000,
+  });
+}
+
+function invalidatePublishedTags(qc: ReturnType<typeof useQueryClient>) {
+  clearTagsCache();
+  void qc.invalidateQueries({ queryKey: ['admin', 'tags'] });
+  void qc.invalidateQueries({ queryKey: ['admin', 'analytics', 'tags'] });
+  void qc.invalidateQueries({ queryKey: queryKeys.tags });
+  void qc.invalidateQueries({ queryKey: queryKeys.admin.tagSuggestions });
+}
+
+export function useApproveAdminTagSuggestion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, tag }: { id: string; tag: TagDraft }) => approveAdminTagSuggestion(id, tag),
+    onSuccess: () => invalidatePublishedTags(qc),
+  });
+}
+
+export function useDenyAdminTagSuggestion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => denyAdminTagSuggestion(id),
+    onSuccess: () => invalidatePublishedTags(qc),
   });
 }
 

@@ -14,7 +14,7 @@ import PostDreamBlock from './post/PostDreamBlock';
 import PostVibe from './post/PostVibe';
 import PostStageMetrics from './post/PostStageMetrics';
 import PostSocial, { type PostSocialPatch } from './PostSocial';
-import PostTagList from './PostTagList';
+import { PostDetailFactors } from './PostTagList';
 import SessionKindChip from './SessionKindChip';
 import SessionTimelines from './SessionTimelines';
 import SleepBuddiesRow from './SleepBuddiesRow';
@@ -152,14 +152,7 @@ export default function PostDetailView({
         </>
       ) : null}
 
-      {post.tags.length > 0 ? (
-        <>
-          <PostDetailSectionHeader title="Factors" />
-          <div className="post-detail-panel post-detail-tags">
-            <PostTagList tags={post.tags} />
-          </div>
-        </>
-      ) : null}
+      <PostDetailFactors tags={post.tags} isOwnPost={user?.id === post.userId} />
 
       {post.dreamLog ? (
         <>

@@ -11,6 +11,7 @@ type Props = {
   saving: boolean;
   formError: string | null;
   panelId?: string;
+  mode?: 'approve';
   onChange: (draft: TagDraft) => void;
   onSubmit: (e: FormEvent) => void;
   onCancel: () => void;
@@ -22,11 +23,14 @@ export default function AdminTagForm({
   saving,
   formError,
   panelId,
+  mode,
   onChange,
   onSubmit,
   onCancel,
 }: Props) {
-  const isEditing = Boolean(draft.value && tags.some((t) => t.value === draft.value));
+  const matchesExisting = Boolean(draft.value && tags.some((t) => t.value === draft.value));
+  const isEditing = mode !== 'approve' && matchesExisting;
+  const isApprove = mode === 'approve';
   const valueTouchedRef = useRef(false);
   const previewLabel = draft.label.trim() || 'Tag label';
   const previewEmoji = draft.emoji.trim() || '☕';
@@ -46,8 +50,10 @@ export default function AdminTagForm({
   return (
     <AdminPanel
       id={panelId}
-      title={isEditing ? `Edit “${draft.label || draft.value}”` : 'New tag'}
-      description="Label is what users see. Value is auto-filled from the label — edit only if you need a specific key."
+      title={isApprove ? `Approve “${draft.label || draft.value}”` : isEditing ? `Edit “${draft.label || draft.value}”` : 'New tag'}
+      description={isApprove
+        ? 'Approving publishes this tag. Posts that already use it will show it to everyone, and it joins the catalog.'
+        : 'Label is what users see. Value is auto-filled from the label — edit only if you need a specific key.'}
       highlighted={isEditing}
       headerAction={(
         <button className="admin-button admin-button-ghost" type="button" onClick={onCancel} disabled={saving}>
@@ -121,7 +127,7 @@ export default function AdminTagForm({
 
         <div className="admin-form-actions admin-form-actions--sticky">
           <button className="admin-button" type="submit" disabled={saving}>
-            {saving ? 'Saving…' : isEditing ? 'Save changes' : 'Create tag'}
+            {saving ? 'Saving…' : isApprove ? 'Approve tag' : isEditing ? 'Save changes' : 'Create tag'}
           </button>
         </div>
       </form>

@@ -1974,6 +1974,11 @@
   color: var(--text-muted);
 }
 
+.post-tag-pending {
+  background: transparent;
+  border: 1px dashed var(--border);
+}
+
 .post-notes {
   margin: 16px 0 0;
   color: var(--text-muted);

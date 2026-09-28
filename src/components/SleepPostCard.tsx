@@ -121,7 +121,7 @@ export default function SleepPostCard({
         </div>
       ) : null}
 
-      <PostTagList tags={post.tags} />
+      <PostTagList tags={post.tags} isOwnPost={user?.id === post.userId} />
 
       {post.notes ? (
         <p className="post-notes">

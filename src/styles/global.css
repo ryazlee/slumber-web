@@ -1420,6 +1420,50 @@ html.admin-app .admin-shell {
   filter: brightness(1.08);
 }
 
+.admin-suggestion-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.admin-suggestion-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.admin-suggestion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-suggestion-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.admin-suggestion-row > div:first-child {
+  min-width: 0;
+}
+
+.admin-suggestion-label {
+  margin: 0 0 2px;
+  font-weight: 650;
+}
+
+.admin-suggestion-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
 /* ── Admin table / card action chips ───────────────────────────────────────── */
 
 .admin-grid-actions {
