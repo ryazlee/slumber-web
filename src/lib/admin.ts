@@ -742,6 +742,14 @@ export async function fetchAdminTags(
   return parsePaginatedResult<AdminTagRow>(result.data);
 }
 
+function adminTagError(error: { message?: string }): Error {
+  const message = error.message ?? '';
+  if (message.includes('emoji_taken')) {
+    return new Error('That emoji is already used by another tag.');
+  }
+  return error instanceof Error ? error : new Error(message || 'Could not save tag.');
+}
+
 export async function upsertAdminTag(tag: TagDraft): Promise<void> {
   const { error } = await supabase.rpc('admin_upsert_tag', {
     p_value: tag.value,
@@ -749,7 +757,7 @@ export async function upsertAdminTag(tag: TagDraft): Promise<void> {
     p_label: tag.label,
     p_sort_order: tag.sort_order,
   });
-  if (error) throw error;
+  if (error) throw adminTagError(error);
 }
 
 export async function deleteAdminTag(value: string): Promise<void> {
@@ -771,7 +779,7 @@ export async function approveAdminTagSuggestion(id: string, tag: TagDraft): Prom
     p_label: tag.label,
     p_sort_order: tag.sort_order,
   });
-  if (error) throw error;
+  if (error) throw adminTagError(error);
 }
 
 export async function denyAdminTagSuggestion(id: string): Promise<void> {
