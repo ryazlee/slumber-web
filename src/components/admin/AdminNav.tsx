@@ -1,11 +1,14 @@
 import { NavLink } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext';
+import { useAdminTagSuggestions } from '../../hooks/useAdmin';
 
 export type AdminNavItem = {
   to: string;
   label: string;
   end?: boolean;
   badge?: number;
+  /** Reports stay red. Other queues use the accent badge. */
+  badgeTone?: 'alert' | 'accent';
 };
 
 export type AdminNavGroup = {
@@ -15,7 +18,6 @@ export type AdminNavGroup = {
 
 export const ADMIN_PAGE_TITLES: Record<string, string> = {
   '/admin': 'Engagement',
-  '/admin/analytics': 'Activity',
   '/admin/tag-usage': 'Tag usage',
   '/admin/dreams': 'Dreams',
   '/admin/posts': 'Posts',
@@ -30,7 +32,7 @@ export const ADMIN_PAGE_TITLES: Record<string, string> = {
   '/admin/configure/roles': 'Roles',
 };
 
-function buildAdminNavGroups(pendingReports = 0): AdminNavGroup[] {
+function buildAdminNavGroups(pendingReports = 0, pendingTags = 0): AdminNavGroup[] {
   return [
     {
       label: 'Engagement',
@@ -43,7 +45,6 @@ function buildAdminNavGroups(pendingReports = 0): AdminNavGroup[] {
       items: [
         { to: '/admin/users', label: 'Users' },
         { to: '/admin/posts', label: 'Posts' },
-        { to: '/admin/analytics', label: 'Activity' },
         { to: '/admin/tag-usage', label: 'Tag usage' },
         { to: '/admin/dreams', label: 'Dreams' },
         { to: '/admin/community', label: 'Clubs' },
@@ -71,7 +72,12 @@ function buildAdminNavGroups(pendingReports = 0): AdminNavGroup[] {
     {
       label: 'Configure',
       items: [
-        { to: '/admin/configure/tags', label: 'Tag catalog' },
+        {
+          to: '/admin/configure/tags',
+          label: 'Tag catalog',
+          badge: pendingTags > 0 ? pendingTags : undefined,
+          badgeTone: 'accent',
+        },
         { to: '/admin/configure/roles', label: 'Roles' },
       ],
     },
@@ -88,8 +94,10 @@ type Props = {
 
 export default function AdminNav({ onNavigate }: Props) {
   const { metrics } = useAdmin();
+  const suggestionsQuery = useAdminTagSuggestions();
   const pendingReports = (metrics?.pending_post_reports ?? 0) + (metrics?.pending_comment_reports ?? 0);
-  const groups = buildAdminNavGroups(pendingReports);
+  const pendingTags = suggestionsQuery.data?.length ?? 0;
+  const groups = buildAdminNavGroups(pendingReports, pendingTags);
 
   return (
     <nav className="admin-nav" aria-label="Admin sections">
@@ -107,7 +115,9 @@ export default function AdminNav({ onNavigate }: Props) {
                 >
                   <span>{item.label}</span>
                   {item.badge != null ? (
-                    <span className="admin-nav-badge">{item.badge}</span>
+                    <span className={item.badgeTone === 'accent' ? 'admin-nav-badge admin-nav-badge--accent' : 'admin-nav-badge'}>
+                      {item.badge}
+                    </span>
                   ) : null}
                 </NavLink>
               </li>

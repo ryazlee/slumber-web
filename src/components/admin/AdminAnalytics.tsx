@@ -3,26 +3,24 @@ import {
   type AdminTagRow,
   type AnalyticsFilters,
   type AnalyticsMetrics,
-  type DailyActivityRow,
 } from '../../lib/admin';
 import { formatRangeLabel } from '../../lib/analyticsRange';
 import { Link } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext';
 import { useAdminAnalyticsBundle, useAppVersions } from '../../hooks/useAdmin';
 import type { AdminAnalyticsScreenProps } from './adminAnalyticsTypes';
-import AdminActivityChart from './AdminActivityChart';
 import AdminAnalyticsFilters from './AdminAnalyticsFilters';
 import AdminMetricCard from './AdminMetricCard';
 import AdminSection, { AdminTableSummary } from './AdminSection';
+import { formatNumber } from './format';
 
-export type AdminAnalyticsView = 'overview' | 'tags' | 'dreams';
+export type AdminAnalyticsView = 'tags' | 'dreams';
 
 type Props = AdminAnalyticsScreenProps & {
   view: AdminAnalyticsView;
 };
 
 const VIEW_LEAD: Record<AdminAnalyticsView, string> = {
-  overview: 'Signups, posts, and comments for a chosen date range — use this when the Health snapshot’s rolling window isn’t enough.',
   tags: 'Which factor tags people put on nights in this range.',
   dreams: 'How often sleep posts include a dream log.',
 };
@@ -68,7 +66,6 @@ export default function AdminAnalytics({
 
   const {
     metrics,
-    activity,
     tags,
     loading,
     fetching,
@@ -77,9 +74,6 @@ export default function AdminAnalytics({
 
   const rangeLabel = formatRangeLabel(range);
   const versionLabel = appVersion ? `v${appVersion}` : 'all versions';
-  const postsPerActive = metrics && metrics.active_users > 0
-    ? (metrics.posts / metrics.active_users).toFixed(1)
-    : '—';
   const dreamRate = metrics && metrics.posts > 0
     ? `${Math.round((metrics.posts_with_dreams / metrics.posts) * 1000) / 10}%`
     : '—';
@@ -104,17 +98,6 @@ export default function AdminAnalytics({
 
       {metrics ? (
         <div className={fetching || refreshing ? 'admin-analytics-panel-wrap--refreshing' : undefined}>
-          {view === 'overview' && (
-            <OverviewPanel
-              metrics={metrics}
-              activity={activity}
-              rangeLabel={rangeLabel}
-              versionLabel={versionLabel}
-              postsPerActive={postsPerActive}
-              appliedVersion={appVersion}
-            />
-          )}
-
           {view === 'tags' && (
             <TagsPanel tags={tags} rangeLabel={rangeLabel} versionLabel={versionLabel} />
           )}
@@ -130,101 +113,6 @@ export default function AdminAnalytics({
         </div>
       ) : null}
     </AdminSection>
-  );
-}
-
-function OverviewPanel({
-  metrics,
-  activity,
-  rangeLabel,
-  versionLabel,
-  postsPerActive,
-  appliedVersion,
-}: {
-  metrics: AnalyticsMetrics;
-  activity: DailyActivityRow[];
-  rangeLabel: string;
-  versionLabel: string;
-  postsPerActive: string;
-  appliedVersion: string;
-}) {
-  return (
-    <div className="admin-analytics-panel">
-      <FilterSummary rangeLabel={rangeLabel} versionLabel={versionLabel} metrics={metrics} />
-
-      <div className="admin-metric-grid admin-metric-grid--hero">
-        <AdminMetricCard
-          label="Signups"
-          value={metrics.signups}
-          sub={`Joined ${rangeLabel}`}
-          to="/admin/users?filter=new"
-        />
-        <AdminMetricCard
-          label="Active posters"
-          value={metrics.active_users}
-          sub={`${postsPerActive} posts per active user`}
-          to="/admin/users"
-        />
-        <AdminMetricCard
-          label="Sleep posts"
-          value={metrics.posts}
-          sub={rangeLabel}
-          to="/admin/posts"
-        />
-      </div>
-
-      <div className="admin-metric-grid admin-metric-grid--dense">
-        <AdminMetricCard label="Comments" value={metrics.comments} sub={rangeLabel} />
-        <AdminMetricCard label="Kudos" value={metrics.kudos} sub={rangeLabel} />
-        <AdminMetricCard
-          label="New friendships"
-          value={metrics.friendships_accepted}
-          sub="Accepted in range"
-        />
-        {appliedVersion ? (
-          <AdminMetricCard
-            label="Users on version"
-            value={metrics.version_user_count ?? 0}
-            sub={`Last reported v${appliedVersion}`}
-          />
-        ) : (
-          <AdminMetricCard
-            label="Version reporting"
-            value={metrics.users_with_version_reported}
-            sub="Users with a reported app version"
-          />
-        )}
-      </div>
-
-      {activity.length > 0 ? (
-        <div className="admin-chart-grid admin-chart-grid--pair">
-          <AdminActivityChart
-            title="Daily active posters"
-            rows={activity}
-            series="active_users"
-            color="var(--accent)"
-          />
-          <AdminActivityChart
-            title="Daily sleep posts"
-            rows={activity}
-            series="posts"
-            color="var(--deep)"
-          />
-          <AdminActivityChart
-            title="Daily signups"
-            rows={activity}
-            series="signups"
-            color="var(--rem)"
-          />
-          <AdminActivityChart
-            title="Daily comments"
-            rows={activity}
-            series="comments"
-            color="var(--text-muted)"
-          />
-        </div>
-      ) : null}
-    </div>
   );
 }
 
@@ -287,7 +175,7 @@ function DreamsPanel({
         <AdminMetricCard
           label="Dream log rate"
           value={dreamRate}
-          sub={`${metrics.posts_with_dreams} of ${metrics.posts} posts`}
+          sub={`${formatNumber(metrics.posts_with_dreams)} of ${formatNumber(metrics.posts)} posts`}
           to="/admin/posts"
         />
         <AdminMetricCard

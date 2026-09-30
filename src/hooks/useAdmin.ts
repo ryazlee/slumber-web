@@ -32,8 +32,6 @@ import {
   checkIsModerator,
   formatAdminRpcError,
   fetchAdminPost,
-  repairDoubledSleepPostStages,
-  repairDoubledSleepPostStagesBulk,
   broadcastAdminNotification,
   fetchAdminCampaigns,
   upsertAdminCampaign,
@@ -50,7 +48,6 @@ import {
   fetchCommunityMetrics,
   fetchDataIssues,
   fetchHealthMetrics,
-  repairInflatedStages,
   resetUserStreak,
   setUserSuspended,
   type AnalyticsFilters,
@@ -225,6 +222,17 @@ export function useAppVersions() {
   });
 }
 
+export function useDailyActivity(filters: AnalyticsFilters, enabled = true) {
+  const ready = Boolean(filters.start && filters.end);
+  return useQuery({
+    queryKey: queryKeys.admin.analyticsActivity(filters),
+    queryFn: () => fetchDailyActivity(filters),
+    enabled: enabled && ready,
+    placeholderData: keepPreviousData,
+    ...adminQueryOptions,
+  });
+}
+
 export function useAdminUserSearch(filters: UserSearchFilters, enabled = true) {
   return useQuery({
     queryKey: queryKeys.admin.userSearch(filters),
@@ -298,12 +306,6 @@ export function useAdminAnalyticsBundle(filters: AnalyticsFilters) {
         ...adminQueryOptions,
       },
       {
-        queryKey: queryKeys.admin.analyticsActivity(filters),
-        queryFn: () => fetchDailyActivity(filters),
-        placeholderData: keepPreviousData,
-        ...adminQueryOptions,
-      },
-      {
         queryKey: queryKeys.admin.analyticsTags(tagFilters),
         queryFn: () => fetchAdminTags(tagFilters),
         placeholderData: keepPreviousData,
@@ -312,7 +314,7 @@ export function useAdminAnalyticsBundle(filters: AnalyticsFilters) {
     ],
   });
 
-  const [metricsQ, activityQ, tagsQ] = results;
+  const [metricsQ, tagsQ] = results;
 
   // With placeholderData, isLoading is false while showing prior range — treat as
   // "no data yet" only when we have nothing to render.
@@ -322,8 +324,6 @@ export function useAdminAnalyticsBundle(filters: AnalyticsFilters) {
   let error: string | null = null;
   if (metricsQ.isError) {
     error = formatAdminRpcError('Metrics', metricsQ.error);
-  } else if (activityQ.isError) {
-    error = formatAdminRpcError('Daily activity', activityQ.error);
   } else if (tagsQ.isError) {
     error = formatAdminRpcError('Tags', tagsQ.error);
   }
@@ -334,7 +334,6 @@ export function useAdminAnalyticsBundle(filters: AnalyticsFilters) {
 
   return {
     metrics: metricsQ.data ?? null,
-    activity: activityQ.data ?? [],
     tags,
     loading,
     fetching,
@@ -495,28 +494,6 @@ export function useAdminPost(postId: string | null) {
   });
 }
 
-export function useRepairDoubledSleepPostStages() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (postId: string) => repairDoubledSleepPostStages(postId),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['admin', 'posts'] });
-    },
-  });
-}
-
-export function useRepairDoubledSleepPostStagesBulk() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (postIds: string[]) => repairDoubledSleepPostStagesBulk(postIds),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['admin', 'posts'] });
-      void qc.invalidateQueries({ queryKey: ['admin', 'data-issues'] });
-      void qc.invalidateQueries({ queryKey: ['admin', 'health'] });
-    },
-  });
-}
-
 export function useHealthMetrics(
   range: { start: string; end: string },
   enabled = true,
@@ -623,19 +600,6 @@ export function useSetUserSuspended() {
     onSuccess: (_data, { userId }) => {
       void qc.invalidateQueries({ queryKey: queryKeys.admin.userDetail(userId) });
       void qc.invalidateQueries({ queryKey: ['admin', 'user-search'] });
-    },
-  });
-}
-
-export function useRepairInflatedStages() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ limit, days }: { limit?: number; days?: number | null }) =>
-      repairInflatedStages(limit, days),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['admin', 'posts'] });
-      void qc.invalidateQueries({ queryKey: ['admin', 'data-issues'] });
-      void qc.invalidateQueries({ queryKey: ['admin', 'health'] });
     },
   });
 }

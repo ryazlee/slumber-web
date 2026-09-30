@@ -21,6 +21,8 @@ import AdminTabs from './AdminTabs';
 import {
   buildCommentReportColumns,
   buildPostReportColumns,
+  commentReportMobileSummary,
+  postReportMobileSummary,
   reportTableColumnVisibility,
 } from './reportGridColumns';
 
@@ -169,9 +171,10 @@ export default function AdminReports() {
         <p className="admin-muted admin-empty">No {tab} reports yet.</p>
       ) : !loading && view === 'table' ? (
         <AdminDataGrid
-          persistKey={`admin-reports-${tab}`}
+          persistKey={`admin-reports-v2-${tab}`}
           rows={tableRows as PostReportRow[] | CommentReportRow[]}
           columns={columns}
+          mobileSummary={tab === 'posts' ? postReportMobileSummary : commentReportMobileSummary}
           getRowId={(row) => row.id}
           loading={loading}
           label={`${tab} reports`}

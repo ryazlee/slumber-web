@@ -4,25 +4,20 @@ import AdminGridAction from './AdminGridAction';
 import AdminGridActions from './AdminGridActions';
 import AdminPostRawCell from './AdminPostRawCell';
 import { dateColumn } from './dateColumn';
-import { gridActionsColumn, idCodeColumn } from './gridColumnHelpers';
+import {
+  AdminStatusPill,
+  gridActionsColumn,
+  idCodeColumn,
+  type AdminMobileSummary,
+} from './gridColumnHelpers';
 
 export type RecentPostColumnOptions = {
   actingPostId?: string | null;
   expandedRawIds?: ReadonlySet<string>;
   onToggleRaw?: (postId: string) => void;
-  onRepair?: (post: RecentPostRow) => void;
+  onOpenPost?: (post: RecentPostRow) => void;
   onSoftDelete?: (post: RecentPostRow) => void;
 };
-
-function isWearablePost(row: RecentPostRow): boolean {
-  return !row.is_custom && row.source_device !== 'Custom';
-}
-
-function needsStageRepair(row: RecentPostRow): boolean {
-  return isWearablePost(row)
-    && row.in_bed_minutes > 0
-    && row.asleep_minutes > row.in_bed_minutes + 5;
-}
 
 function formatSleepMinutes(minutes: number): string {
   const h = Math.floor(minutes / 60);
@@ -34,13 +29,14 @@ function formatSleepMinutes(minutes: number): string {
 function sleepMinutesColumn(
   field: keyof RecentPostRow,
   headerName: string,
-  width = 88,
+  width = 84,
 ): GridColDef<RecentPostRow> {
   return {
     field,
     headerName,
     type: 'number',
     width,
+    flex: 0,
     valueGetter: (_value, row) => {
       const raw = row[field];
       return raw == null ? null : Number(raw);
@@ -54,19 +50,42 @@ function postSourceLabel(row: RecentPostRow): string {
   return row.source_device?.trim() || 'Wearable';
 }
 
+function sleepDateLabel(row: RecentPostRow): string {
+  if (!row.sleep_date) return '—';
+  return new Date(`${row.sleep_date}T12:00:00`).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+export const postMobileSummary: AdminMobileSummary = {
+  title: (row: RecentPostRow) => row.title?.trim() || 'Untitled',
+  searchText: (row: RecentPostRow) => [row.title, row.username, postSourceLabel(row), row.sleep_date].filter(Boolean).join(' '),
+  status: (row: RecentPostRow) => <AdminStatusPill>{postSourceLabel(row)}</AdminStatusPill>,
+  facts: [
+    { label: 'User', value: (row: RecentPostRow) => `@${row.username}` },
+    { label: 'Night', value: (row: RecentPostRow) => sleepDateLabel(row) },
+    {
+      label: 'Asleep',
+      value: (row: RecentPostRow) => (
+        row.asleep_minutes == null ? '—' : formatSleepMinutes(Number(row.asleep_minutes))
+      ),
+    },
+  ],
+};
+
 export function buildRecentPostColumns(
   options: RecentPostColumnOptions = {},
 ): GridColDef<RecentPostRow>[] {
-  const { actingPostId = null, expandedRawIds, onToggleRaw, onRepair, onSoftDelete } = options;
+  const { actingPostId = null, expandedRawIds, onToggleRaw, onOpenPost, onSoftDelete } = options;
 
   const cols: GridColDef<RecentPostRow>[] = [
-    idCodeColumn<RecentPostRow>('id', 'Post ID'),
-    idCodeColumn<RecentPostRow>('user_id', 'User ID'),
     {
       field: 'username',
       headerName: 'User',
-      flex: 1,
-      minWidth: 120,
+      flex: 0.8,
+      minWidth: 110,
       valueGetter: (_value, row) => row.username,
       valueFormatter: (value) => `@${value}`,
     },
@@ -75,6 +94,7 @@ export function buildRecentPostColumns(
       headerName: 'Sleep date',
       type: 'date',
       width: 120,
+      flex: 0,
       valueGetter: (_value, row) => (row.sleep_date ? new Date(`${row.sleep_date}T12:00:00`) : null),
       valueFormatter: (value: Date | null) => {
         if (value == null) return '—';
@@ -84,48 +104,23 @@ export function buildRecentPostColumns(
     {
       field: 'title',
       headerName: 'Title',
-      flex: 1.5,
+      flex: 1.4,
       minWidth: 160,
     },
     sleepMinutesColumn('asleep_minutes', 'Asleep'),
-    sleepMinutesColumn('in_bed_minutes', 'In bed'),
-    sleepMinutesColumn('core_minutes', 'Core'),
-    sleepMinutesColumn('deep_minutes', 'Deep'),
-    sleepMinutesColumn('rem_minutes', 'REM'),
-    sleepMinutesColumn('awake_minutes', 'Awake'),
     {
       field: 'source',
       headerName: 'Source',
       width: 110,
+      flex: 0,
       valueGetter: (_value, row) => postSourceLabel(row),
-    },
-    {
-      field: 'source_device',
-      headerName: 'Device',
-      width: 110,
-      valueGetter: (_value, row) => row.source_device?.trim() || '—',
-    },
-    {
-      field: 'is_custom',
-      headerName: 'Manual',
-      type: 'boolean',
-      width: 88,
-      valueGetter: (_value, row) => row.is_custom,
-      valueFormatter: (value) => (value ? 'Yes' : '—'),
-    },
-    {
-      field: 'has_dream',
-      headerName: 'Dream',
-      type: 'boolean',
-      width: 80,
-      valueGetter: (_value, row) => row.has_dream,
-      valueFormatter: (value) => (value ? 'Yes' : '—'),
     },
     {
       field: 'kudos_count',
       headerName: 'Kudos',
       type: 'number',
       width: 80,
+      flex: 0,
       valueGetter: (_value, row) => Number(row.kudos_count ?? 0),
     },
     {
@@ -133,13 +128,43 @@ export function buildRecentPostColumns(
       headerName: 'Comments',
       type: 'number',
       width: 100,
+      flex: 0,
       valueGetter: (_value, row) => Number(row.comments_count ?? 0),
     },
     dateColumn('created_at', 'Logged'),
     {
+      field: 'has_dream',
+      headerName: 'Dream',
+      width: 80,
+      flex: 0,
+      valueGetter: (_value, row) => (row.has_dream ? 'Yes' : '—'),
+    },
+    sleepMinutesColumn('in_bed_minutes', 'In bed'),
+    sleepMinutesColumn('core_minutes', 'Core'),
+    sleepMinutesColumn('deep_minutes', 'Deep'),
+    sleepMinutesColumn('rem_minutes', 'REM'),
+    sleepMinutesColumn('awake_minutes', 'Awake'),
+    {
+      field: 'source_device',
+      headerName: 'Device',
+      width: 120,
+      flex: 0,
+      valueGetter: (_value, row) => row.source_device?.trim() || '—',
+    },
+    {
+      field: 'is_custom',
+      headerName: 'Manual',
+      width: 88,
+      flex: 0,
+      valueGetter: (_value, row) => (row.is_custom ? 'Yes' : '—'),
+    },
+    idCodeColumn<RecentPostRow>('id', 'Post ID'),
+    idCodeColumn<RecentPostRow>('user_id', 'User ID'),
+    {
       field: 'raw',
       headerName: 'Raw',
-      width: 220,
+      width: 140,
+      flex: 0,
       sortable: false,
       valueGetter: (_value, row) => JSON.stringify(row),
       renderCell: ({ row, value }) => (
@@ -153,49 +178,40 @@ export function buildRecentPostColumns(
     },
   ];
 
-  if (onRepair || onSoftDelete) {
-    cols.push({
-      field: 'post_actions',
-      headerName: 'Actions',
-      ...gridActionsColumn,
-      width: onSoftDelete && onRepair ? 156 : 88,
-      renderCell: ({ row }) => {
-        const wearable = isWearablePost(row);
-        const busy = actingPostId === row.id;
-        const inflated = needsStageRepair(row);
-        return (
-          <AdminGridActions>
-            {onSoftDelete ? (
-              <AdminGridAction
-                variant="danger"
-                disabled={busy}
-                title="Soft-delete post"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSoftDelete(row);
-                }}
-              >
-                {busy ? '…' : 'Delete'}
-              </AdminGridAction>
-            ) : null}
-            {onRepair && inflated ? (
-              <AdminGridAction
-                variant="accent"
-                disabled={!wearable || busy}
-                title="Collapse duplicate stage segments"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRepair(row);
-                }}
-              >
-                {busy ? '…' : 'Repair'}
-              </AdminGridAction>
-            ) : null}
-          </AdminGridActions>
-        );
-      },
-    });
-  }
+  cols.push({
+    field: 'post_actions',
+    headerName: 'Actions',
+    ...gridActionsColumn,
+    width: 168,
+    renderCell: ({ row }) => {
+      const busy = actingPostId === row.id;
+      return (
+        <AdminGridActions>
+          <AdminGridAction
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenPost?.(row);
+            }}
+          >
+            Open
+          </AdminGridAction>
+          {onSoftDelete ? (
+            <AdminGridAction
+              variant="danger"
+              disabled={busy}
+              title="Soft-delete post"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSoftDelete(row);
+              }}
+            >
+              {busy ? '…' : 'Delete'}
+            </AdminGridAction>
+          ) : null}
+        </AdminGridActions>
+      );
+    },
+  });
 
   return cols;
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import type { FormEvent } from 'react';
 import type { AdminCampaignActionKind, AdminCampaignDraft, AdminCampaignRow } from '../../lib/admin';
 import { defaultAdminCampaignCta, uploadAdminCampaignImage } from '../../lib/admin';
@@ -14,7 +15,11 @@ import {
 import { useAssignableRoles } from '../../hooks/useCatalog';
 import { getCachedRoleOptions } from '../../lib/userRoles';
 import AdminFieldGroup from './AdminFieldGroup';
+import AdminGridAction from './AdminGridAction';
+import AdminGridActions from './AdminGridActions';
+import { AdminStatusPill } from './gridColumnHelpers';
 import AdminFilterBar, { AdminFilterField } from './AdminFilterBar';
+import AdminFormDialog from './AdminFormDialog';
 import AdminPanel from './AdminPanel';
 import AdminSection from './AdminSection';
 
@@ -92,6 +97,24 @@ function parseActionKind(value: string | null | undefined): AdminCampaignActionK
   return 'challenge';
 }
 
+
+function snippet(body: string): string {
+  const trimmed = body.replace(/\s+/g, ' ').trim();
+  if (trimmed.length <= 110) return trimmed;
+  return `${trimmed.slice(0, 107)}…`;
+}
+
+function actionDetail(row: AdminCampaignRow): string {
+  const kind = parseActionKind(row.action_kind);
+  if (kind === 'url') return row.cta_url?.trim() || row.cta_label || 'Link';
+  if (kind === 'message') return row.cta_label?.trim() || 'Announcement';
+  const title = row.challenge_title?.trim() || 'Linked challenge';
+  const host = row.hosted_by === 'slumber' ? 'Slumber' : 'User hosted';
+  const link = row.open_link_enabled ? 'Open link' : 'Link off';
+  const status = row.challenge_status ? row.challenge_status : null;
+  return [title, host, link, status].filter(Boolean).join(' · ');
+}
+
 export default function AdminCampaigns() {
   const campaignsQuery = useAdminCampaigns();
   const upsertMutation = useUpsertAdminCampaign();
@@ -102,6 +125,7 @@ export default function AdminCampaigns() {
   const rolesQuery = useAssignableRoles();
   const roleOptions = rolesQuery.data ?? getCachedRoleOptions();
 
+  const [composerOpen, setComposerOpen] = useState(false);
   const [draft, setDraft] = useState<AdminCampaignDraft>(EMPTY_DRAFT);
   const [slumber, setSlumber] = useState(EMPTY_SLUMBER);
   const [slumberNote, setSlumberNote] = useState<string | null>(null);
@@ -112,6 +136,7 @@ export default function AdminCampaigns() {
   const campaigns = campaignsQuery.data ?? [];
   const error = getOptionalQueryErrorMessage(campaignsQuery.error, 'Could not load campaigns.');
   const editing = Boolean(draft.id);
+  const isNarrow = useMediaQuery('(max-width: 900px)');
 
   const setActionKind = (action_kind: AdminCampaignActionKind) => {
     setDraft((prev) => {
@@ -151,13 +176,24 @@ export default function AdminCampaigns() {
       priority: row.priority,
     });
     setFormError(null);
+    setComposerOpen(true);
   };
 
-  const handleReset = () => {
+  const clearDraft = () => {
     setDraft(EMPTY_DRAFT);
     setSlumber(EMPTY_SLUMBER);
     setSlumberNote(null);
     setFormError(null);
+  };
+
+  const closeComposer = () => {
+    clearDraft();
+    setComposerOpen(false);
+  };
+
+  const openComposer = () => {
+    clearDraft();
+    setComposerOpen(true);
   };
 
   const handleCreateSlumber = async () => {
@@ -216,7 +252,7 @@ export default function AdminCampaigns() {
     setListError(null);
     try {
       await deleteMutation.mutateAsync(row.id);
-      if (draft.id === row.id) handleReset();
+      if (draft.id === row.id) closeComposer();
     } catch (err: unknown) {
       setListError(err instanceof Error ? err.message : 'Could not delete campaign.');
     }
@@ -277,7 +313,7 @@ export default function AdminCampaigns() {
         cta_url: draft.cta_url.trim(),
         image_url: draft.image_url.trim(),
       });
-      handleReset();
+      closeComposer();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Could not save campaign.';
       if (message.includes('challenge_not_open_link')) {
@@ -294,20 +330,53 @@ export default function AdminCampaigns() {
     }
   };
 
+  const renderCampaignActions = (row: AdminCampaignRow) => (
+    <AdminGridActions>
+      <AdminGridAction onClick={() => handleEdit(row)}>Edit</AdminGridAction>
+      <AdminGridAction
+        disabled={enabledMutation.isPending}
+        onClick={() => { void enabledMutation.mutateAsync({ id: row.id, enabled: !row.enabled }); }}
+      >
+        {row.enabled ? 'Disable' : 'Enable'}
+      </AdminGridAction>
+      {row.hosted_by === 'slumber' && row.challenge_status === 'pending' && row.challenge_id ? (
+        <AdminGridAction
+          disabled={startSlumberMutation.isPending}
+          onClick={() => { void handleStartSlumber(row.challenge_id as string); }}
+        >
+          Start
+        </AdminGridAction>
+      ) : null}
+      <AdminGridAction
+        variant="danger"
+        disabled={deleteMutation.isPending}
+        onClick={() => { void handleDelete(row); }}
+      >
+        Delete
+      </AdminGridAction>
+    </AdminGridActions>
+  );
+
   return (
     <AdminSection
       lead="The header shows every enabled campaign whose audience includes you. Leave the dates blank to keep it up until you turn it off. The Feed banner only stays up while there is still something to do."
       error={error}
     >
-      <AdminPanel
+      <div className="admin-form-actions">
+        <button type="button" className="admin-button" onClick={openComposer}>
+          New campaign
+        </button>
+      </div>
+
+      <AdminFormDialog
+        open={composerOpen}
+        onClose={closeComposer}
         title={editing ? 'Edit campaign' : 'New campaign'}
-        description="Challenge, announcement, or link. Target developer + founder first, then clear roles to ship."
-        headerAction={editing ? (
-          <button type="button" className="admin-button admin-button-ghost" onClick={handleReset}>
-            New
-          </button>
-        ) : null}
+        wide
       >
+        <p className="admin-panel-desc">
+          Challenge, announcement, or link. Target developer + founder first, then clear roles to ship.
+        </p>
         <form className="admin-compose-form" onSubmit={handleSubmit}>
           <label className="admin-label" htmlFor="campaign-kind">Type</label>
           <select
@@ -603,9 +672,27 @@ export default function AdminCampaigns() {
             <button className="admin-button" type="submit" disabled={upsertMutation.isPending}>
               {upsertMutation.isPending ? 'Saving…' : editing ? 'Save campaign' : 'Create campaign'}
             </button>
+            {editing ? (
+              <button
+                type="button"
+                className="admin-button admin-button-ghost"
+                onClick={clearDraft}
+                disabled={upsertMutation.isPending}
+              >
+                Start over
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="admin-button admin-button-ghost"
+              onClick={closeComposer}
+              disabled={upsertMutation.isPending}
+            >
+              Cancel
+            </button>
           </div>
         </form>
-      </AdminPanel>
+      </AdminFormDialog>
 
       <AdminPanel title="Campaigns">
         {listError ? <p className="admin-error">{listError}</p> : null}
@@ -613,16 +700,65 @@ export default function AdminCampaigns() {
           <p className="admin-muted">Loading…</p>
         ) : campaigns.length === 0 ? (
           <p className="admin-empty-inline">No campaigns yet.</p>
-        ) : (
+        ) : isNarrow ? (
+            <div className="admin-mobile-card-list">
+              <ul className="admin-mobile-card-list-items">
+                {campaigns.map((row) => {
+                  const kind = parseActionKind(row.action_kind);
+                  return (
+                    <li key={row.id} className="admin-mobile-card">
+                      <div className="admin-mobile-card-header">
+                        <div className="admin-campaign-title-row">
+                          {row.image_url ? <img src={row.image_url} alt="" className="admin-campaign-thumb" /> : null}
+                          <span className="admin-mobile-card-title">
+                            {row.emoji ? `${row.emoji} ` : ''}{row.title}
+                          </span>
+                        </div>
+                        <AdminStatusPill tone={row.enabled ? 'on' : 'off'}>
+                          {row.enabled ? 'On' : 'Off'}
+                        </AdminStatusPill>
+                      </div>
+                      {row.body?.trim() ? <p className="admin-campaign-sub">{snippet(row.body)}</p> : null}
+                      <dl className="admin-mobile-card-facts">
+                        <div>
+                          <dt>Action</dt>
+                          <dd>{actionLabel(kind)}</dd>
+                        </div>
+                        <div>
+                          <dt>Schedule</dt>
+                          <dd>{formatWindow(row.starts_at, row.ends_at)}</dd>
+                        </div>
+                        <div>
+                          <dt>Audience</dt>
+                          <dd>{audienceLabel(row.target_roles ?? [])}</dd>
+                        </div>
+                      </dl>
+                      <p className="admin-campaign-kicker">{actionDetail(row)}</p>
+                      {renderCampaignActions(row)}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : (
           <div className="admin-table-wrap">
-            <table className="admin-table">
+            <table className="admin-table admin-table--readable admin-campaign-table">
+              <colgroup>
+                <col className="admin-campaign-col-title" />
+                <col className="admin-campaign-col-status" />
+                <col className="admin-campaign-col-action" />
+                <col className="admin-campaign-col-when" />
+                <col className="admin-campaign-col-who" />
+                <col className="admin-campaign-col-actions" />
+              </colgroup>
               <thead>
                 <tr>
-                  <th>Title</th>
-                  <th>Audience</th>
-                  <th>Action</th>
+                  <th>Campaign</th>
                   <th>Status</th>
-                  <th />
+                  <th>Action</th>
+                  <th>Schedule</th>
+                  <th>Audience</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -630,73 +766,30 @@ export default function AdminCampaigns() {
                   const kind = parseActionKind(row.action_kind);
                   return (
                     <tr key={row.id}>
-                      <td>
-                      {row.image_url ? (
-                        <img
-                          src={row.image_url}
-                          alt=""
-                          style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 6, marginRight: 8, verticalAlign: 'middle' }}
-                        />
-                      ) : null}
-                      {row.emoji ? `${row.emoji} ` : ''}
-                      {row.title}
-                        <div className="admin-muted">{row.enabled ? 'On' : 'Off'} · p{row.priority} · {actionLabel(kind)}</div>
-                      </td>
-                      <td>{audienceLabel(row.target_roles ?? [])}</td>
-                      <td>
-                        {kind === 'url' ? (
-                          <>
-                            {row.cta_url || '—'}
-                            <div className="admin-muted">{row.cta_label}</div>
-                          </>
-                        ) : kind === 'message' ? (
-                          <span className="admin-muted">{row.cta_label || 'Got it'}</span>
-                        ) : (
-                          <>
-                            {row.challenge_title || row.challenge_id || '—'}
-                            <div className="admin-muted">
-                              {row.hosted_by === 'slumber' ? 'Slumber' : 'User'}
-                              {' · '}
-                              {row.open_link_enabled ? 'Open link' : 'Link off'}
-                              {row.challenge_status ? ` · ${row.challenge_status}` : ''}
+                      <td className="admin-td-wrap">
+                        <div className="admin-campaign-title-row">
+                          {row.image_url ? <img src={row.image_url} alt="" className="admin-campaign-thumb" /> : null}
+                          <div>
+                            <div className="admin-campaign-name">
+                              {row.emoji ? `${row.emoji} ` : ''}{row.title}
                             </div>
-                          </>
-                        )}
+                            {row.body?.trim() ? <div className="admin-campaign-sub">{snippet(row.body)}</div> : null}
+                          </div>
+                        </div>
                       </td>
                       <td>
-                        {formatWindow(row.starts_at, row.ends_at)}
+                        <AdminStatusPill tone={row.enabled ? 'on' : 'off'}>
+                          {row.enabled ? 'On' : 'Off'}
+                        </AdminStatusPill>
+                        <div className="admin-campaign-priority">Priority {row.priority}</div>
                       </td>
-                      <td>
-                        <button type="button" className="admin-button admin-button-ghost admin-button-sm" onClick={() => handleEdit(row)}>
-                          Edit
-                        </button>
-                        {row.hosted_by === 'slumber' && row.challenge_status === 'pending' && row.challenge_id ? (
-                          <button
-                            type="button"
-                            className="admin-button admin-button-ghost admin-button-sm"
-                            disabled={startSlumberMutation.isPending}
-                            onClick={() => { void handleStartSlumber(row.challenge_id as string); }}
-                          >
-                            Start
-                          </button>
-                        ) : null}
-                        <button
-                          type="button"
-                          className="admin-button admin-button-ghost admin-button-sm"
-                          disabled={enabledMutation.isPending}
-                          onClick={() => void enabledMutation.mutateAsync({ id: row.id, enabled: !row.enabled })}
-                        >
-                          {row.enabled ? 'Disable' : 'Enable'}
-                        </button>
-                        <button
-                          type="button"
-                          className="admin-button admin-button-danger admin-button-sm"
-                          disabled={deleteMutation.isPending}
-                          onClick={() => { void handleDelete(row); }}
-                        >
-                          Delete
-                        </button>
+                      <td className="admin-td-wrap">
+                        <div className="admin-campaign-name">{actionLabel(kind)}</div>
+                        <div className="admin-campaign-sub">{actionDetail(row)}</div>
                       </td>
+                      <td className="admin-td-wrap">{formatWindow(row.starts_at, row.ends_at)}</td>
+                      <td className="admin-td-wrap">{audienceLabel(row.target_roles ?? [])}</td>
+                      <td className="admin-td-actions">{renderCampaignActions(row)}</td>
                     </tr>
                   );
                 })}

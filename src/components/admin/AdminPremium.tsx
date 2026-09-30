@@ -10,16 +10,16 @@ import {
   usePremiumUsers,
   useUpdateUserPremium,
 } from '../../hooks/useAdmin';
-import AdminDataGrid from './AdminDataGrid';
-import AdminFilterBar, { AdminFilterField } from './AdminFilterBar';
+import AdminDataGrid, { AdminGridSearchField } from './AdminDataGrid';
 import AdminGridClientFilterHint from './AdminGridClientFilterHint';
 import AdminListToolbar from './AdminListToolbar';
 import AdminMetricCard from './AdminMetricCard';
-import AdminPanel from './AdminPanel';
+import AdminFormDialog from './AdminFormDialog';
 import AdminSection, { AdminTableSummary } from './AdminSection';
 import { AdminUserPickerList, AdminUserPickerSearchField } from './AdminUserPicker';
 import { pluralCount, formatNumber } from './format';
-import { buildPremiumSubscriberColumns } from './premiumGridColumns';
+import { buildPremiumSubscriberColumns, premiumMobileSummary } from './premiumGridColumns';
+
 import {
   defaultPremiumUntilDate,
   extendPremiumUntilOneYear,
@@ -29,6 +29,7 @@ import {
 } from './premiumDateUtils';
 
 export default function AdminPremium() {
+  const [grantOpen, setGrantOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [draftUntil, setDraftUntil] = useState(defaultPremiumUntilDate());
   const [grantError, setGrantError] = useState<string | null>(null);
@@ -81,8 +82,10 @@ export default function AdminPremium() {
     ?? getOptionalQueryErrorMessage(subscribersQuery.error, 'Could not load subscribers.');
 
   useEffect(() => {
-    grantSearchRef.current?.focus();
-  }, []);
+    if (!grantOpen) return undefined;
+    const id = window.requestAnimationFrame(() => grantSearchRef.current?.focus());
+    return () => window.cancelAnimationFrame(id);
+  }, [grantOpen]);
 
   useEffect(() => {
     if (selectedUser) {
@@ -200,12 +203,21 @@ export default function AdminPremium() {
         </div>
       ) : null}
 
-      <div className="admin-split">
-        <AdminPanel
-          step={1}
-          title="Grant Premium"
-          description="Search any user, pick a duration, and save. Comps set is_premium — separate from the cosmetic premium avatar role."
-        >
+      <div className="admin-form-actions">
+        <button type="button" className="admin-button" onClick={() => setGrantOpen(true)}>
+          Grant Premium
+        </button>
+      </div>
+
+      <AdminFormDialog
+        open={grantOpen}
+        onClose={() => setGrantOpen(false)}
+        title="Grant Premium"
+        wide
+      >
+        <p className="admin-panel-desc">
+          Search any user, pick a duration, and save. Comps set is_premium — separate from the cosmetic premium avatar role.
+        </p>
           <AdminUserPickerSearchField
             inputId="premium-grant-search"
             label="Search user"
@@ -288,8 +300,16 @@ export default function AdminPremium() {
           ) : null}
 
           {grantError ? <p className="admin-error">{grantError}</p> : null}
-        </AdminPanel>
-      </div>
+          <div className="admin-form-actions">
+            <button
+              type="button"
+              className="admin-button admin-button-ghost"
+              onClick={() => setGrantOpen(false)}
+            >
+              Close
+            </button>
+          </div>
+      </AdminFormDialog>
 
       <AdminSubscribersSection
         subscribers={subscribers}
@@ -337,24 +357,20 @@ function AdminSubscribersSection({
         </AdminTableSummary>
       </AdminListToolbar>
 
-      <AdminFilterBar nested>
-        <AdminFilterField label="Filter subscribers" htmlFor="premium-subscriber-search" className="admin-filter-field--wide">
-          <input
-            id="premium-subscriber-search"
-            className="admin-input"
-            type="search"
-            placeholder="Filter by username or email…"
-            value={subscriberQuery}
-            onChange={(e) => onSubscriberQueryChange(e.target.value)}
-            autoComplete="off"
-          />
-        </AdminFilterField>
-      </AdminFilterBar>
-
       {rowError ? <p className="admin-error">{rowError}</p> : null}
 
       <AdminDataGrid
-        persistKey="admin-premium-subscribers"
+        persistKey="admin-premium-subscribers-v2"
+        mobileSummary={premiumMobileSummary}
+        search={(
+          <AdminGridSearchField
+            id="premium-subscriber-search"
+            label="Search subscribers"
+            placeholder="Filter by username or email…"
+            value={subscriberQuery}
+            onChange={onSubscriberQueryChange}
+          />
+        )}
         rows={subscribers}
         columns={columns}
         getRowId={(row) => row.id}

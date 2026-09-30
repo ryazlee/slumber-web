@@ -17,6 +17,8 @@ type Props = {
   invertDelta?: boolean;
   /** Short change, without the comparison phrase. Flat changes omit the percent. */
   compactDelta?: boolean;
+  /** Delta is a percentage-point change. Skips the relative percent. */
+  pointsDelta?: boolean;
 };
 
 export default function AdminMetricCard({
@@ -29,6 +31,7 @@ export default function AdminMetricCard({
   deltaLabel,
   invertDelta = false,
   compactDelta = false,
+  pointsDelta = false,
 }: Props) {
   const showDelta = delta != null;
   const deltaClass = !showDelta || delta === 0
@@ -36,15 +39,16 @@ export default function AdminMetricCard({
     : (invertDelta ? delta > 0 : delta < 0)
       ? 'admin-metric-delta--down'
       : 'admin-metric-delta--up';
-  const rawPct = showDelta && previous != null && !(compactDelta && delta === 0)
+  const rawPct = showDelta && !pointsDelta && previous != null && !(compactDelta && delta === 0)
     ? formatDeltaPercent(typeof value === 'number' ? value : 0, previous)
     : null;
   const pct = rawPct?.replace(/^-/, '−') ?? null;
+  const signedDelta = showDelta ? (pointsDelta ? `${formatDelta(delta)} pp` : formatDelta(delta)) : '';
   const deltaText = !showDelta
     ? ''
     : compactDelta
-      ? [formatDelta(delta), pct].filter(Boolean).join(' · ')
-      : `${formatDelta(delta)}${pct ? ` (${pct})` : ''}${deltaLabel ? ` ${deltaLabel}` : ''}`;
+      ? [signedDelta, pct].filter(Boolean).join(' · ')
+      : `${signedDelta}${pct ? ` (${pct})` : ''}${deltaLabel ? ` ${deltaLabel}` : ''}`;
 
   const body = (
     <>
@@ -55,7 +59,9 @@ export default function AdminMetricCard({
       {showDelta ? (
         <p className={`admin-metric-delta ${deltaClass}`}>{deltaText}</p>
       ) : null}
-      {sub ? <p className="admin-metric-sub">{sub}</p> : null}
+      {sub ? (
+        <p className="admin-metric-sub" title={typeof sub === 'string' ? sub : undefined}>{sub}</p>
+      ) : null}
     </>
   );
 

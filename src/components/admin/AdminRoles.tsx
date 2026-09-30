@@ -5,8 +5,7 @@ import { getOptionalQueryErrorMessage } from '../../lib/queryError';
 import { useAdminCatalogForm } from '../../hooks/useAdminCatalogForm';
 import { usePaginatedFilters } from '../../hooks/usePaginatedFilters';
 import { useAdminRoleDefinitions, useDeleteAdminRole, useUpsertAdminRole } from '../../hooks/useAdmin';
-import { ADMIN_CATALOG_FORM_ID, scrollAdminPanelIntoView } from './adminScroll';
-import { buildAdminRoleColumns } from './catalogGridColumns';
+import { buildAdminRoleColumns, roleMobileSummary } from './catalogGridColumns';
 import AdminDataGrid from './AdminDataGrid';
 import AdminGridClientFilterHint from './AdminGridClientFilterHint';
 import AdminListToolbar from './AdminListToolbar';
@@ -74,7 +73,6 @@ export default function AdminRoles() {
       sort_order: role.sort_order,
     });
     setFormError(null);
-    scrollAdminPanelIntoView(ADMIN_CATALOG_FORM_ID);
   };
 
   const handleDelete = async (role: AdminRoleDefinitionRow) => {
@@ -113,15 +111,14 @@ export default function AdminRoles() {
       lead="Admin and avatar roles. Assign them on a user from People → Users."
     >
       <AdminListToolbar
-        actions={!showForm ? (
+        actions={(
           <button className="admin-button" type="button" onClick={() => {
             openCreate();
-            scrollAdminPanelIntoView(ADMIN_CATALOG_FORM_ID);
           }}
           >
             + Add role
           </button>
-        ) : null}
+        )}
       >
         <AdminTableSummary>
           {pluralCount(rolesTotal, 'role')}
@@ -132,7 +129,6 @@ export default function AdminRoles() {
 
       {showForm ? (
         <AdminRoleDefinitionForm
-          panelId={ADMIN_CATALOG_FORM_ID}
           draft={draft}
           editingKey={editingKey}
           saving={saving}
@@ -145,7 +141,8 @@ export default function AdminRoles() {
 
       {!loading && rolesTotal > 0 ? (
         <AdminDataGrid
-          persistKey="admin-roles"
+          persistKey="admin-roles-v2"
+          mobileSummary={roleMobileSummary}
           rows={roles}
           columns={columns}
           getRowId={(row) => row.key}

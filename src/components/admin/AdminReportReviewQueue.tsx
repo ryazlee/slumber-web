@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import type { CommentReportGroup, PostReportGroup } from '../../lib/groupReports';
 import { formatRoleList } from '../../lib/userRoles';
 import AdminCopyButton from './AdminCopyButton';
+import AdminGridAction from './AdminGridAction';
+import AdminGridActions from './AdminGridActions';
 import { formatWhen } from './format';
 
 type Tab = 'posts' | 'comments';
@@ -218,18 +220,12 @@ function ReportActions({
             ? `${removeLabel}? This cannot be undone, and reports will be closed.`
             : `${confirmLabel}? Reports leave the queue; content stays up.`}
         </p>
-        <div className="admin-report-actions-row">
-          <button
-            type="button"
-            className="admin-button admin-button-ghost"
-            disabled={acting}
-            onClick={() => setConfirm(null)}
-          >
+        <AdminGridActions>
+          <AdminGridAction variant="ghost" disabled={acting} onClick={() => setConfirm(null)}>
             Cancel
-          </button>
-          <button
-            type="button"
-            className={isRemove ? 'admin-button admin-button-danger' : 'admin-button'}
+          </AdminGridAction>
+          <AdminGridAction
+            variant={isRemove ? 'danger' : 'default'}
             disabled={acting}
             onClick={() => {
               if (isRemove) onRemove();
@@ -237,33 +233,23 @@ function ReportActions({
             }}
           >
             {acting ? 'Working…' : isRemove ? `Yes, ${removeLabel.toLowerCase()}` : 'Yes, close reports'}
-          </button>
-        </div>
+          </AdminGridAction>
+        </AdminGridActions>
       </div>
     );
   }
 
   return (
-    <div className="admin-report-actions">
-      <button
-        type="button"
-        className="admin-button"
-        disabled={acting}
-        onClick={() => setConfirm('dismiss')}
-      >
+    <AdminGridActions className="admin-report-actions">
+      <AdminGridAction disabled={acting} onClick={() => setConfirm('dismiss')}>
         Close reports
-      </button>
+      </AdminGridAction>
       {!removeDisabled ? (
-        <button
-          type="button"
-          className="admin-button admin-button-danger"
-          disabled={acting}
-          onClick={() => setConfirm('remove')}
-        >
+        <AdminGridAction variant="danger" disabled={acting} onClick={() => setConfirm('remove')}>
           {removeLabel}
-        </button>
+        </AdminGridAction>
       ) : null}
-    </div>
+    </AdminGridActions>
   );
 }
 

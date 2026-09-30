@@ -11,8 +11,7 @@ import {
   useUpsertAdminTag,
 } from '../../hooks/useAdmin';
 import AdminTagSuggestions from './AdminTagSuggestions';
-import { ADMIN_CATALOG_FORM_ID, scrollAdminPanelIntoView } from './adminScroll';
-import { buildAdminTagColumns } from './catalogGridColumns';
+import { buildAdminTagColumns, tagMobileSummary } from './catalogGridColumns';
 import AdminDataGrid from './AdminDataGrid';
 import AdminGridClientFilterHint from './AdminGridClientFilterHint';
 import AdminListToolbar from './AdminListToolbar';
@@ -81,7 +80,6 @@ export default function AdminTags() {
     });
     setFormError(null);
     setFormOpen(true);
-    scrollAdminPanelIntoView(ADMIN_CATALOG_FORM_ID);
   };
 
   const handleEdit = (tag: AdminTagRow) => {
@@ -94,7 +92,6 @@ export default function AdminTags() {
       sort_order: tag.sort_order,
     });
     setFormError(null);
-    scrollAdminPanelIntoView(ADMIN_CATALOG_FORM_ID);
   };
 
   const handleDelete = async (tag: AdminTagRow) => {
@@ -129,16 +126,15 @@ export default function AdminTags() {
       lead="The factor-tag catalog people pick when logging a night. Custom tags wait here until you approve them. Usage lives under People → Tag usage."
     >
       <AdminListToolbar
-        actions={!showForm ? (
+        actions={(
           <button className="admin-button" type="button" onClick={() => {
             setApprovingId(null);
             openCreate();
-            scrollAdminPanelIntoView(ADMIN_CATALOG_FORM_ID);
           }}
           >
             + Add tag
           </button>
-        ) : null}
+        )}
       >
         <AdminTableSummary>
           {pluralCount(tagsTotal, 'tag')}
@@ -152,7 +148,6 @@ export default function AdminTags() {
       {showForm ? (
         <AdminTagForm
           key={approvingId ?? editingValue ?? 'create'}
-          panelId={ADMIN_CATALOG_FORM_ID}
           draft={draft}
           tags={tags}
           saving={saving}
@@ -166,7 +161,8 @@ export default function AdminTags() {
 
       {!loading && tagsTotal > 0 ? (
         <AdminDataGrid
-          persistKey="admin-tags"
+          persistKey="admin-tags-v2"
+          mobileSummary={tagMobileSummary}
           rows={tags}
           columns={columns}
           getRowId={(row) => row.value}

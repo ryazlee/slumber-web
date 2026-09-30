@@ -185,10 +185,6 @@ export type HealthMetrics = {
     wau: number;
     mau: number;
   };
-  data_quality: {
-    inflated_stage_posts_window: number;
-    inflated_stage_posts_total: number;
-  };
   /** Same-length window immediately before the current one. Omitted on older RPCs. */
   previous?: {
     activation: HealthWindowActivation;
@@ -660,34 +656,6 @@ export async function adminDeleteComment(commentId: string): Promise<void> {
   if (error) throw error;
 }
 
-export type RecalculateSleepStagesResult = {
-  ok: boolean;
-  post_id: string;
-  changed: boolean;
-  before: {
-    core_minutes: number | null;
-    deep_minutes: number | null;
-    rem_minutes: number | null;
-    awake_minutes: number | null;
-    asleep_minutes: number;
-    awake_events: number | null;
-  };
-  after: {
-    core_minutes: number;
-    deep_minutes: number;
-    rem_minutes: number;
-    awake_minutes: number;
-    asleep_minutes: number;
-    awake_events: number;
-  };
-};
-
-export type RecalculateSleepStagesBulkResult = {
-  fixed: number;
-  skipped: number;
-  errors: { post_id: string; error: string }[];
-};
-
 export type AdminPostRaw = Record<string, unknown>;
 
 export async function fetchAdminPost(postId: string): Promise<AdminPostRaw | null> {
@@ -697,32 +665,6 @@ export async function fetchAdminPost(postId: string): Promise<AdminPostRaw | nul
   if (error) throw error;
   if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
   return data as AdminPostRaw;
-}
-
-export type RepairDoubledSleepStagesResult = RecalculateSleepStagesResult & {
-  before: RecalculateSleepStagesResult['before'] & { segment_count?: number };
-  after: RecalculateSleepStagesResult['after'] & { segment_count?: number };
-};
-
-export async function repairDoubledSleepPostStages(
-  postId: string,
-): Promise<RepairDoubledSleepStagesResult> {
-  const { data, error } = await supabase.rpc('admin_repair_doubled_sleep_post_stages', {
-    p_post_id: postId,
-  });
-  if (error) throw error;
-  return data as RepairDoubledSleepStagesResult;
-}
-
-export async function repairDoubledSleepPostStagesBulk(
-  postIds: string[],
-): Promise<RecalculateSleepStagesBulkResult> {
-  const { data, error } = await supabase.rpc('admin_repair_doubled_sleep_post_stages_bulk', {
-    p_post_ids: postIds,
-  });
-  if (error) throw error;
-  const row = data as RecalculateSleepStagesBulkResult | null;
-  return row ?? { fixed: 0, skipped: 0, errors: [] };
 }
 
 export async function fetchAdminTags(
@@ -996,19 +938,6 @@ export async function fetchDataIssues(
   });
   if (error) throw error;
   return parsePaginatedResult<DataIssueRow>(data);
-}
-
-export async function repairInflatedStages(
-  limit = 50,
-  days?: number | null,
-): Promise<RecalculateSleepStagesBulkResult> {
-  const { data, error } = await supabase.rpc('admin_repair_inflated_stages', {
-    p_limit: limit,
-    p_days: days ?? null,
-  });
-  if (error) throw error;
-  const row = data as RecalculateSleepStagesBulkResult | null;
-  return row ?? { fixed: 0, skipped: 0, errors: [] };
 }
 
 export async function fetchAdminUserDetail(userId: string): Promise<AdminUserDetail> {

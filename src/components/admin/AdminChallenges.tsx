@@ -16,13 +16,28 @@ import AdminGridAction from './AdminGridAction';
 import AdminGridActions from './AdminGridActions';
 import AdminMetricCard from './AdminMetricCard';
 import AdminSection from './AdminSection';
-import { gridActionsColumn } from './gridColumnHelpers';
+import { AdminStatusPill, gridActionsColumn } from './gridColumnHelpers';
 import { dateColumn } from './dateColumn';
 
 function formatGoalMinutes(minutes: number): string {
   const h = Math.round(minutes / 60);
   return `${h}h goal`;
 }
+
+const challengeMobileSummary = {
+  title: (row: AdminChallengeRow) => formatAdminChallengeTitle(row),
+  searchText: (row: AdminChallengeRow) => `${formatAdminChallengeTitle(row)} ${row.creator_username} ${row.status}`,
+  status: (row: AdminChallengeRow) => (
+    <AdminStatusPill tone={row.status === 'active' ? 'on' : row.status === 'cancelled' ? 'off' : 'neutral'}>
+      {row.status}
+    </AdminStatusPill>
+  ),
+  facts: [
+    { label: 'Creator', value: (row: AdminChallengeRow) => `@${row.creator_username}` },
+    { label: 'Players', value: (row: AdminChallengeRow) => row.participant_count },
+    { label: 'Goal', value: (row: AdminChallengeRow) => formatGoalMinutes(row.goal_minutes) },
+  ],
+};
 
 export default function AdminChallenges() {
   const [statusFilter, setStatusFilter] = useState('');
@@ -72,7 +87,13 @@ export default function AdminChallenges() {
     {
       field: 'status',
       headerName: 'Status',
-      width: 110,
+      width: 120,
+      flex: 0,
+      renderCell: ({ row }) => (
+        <AdminStatusPill tone={row.status === 'active' ? 'on' : row.status === 'cancelled' ? 'off' : 'neutral'}>
+          {row.status}
+        </AdminStatusPill>
+      ),
     },
     {
       field: 'creator_username',
@@ -85,6 +106,7 @@ export default function AdminChallenges() {
       field: 'goal_minutes',
       headerName: 'Goal',
       width: 96,
+      flex: 0,
       valueGetter: (_v, row) => row.goal_minutes,
       valueFormatter: (value) => formatGoalMinutes(Number(value)),
     },
@@ -93,15 +115,19 @@ export default function AdminChallenges() {
       headerName: 'Players',
       type: 'number',
       width: 88,
+      flex: 0,
     },
     dateColumn('created_at', 'Created'),
     {
       field: 'actions',
-      headerName: '',
+      headerName: 'Actions',
       ...gridActionsColumn,
-      width: 100,
+      width: 168,
       renderCell: ({ row }) => (
         <AdminGridActions>
+          <AdminGridAction to={`/challenge/${row.id}`} onClick={(e) => e.stopPropagation()}>
+            Open
+          </AdminGridAction>
           {row.status === 'pending' || row.status === 'active' ? (
             <AdminGridAction
               variant="danger"
@@ -154,9 +180,10 @@ export default function AdminChallenges() {
         ))}
       </div>
       <AdminDataGrid
-        persistKey="admin-challenges"
+        persistKey="admin-challenges-v2"
         rows={challenges}
         columns={challengeColumns}
+        mobileSummary={challengeMobileSummary}
         getRowId={(row) => row.id}
         loading={challengesQuery.isFetching}
         label="Challenges"

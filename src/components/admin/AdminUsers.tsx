@@ -4,14 +4,15 @@ import { type GridRowParams } from '@mui/x-data-grid';
 import type { RecentUserRow, UserSearchFilters } from '../../lib/admin';
 import { getOptionalQueryErrorMessage } from '../../lib/queryError';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
-import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { usePaginatedFilters } from '../../hooks/usePaginatedFilters';
 import { useAdminUserSearch, useHealthMetrics } from '../../hooks/useAdmin';
 import { useAssignableRoles } from '../../hooks/useCatalog';
 import { rangeForPreset } from '../../lib/analyticsRange';
 import { getCachedRoleOptions } from '../../lib/userRoles';
-import AdminDataGrid from './AdminDataGrid';
+import AdminDataGrid, { AdminGridSearchField } from './AdminDataGrid';
 import AdminFilterBar, { AdminFilterField } from './AdminFilterBar';
+import AdminGridAction from './AdminGridAction';
+import AdminGridActions from './AdminGridActions';
 import AdminGridClientFilterHint from './AdminGridClientFilterHint';
 import AdminListToolbar from './AdminListToolbar';
 import AdminMetricCard from './AdminMetricCard';
@@ -19,8 +20,7 @@ import AdminSection, { AdminTableSummary } from './AdminSection';
 import AdminSubsection from './AdminSubsection';
 import AdminUserDetailPanel from './AdminUserDetailPanel';
 import { pluralCount } from './format';
-import { ADMIN_CATALOG_FORM_ID, scrollAdminPanelIntoView } from './adminScroll';
-import { buildAdminUserSearchColumns } from './userGridColumns';
+import { buildAdminUserSearchColumns, userMobileSummary } from './userGridColumns';
 
 type QuickFilter = 'new' | 'premium' | 'never-posted' | 'inactive' | null;
 
@@ -135,14 +135,7 @@ export default function AdminUsers() {
     });
   }, []);
 
-  const dismissDetail = useCallback(() => {
-    if (detailHistory.length > 0) goBack();
-    else closeDetail();
-  }, [detailHistory.length, goBack, closeDetail]);
-
-  useEscapeKey(Boolean(selectedUser), dismissDetail);
-
-  const openDetail = (user: RecentUserRow, fromGraph = false) => {
+  const openDetail = useCallback((user: RecentUserRow, fromGraph = false) => {
     if (fromGraph) {
       setSelectedUser((current) => {
         if (current && current.id !== user.id) {
@@ -154,8 +147,8 @@ export default function AdminUsers() {
       setDetailHistory([]);
       setSelectedUser(user);
     }
-    scrollAdminPanelIntoView(ADMIN_CATALOG_FORM_ID);
-  };
+  }, []);
+
 
   const openConnectedUser = (user: { id: string; username: string }) => {
     if (selectedUser?.id === user.id) return;
@@ -177,8 +170,21 @@ export default function AdminUsers() {
   };
 
   const columns = useMemo(
-    () => buildAdminUserSearchColumns({}),
-    [],
+    () => buildAdminUserSearchColumns({
+      renderActions: ({ row }) => (
+        <AdminGridActions>
+          <AdminGridAction
+            onClick={(e) => {
+              e.stopPropagation();
+              openDetail(row);
+            }}
+          >
+            Open
+          </AdminGridAction>
+        </AdminGridActions>
+      ),
+    }),
+    [openDetail],
   );
 
   const handleRowClick = (params: GridRowParams<RecentUserRow>) => {
@@ -219,20 +225,7 @@ export default function AdminUsers() {
       <AdminFilterBar
         showReset={hasFilters}
         onReset={resetFilters}
-        actions={searching ? <span className="admin-muted admin-filter-note">Updating…</span> : null}
       >
-        <AdminFilterField label="Search" htmlFor="user-search" className="admin-filter-field--wide">
-          <input
-            ref={searchRef}
-            id="user-search"
-            className="admin-input"
-            type="search"
-            placeholder="Username or email — updates as you type"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            autoComplete="off"
-          />
-        </AdminFilterField>
         <AdminFilterField label="Role" htmlFor="user-role">
           <select
             id="user-role"
@@ -338,9 +331,21 @@ export default function AdminUsers() {
       ) : null}
 
       <AdminDataGrid
-        persistKey="admin-users"
+        persistKey="admin-users-v2"
         rows={users}
         columns={columns}
+        mobileSummary={userMobileSummary}
+        search={(
+          <AdminGridSearchField
+            id="user-search"
+            label="Search"
+            inputRef={searchRef}
+            placeholder="Username or email — updates as you type"
+            value={query}
+            onChange={setQuery}
+            note={searching ? <span className="admin-muted admin-filter-note">Updating…</span> : null}
+          />
+        )}
         getRowId={(row) => row.id}
         loading={searching}
         label="Users"
@@ -353,6 +358,7 @@ export default function AdminUsers() {
         }}
         initialState={{
           sorting: { sortModel: [{ field: 'created_at', sort: 'desc' }] },
+          columns: { columnVisibilityModel: { id: false } },
         }}
       />
     </AdminSection>

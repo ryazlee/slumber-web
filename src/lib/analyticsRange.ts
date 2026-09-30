@@ -3,7 +3,13 @@ export type DateRange = {
   end: string;
 };
 
-export type RangePreset = 'today' | '7' | '14' | '30' | '90' | 'custom';
+/**
+ * Sentinel start for the All time preset. The health and analytics RPCs must
+ * not clamp a range that begins on this date — see migration 177.
+ */
+export const ALL_TIME_START = '2000-01-01';
+
+export type RangePreset = 'today' | '7' | '14' | '30' | '90' | 'all' | 'custom';
 
 export function toISODate(d: Date): string {
   const y = d.getFullYear();
@@ -19,6 +25,9 @@ export function todayISO(): string {
 export function rangeForPreset(preset: Exclude<RangePreset, 'custom'>, end = todayISO()): DateRange {
   if (preset === 'today') {
     return { start: end, end };
+  }
+  if (preset === 'all') {
+    return { start: ALL_TIME_START, end };
   }
   const endDate = new Date(`${end}T12:00:00`);
   const startDate = new Date(endDate);
@@ -40,7 +49,7 @@ export function dayCount(range: DateRange): number {
   return Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
 }
 
-const CHIP_PRESETS: Exclude<RangePreset, 'custom'>[] = ['today', '7', '14', '30', '90'];
+const CHIP_PRESETS: Exclude<RangePreset, 'custom'>[] = ['today', '7', '14', '30', '90', 'all'];
 
 export function presetForRange(range: DateRange, end = todayISO()): RangePreset {
   for (const preset of CHIP_PRESETS) {

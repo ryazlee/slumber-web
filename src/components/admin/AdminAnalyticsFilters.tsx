@@ -23,6 +23,7 @@ const CHIP_PRESETS: { id: Exclude<RangePreset, 'custom'>; label: string }[] = [
   { id: '14', label: '14d' },
   { id: '30', label: '30d' },
   { id: '90', label: '90d' },
+  { id: 'all', label: 'All time' },
 ];
 
 export default function AdminAnalyticsFilters({

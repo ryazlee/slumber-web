@@ -15,7 +15,7 @@ import { getCachedRoleOptions } from '../../lib/userRoles';
 import { AdminUserPickerList, AdminUserPickerSearchField } from './AdminUserPicker';
 import AdminFieldGroup from './AdminFieldGroup';
 import AdminFilterBar, { AdminFilterField } from './AdminFilterBar';
-import AdminPanel from './AdminPanel';
+import AdminFormDialog from './AdminFormDialog';
 import AdminSection from './AdminSection';
 import { formatWhen } from './format';
 
@@ -32,6 +32,8 @@ export default function AdminNotify() {
     trimmedDebounced: debouncedQuery,
     isActive: searchActive,
   } = useAdminDebouncedSearch();
+  const [messageOpen, setMessageOpen] = useState(Boolean(preselectedUserId));
+  const [broadcastOpen, setBroadcastOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(preselectedUserId);
   const [message, setMessage] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
@@ -73,20 +75,20 @@ export default function AdminNotify() {
   const canSend = Boolean(selectedUserId && trimmedMessage && !sendMutation.isPending);
 
   useEffect(() => {
-    searchRef.current?.focus();
-  }, []);
-
-  useEffect(() => {
     if (preselectedUserId) {
       setSelectedUserId(preselectedUserId);
+      setMessageOpen(true);
     }
   }, [preselectedUserId]);
 
   useEffect(() => {
-    if (selectedUserId) {
-      messageRef.current?.focus();
-    }
-  }, [selectedUserId]);
+    if (!messageOpen) return undefined;
+    const id = window.requestAnimationFrame(() => {
+      if (selectedUserId) messageRef.current?.focus();
+      else searchRef.current?.focus();
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [messageOpen, selectedUserId]);
 
   const sendNotification = async () => {
     if (!selectedUserId) {
@@ -159,14 +161,41 @@ export default function AdminNotify() {
       error={searchError}
       lead="Send a push to one person, or broadcast an announcement to a slice of users."
     >
-      <div className="admin-split">
-        <AdminPanel
-          step={1}
-          title="Pick recipient"
-          description={searchActive
+      <div className="admin-form-actions">
+        <button type="button" className="admin-button" onClick={() => setMessageOpen(true)}>
+          Message one person
+        </button>
+        <button type="button" className="admin-button admin-button-ghost" onClick={() => setBroadcastOpen(true)}>
+          Broadcast announcement
+        </button>
+      </div>
+      {!messageOpen && lastResult ? (
+        <p className="admin-success-banner">
+          Sent · {lastResult.device_tokens > 0
+            ? `push queued (${lastResult.device_tokens} device${lastResult.device_tokens === 1 ? '' : 's'})`
+            : 'no push tokens'}
+        </p>
+      ) : null}
+      {!broadcastOpen && broadcastResult ? (
+        <p className="admin-success-banner">
+          Sent to {broadcastResult.sent} user{broadcastResult.sent === 1 ? '' : 's'}
+          {' · '}
+          {broadcastResult.device_tokens} push token{broadcastResult.device_tokens === 1 ? '' : 's'}
+        </p>
+      ) : null}
+
+      <AdminFormDialog
+        open={messageOpen}
+        onClose={() => setMessageOpen(false)}
+        title="Message one person"
+        wide
+      >
+        <p className="admin-panel-desc">
+          {searchActive
             ? 'Matching users update as you type.'
-            : 'Recent signups below — or search by username/email.'}
-        >
+            : 'Recent signups below — or search by username or email. ⌘/Ctrl + Enter sends.'}
+        </p>
+        <div className="admin-notify-dialog">
           <AdminUserPickerSearchField
             inputId="notify-search"
             label="Search"
@@ -194,27 +223,7 @@ export default function AdminNotify() {
             metaMode="joined"
             formatJoined={formatWhen}
           />
-        </AdminPanel>
 
-        <AdminPanel
-          step={2}
-          title="Write message"
-          description="⌘/Ctrl + Enter to send. Push fires if they have a device token."
-          highlighted={Boolean(selectedUser)}
-          headerAction={selectedUser ? (
-            <button
-              type="button"
-              className="admin-button admin-button-ghost"
-              onClick={() => {
-                setSelectedUserId(null);
-                setFormError(null);
-                setLastResult(null);
-              }}
-            >
-              Clear
-            </button>
-          ) : null}
-        >
           {selectedUser ? (
             <div className="admin-recipient-chip">
               <span className="admin-recipient-label">To</span>
@@ -253,20 +262,44 @@ export default function AdminNotify() {
               </p>
             ) : null}
 
-            <div className="admin-form-actions admin-form-actions--sticky">
+            <div className="admin-form-actions">
               <button className="admin-button" type="submit" disabled={!canSend}>
                 {sendMutation.isPending ? 'Sending…' : 'Send'}
               </button>
+              {selectedUser ? (
+                <button
+                  type="button"
+                  className="admin-button admin-button-ghost"
+                  onClick={() => {
+                    setSelectedUserId(null);
+                    setFormError(null);
+                    setLastResult(null);
+                  }}
+                >
+                  Clear recipient
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="admin-button admin-button-ghost"
+                onClick={() => setMessageOpen(false)}
+              >
+                Close
+              </button>
             </div>
           </form>
-        </AdminPanel>
-      </div>
+        </div>
+      </AdminFormDialog>
 
-      <AdminPanel
+      <AdminFormDialog
+        open={broadcastOpen}
+        onClose={() => setBroadcastOpen(false)}
         title="Broadcast announcement"
-        description="Sends an in-app announcement (and push when tokens exist) to a filtered audience. Rate-limited server-side."
-        className="admin-notify-broadcast"
+        wide
       >
+        <p className="admin-panel-desc">
+          Sends an in-app announcement (and push when tokens exist) to a filtered audience. Rate-limited server-side.
+        </p>
         <form className="admin-compose-form" onSubmit={sendBroadcast}>
           <AdminFilterBar nested>
             <AdminFilterField label="Role filter" htmlFor="broadcast-role">
@@ -338,9 +371,16 @@ export default function AdminNotify() {
             >
               {broadcastMutation.isPending ? 'Sending…' : 'Broadcast'}
             </button>
+            <button
+              type="button"
+              className="admin-button admin-button-ghost"
+              onClick={() => setBroadcastOpen(false)}
+            >
+              Close
+            </button>
           </div>
         </form>
-      </AdminPanel>
+      </AdminFormDialog>
     </AdminSection>
   );
 }

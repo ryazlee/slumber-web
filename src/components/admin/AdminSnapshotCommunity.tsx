@@ -4,6 +4,8 @@ import type { AdminChallengeRow, AdminClubRow } from '../../lib/admin';
 import { formatAdminChallengeTitle, formatChallengeStatus, pluralCount } from '../../lib/format';
 import { getOptionalQueryErrorMessage } from '../../lib/queryError';
 import { useAdminChallenges, useAdminClubs } from '../../hooks/useAdmin';
+import AdminGridAction from './AdminGridAction';
+import AdminGridActions from './AdminGridActions';
 import AdminSubsection from './AdminSubsection';
 
 const DEFAULT_LIST_CAP = 12;
@@ -122,7 +124,7 @@ export function AdminCurrentChallenges({
       ) : null}
       {tableRows.length > 0 ? (
         <div className="admin-table-wrap">
-          <table className="admin-table">
+          <table className="admin-table admin-table--readable admin-table--cards">
             <thead>
               <tr>
                 <th><button type="button" className="admin-sort-btn" onClick={() => toggleSort('title')}>Challenge{sortMark('title')}</button></th>
@@ -131,24 +133,26 @@ export function AdminCurrentChallenges({
                 <th><button type="button" className="admin-sort-btn" onClick={() => toggleSort('players')}>Players{sortMark('players')}</button></th>
                 <th>People</th>
                 <th><button type="button" className="admin-sort-btn" onClick={() => toggleSort('created')}>Created{sortMark('created')}</button></th>
-                <th />
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {tableRows.map((row) => (
                 <tr key={row.id}>
-                  <td>
+                  <td data-label="Challenge" className="admin-td-wrap">
                     <Link to={`/challenge/${row.id}`} className="admin-inline-link">
                       {formatAdminChallengeTitle(row)}
                     </Link>
                   </td>
-                  <td>{formatChallengeStatus(row.status)}</td>
-                  <td>{Math.round(row.goal_minutes / 60)}h</td>
-                  <td>{row.participant_count}</td>
-                  <td className="admin-td-wrap"><ChallengePeople row={row} /></td>
-                  <td>{new Date(row.created_at).toLocaleDateString()}</td>
-                  <td>
-                    <Link to={`/challenge/${row.id}`} className="admin-inline-link">Open</Link>
+                  <td data-label="Status">{formatChallengeStatus(row.status)}</td>
+                  <td data-label="Goal">{Math.round(row.goal_minutes / 60)}h</td>
+                  <td data-label="Players">{row.participant_count}</td>
+                  <td data-label="People" className="admin-td-wrap"><ChallengePeople row={row} /></td>
+                  <td data-label="Created">{new Date(row.created_at).toLocaleDateString()}</td>
+                  <td className="admin-td-actions">
+                    <AdminGridActions>
+                      <AdminGridAction to={`/challenge/${row.id}`}>Open</AdminGridAction>
+                    </AdminGridActions>
                   </td>
                 </tr>
               ))}

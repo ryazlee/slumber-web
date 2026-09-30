@@ -3,14 +3,13 @@ import type { FormEvent } from 'react';
 import type { AdminTagRow, TagDraft } from '../../lib/admin';
 import { labelToTagValue } from './catalogUtils';
 import AdminEmojiPicker from './AdminEmojiPicker';
-import AdminPanel from './AdminPanel';
+import AdminFormDialog from './AdminFormDialog';
 
 type Props = {
   draft: TagDraft;
   tags: AdminTagRow[];
   saving: boolean;
   formError: string | null;
-  panelId?: string;
   mode?: 'approve';
   onChange: (draft: TagDraft) => void;
   onSubmit: (e: FormEvent) => void;
@@ -22,7 +21,6 @@ export default function AdminTagForm({
   tags,
   saving,
   formError,
-  panelId,
   mode,
   onChange,
   onSubmit,
@@ -47,20 +45,19 @@ export default function AdminTagForm({
     updateDraft({ ...draft, label });
   };
 
+  const title = isApprove
+    ? `Approve “${draft.label || draft.value}”`
+    : isEditing
+      ? `Edit “${draft.label || draft.value}”`
+      : 'New tag';
+
   return (
-    <AdminPanel
-      id={panelId}
-      title={isApprove ? `Approve “${draft.label || draft.value}”` : isEditing ? `Edit “${draft.label || draft.value}”` : 'New tag'}
-      description={isApprove
-        ? 'Approving publishes this tag. Posts that already use it will show it to everyone, and it joins the catalog.'
-        : 'Label is what users see. Value is auto-filled from the label — edit only if you need a specific key.'}
-      highlighted={isEditing}
-      headerAction={(
-        <button className="admin-button admin-button-ghost" type="button" onClick={onCancel} disabled={saving}>
-          Cancel
-        </button>
-      )}
-    >
+    <AdminFormDialog open onClose={onCancel} title={title}>
+      <p className="admin-panel-desc">
+        {isApprove
+          ? 'Approving publishes this tag. Posts that already use it will show it to everyone, and it joins the catalog.'
+          : 'Label is what users see. Value is auto-filled from the label — edit only if you need a specific key.'}
+      </p>
       <div className="admin-catalog-preview">
         <span className="admin-catalog-preview-emoji" aria-hidden>{previewEmoji}</span>
         <div>
@@ -125,12 +122,15 @@ export default function AdminTagForm({
 
         {formError ? <p className="admin-error">{formError}</p> : null}
 
-        <div className="admin-form-actions admin-form-actions--sticky">
+        <div className="admin-form-actions">
           <button className="admin-button" type="submit" disabled={saving}>
             {saving ? 'Saving…' : isApprove ? 'Approve tag' : isEditing ? 'Save changes' : 'Create tag'}
           </button>
+          <button className="admin-button admin-button-ghost" type="button" onClick={onCancel} disabled={saving}>
+            Cancel
+          </button>
         </div>
       </form>
-    </AdminPanel>
+    </AdminFormDialog>
   );
 }

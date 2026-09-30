@@ -1,9 +1,10 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import { getOptionalQueryErrorMessage } from '../../lib/queryError';
 import { useAdminPost } from '../../hooks/useAdmin';
-import AdminPanel from './AdminPanel';
+import AdminFormDialog from './AdminFormDialog';
+import AdminGridAction from './AdminGridAction';
+import AdminPostPreviewDialog from './AdminPostPreviewDialog';
 import AdminPostRawJson from './AdminPostRawJson';
-import { ADMIN_POST_RAW_ID } from './adminScroll';
 
 type Props = {
   postId: string;
@@ -13,6 +14,7 @@ type Props = {
 };
 
 export default function AdminPostRawPanel({ postId, title, username, onClose }: Props) {
+  const [previewOpen, setPreviewOpen] = useState(false);
   const query = useAdminPost(postId);
   const data = query.data ?? null;
   const error = getOptionalQueryErrorMessage(query.error, 'Could not load post.');
@@ -23,32 +25,36 @@ export default function AdminPostRawPanel({ postId, title, username, onClose }: 
   ].filter(Boolean).join(' · ');
 
   return (
-    <AdminPanel
-      id={ADMIN_POST_RAW_ID}
-      title={heading}
-      meta={meta}
-      description="Full sleep_posts row, including raw_samples and session_breakdown."
-      highlighted
-      headerAction={(
-        <button type="button" className="admin-button admin-button-ghost" onClick={onClose}>
-          Close
-        </button>
-      )}
-    >
+    <AdminFormDialog open onClose={onClose} title={heading} wide>
+      <p className="admin-panel-desc">
+        Full sleep_posts row, including raw_samples and session_breakdown.
+      </p>
+      {meta ? <p className="admin-muted">{meta}</p> : null}
       <div className="admin-user-detail-actions">
-        <Link
-          to={`/post/${postId}?from=admin`}
-          className="admin-action-btn admin-action-btn--ghost"
+        <AdminGridAction
+          variant="ghost"
+          onClick={(e) => {
+            e.stopPropagation();
+            setPreviewOpen(true);
+          }}
         >
           Open post
-        </Link>
+        </AdminGridAction>
       </div>
+      <AdminPostPreviewDialog
+        postId={previewOpen ? postId : null}
+        row={{
+          title: title ?? undefined,
+          username: username ?? undefined,
+        }}
+        onClose={() => setPreviewOpen(false)}
+      />
       {error ? <p className="admin-error">{error}</p> : null}
       {query.isLoading && !data ? <p className="admin-muted">Loading raw post…</p> : null}
       {!query.isLoading && !error && !data ? (
         <p className="admin-muted">Post not found.</p>
       ) : null}
       {data ? <AdminPostRawJson data={data} /> : null}
-    </AdminPanel>
+    </AdminFormDialog>
   );
 }

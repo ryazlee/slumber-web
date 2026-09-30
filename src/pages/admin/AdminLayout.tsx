@@ -6,7 +6,7 @@ import LoginForm from '../../components/LoginForm';
 import { AdminProvider, useAdmin } from '../../context/AdminContext';
 import { useAuth } from '../../context/AuthContext';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
-import { useIsModerator } from '../../hooks/useAdmin';
+import { useAdminTagSuggestions, useIsModerator } from '../../hooks/useAdmin';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 function AdminShell() {
@@ -18,7 +18,9 @@ function AdminShell() {
   const [navOpen, setNavOpen] = useState(false);
   const navId = useId();
 
+  const suggestionsQuery = useAdminTagSuggestions();
   const pendingReports = (metrics?.pending_post_reports ?? 0) + (metrics?.pending_comment_reports ?? 0);
+  const pendingTags = suggestionsQuery.data?.length ?? 0;
 
   const closeNav = useCallback(() => setNavOpen(false), []);
   const openNav = useCallback(() => setNavOpen(true), []);
@@ -68,7 +70,14 @@ function AdminShell() {
             >
               {navOpen ? 'Close' : 'Menu'}
               {!navOpen && pendingReports > 0 ? (
-                <span className="admin-nav-badge">{pendingReports}</span>
+                <span className="admin-nav-badge" aria-label={`${pendingReports} pending reports`}>
+                  {pendingReports}
+                </span>
+              ) : null}
+              {!navOpen && pendingTags > 0 ? (
+                <span className="admin-nav-badge admin-nav-badge--accent" aria-label={`${pendingTags} tags waiting for approval`}>
+                  {pendingTags}
+                </span>
               ) : null}
             </button>
           </header>

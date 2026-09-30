@@ -1,34 +1,26 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useCallback, useMemo, useState } from 'react';
 import type { GridColDef } from '@mui/x-data-grid';
 import type { RecentPostRow } from '../../lib/admin';
 import { formatRangeLabel } from '../../lib/analyticsRange';
-import { formatRecalcStagesError } from '../../lib/adminPostStages';
 import { useAdmin } from '../../context/AdminContext';
-import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { usePaginatedFilters } from '../../hooks/usePaginatedFilters';
 import {
   useAdminPostsPageData,
   useAppVersions,
-  useRepairDoubledSleepPostStages,
-  useRepairDoubledSleepPostStagesBulk,
   useAdminSoftDeletePostFromGrid,
-  useRepairInflatedStages,
 } from '../../hooks/useAdmin';
 import type { AdminAnalyticsScreenProps } from './adminAnalyticsTypes';
 import AdminActivityChart from './AdminActivityChart';
 import AdminAnalyticsFilters from './AdminAnalyticsFilters';
 import AdminDataGrid from './AdminDataGrid';
-import AdminFilterBar, { AdminFilterField } from './AdminFilterBar';
-import AdminGridActions from './AdminGridActions';
 import AdminGridClientFilterHint from './AdminGridClientFilterHint';
 import AdminListToolbar from './AdminListToolbar';
 import AdminMetricCard from './AdminMetricCard';
+import AdminPostPreviewDialog from './AdminPostPreviewDialog';
 import AdminPostRawPanel from './AdminPostRawPanel';
 import AdminSection, { AdminTableSummary } from './AdminSection';
-import { ADMIN_POST_RAW_ID, scrollAdminPanelIntoView } from './adminScroll';
-import { gridActionsColumn } from './gridColumnHelpers';
-import { buildRecentPostColumns } from './postGridColumns';
+import { buildRecentPostColumns, postMobileSummary } from './postGridColumns';
 
 const POST_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -36,6 +28,11 @@ type RawPostTarget = {
   id: string;
   title?: string | null;
   username?: string | null;
+};
+
+type PostPreviewTarget = {
+  id: string;
+  row: RecentPostRow | null;
 };
 
 type Props = AdminAnalyticsScreenProps & {
@@ -51,13 +48,13 @@ export default function AdminPosts({
   onAppVersionChange,
   userId = null,
 }: Props) {
-  const navigate = useNavigate();
   const { refreshing } = useAdmin();
   const [stageMessage, setStageMessage] = useState<string | null>(null);
   const [actingPostId, setActingPostId] = useState<string | null>(null);
   const [postIdLookup, setPostIdLookup] = useState('');
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [rawPost, setRawPost] = useState<RawPostTarget | null>(null);
+  const [previewPost, setPreviewPost] = useState<PostPreviewTarget | null>(null);
   const [expandedRawIds, setExpandedRawIds] = useState<ReadonlySet<string>>(() => new Set());
 
   const baseFilters = useMemo(() => ({
@@ -77,10 +74,7 @@ export default function AdminPosts({
   const versionsLoading = versionsQuery.isLoading;
 
   const { metrics, activity, posts, postsTotal, loading, fetching, error } = useAdminPostsPageData(filters);
-  const repairMutation = useRepairDoubledSleepPostStages();
-  const repairBulkMutation = useRepairDoubledSleepPostStagesBulk();
   const softDeleteMutation = useAdminSoftDeletePostFromGrid();
-  const repairAllMutation = useRepairInflatedStages();
 
   const rangeLabel = formatRangeLabel(range);
   const versionLabel = appVersion ? `v${appVersion}` : 'all versions';
@@ -88,27 +82,12 @@ export default function AdminPosts({
     ? (metrics.posts / metrics.active_users).toFixed(1)
     : '—';
 
-  const wearablePosts = useMemo(
-    () => posts.filter((post) => !post.is_custom && post.source_device !== 'Custom'),
-    [posts],
-  );
-
-  const inflatedWearablePosts = useMemo(
-    () => wearablePosts.filter(
-      (post) => post.in_bed_minutes > 0 && post.asleep_minutes > post.in_bed_minutes + 5,
-    ),
-    [wearablePosts],
-  );
-
   const closeRaw = useCallback(() => setRawPost(null), []);
 
   const openRaw = useCallback((target: RawPostTarget) => {
     setLookupError(null);
     setRawPost(target);
-    scrollAdminPanelIntoView(ADMIN_POST_RAW_ID);
   }, []);
-
-  useEscapeKey(Boolean(rawPost), closeRaw);
 
   const parsePostId = useCallback((rawId: string): string | null => {
     const id = rawId.trim();
@@ -119,28 +98,6 @@ export default function AdminPosts({
     setLookupError(null);
     return id;
   }, []);
-
-  const repairPost = useCallback(async (post: RecentPostRow) => {
-    if (!window.confirm(
-      `Repair doubled stage minutes for “${post.title}”? `
-      + `(${post.asleep_minutes}m asleep vs ${post.in_bed_minutes}m in bed)`,
-    )) return;
-    setStageMessage(null);
-    setActingPostId(post.id);
-    try {
-      const result = await repairMutation.mutateAsync(post.id);
-      const after = result.after;
-      setStageMessage(
-        result.changed
-          ? `Repaired ${post.title}: asleep ${result.before.asleep_minutes}m → ${after.asleep_minutes}m.`
-          : `No change for ${post.title}.`,
-      );
-    } catch (err: unknown) {
-      setStageMessage(formatRecalcStagesError(err));
-    } finally {
-      setActingPostId(null);
-    }
-  }, [repairMutation]);
 
   const softDeletePost = useCallback(async (post: RecentPostRow) => {
     if (!window.confirm(`Soft-delete “${post.title}”? Reports will be dismissed.`)) return;
@@ -156,11 +113,16 @@ export default function AdminPosts({
     }
   }, [softDeleteMutation]);
 
+  const openPost = useCallback((post: RecentPostRow) => {
+    setPreviewPost({ id: post.id, row: post });
+  }, []);
+
   const openPostById = useCallback((rawId: string) => {
     const id = parsePostId(rawId);
     if (!id) return;
-    navigate(`/post/${id}?from=admin`);
-  }, [navigate, parsePostId]);
+    const match = posts.find((post) => post.id === id) ?? null;
+    setPreviewPost({ id, row: match });
+  }, [parsePostId, posts]);
 
   const openRawById = useCallback((rawId: string) => {
     const id = parsePostId(rawId);
@@ -182,82 +144,22 @@ export default function AdminPosts({
     });
   }, []);
 
-  const repairLoadedInflated = async () => {
-    const ids = inflatedWearablePosts.map((post) => post.id);
-    if (!ids.length) {
-      setStageMessage('No inflated wearable posts in this table (asleep > in bed).');
-      return;
-    }
-    if (!window.confirm(`Repair ${ids.length} inflated wearable post(s)?`)) return;
-    setStageMessage(null);
-    try {
-      const result = await repairBulkMutation.mutateAsync(ids);
-      const failed = result.errors.length;
-      setStageMessage(
-        failed
-          ? `Repaired ${result.fixed}, unchanged ${result.skipped}, failed ${failed}.`
-          : `Repaired ${result.fixed} post(s)${result.skipped ? ` · ${result.skipped} unchanged` : ''}.`,
-      );
-    } catch (err: unknown) {
-      setStageMessage(formatRecalcStagesError(err));
-    }
-  };
-
-  const repairAllInflated = async () => {
-    if (!window.confirm('Repair up to 50 inflated wearable posts in the current date filter?')) return;
-    setStageMessage(null);
-    try {
-      const daySpan = range.start && range.end
-        ? Math.ceil((new Date(range.end).getTime() - new Date(range.start).getTime()) / 86400000) + 1
-        : null;
-      const result = await repairAllMutation.mutateAsync({ limit: 50, days: daySpan });
-      const failed = result.errors.length;
-      setStageMessage(
-        failed
-          ? `Repaired ${result.fixed}, unchanged ${result.skipped}, failed ${failed}.`
-          : `Repaired ${result.fixed} post(s)${result.skipped ? ` · ${result.skipped} unchanged` : ''}.`,
-      );
-    } catch (err: unknown) {
-      setStageMessage(formatRecalcStagesError(err));
-    }
-  };
-
-  const acting = repairMutation.isPending || repairBulkMutation.isPending
-    || softDeleteMutation.isPending || repairAllMutation.isPending;
-
-  const columns = useMemo<GridColDef<RecentPostRow>[]>(() => [
-    ...buildRecentPostColumns({
+  const columns = useMemo<GridColDef<RecentPostRow>[]>(() => (
+    buildRecentPostColumns({
       actingPostId,
       expandedRawIds,
       onToggleRaw: toggleRaw,
-      onRepair: repairPost,
+      onOpenPost: openPost,
       onSoftDelete: softDeletePost,
-    }),
-    {
-      field: 'open',
-      headerName: '',
-      ...gridActionsColumn,
-      width: 72,
-      renderCell: ({ row }) => (
-        <AdminGridActions>
-          <Link
-            to={`/post/${row.id}?from=admin`}
-            className="admin-action-btn admin-action-btn--link"
-            onClick={(e) => e.stopPropagation()}
-          >
-            Open
-          </Link>
-        </AdminGridActions>
-      ),
-    },
-  ], [actingPostId, expandedRawIds, toggleRaw, repairPost, softDeletePost]);
+    })
+  ), [actingPostId, expandedRawIds, toggleRaw, openPost, softDeletePost]);
 
   return (
     <AdminSection
       className="admin-posts"
       lead={userId
         ? 'Posts for one user in the selected date range.'
-        : 'Browse sleep posts in the selected date range (paginated). Inspect the raw sleep_posts row, repair inflated stage minutes, soft-delete, or open a post. Lookup any post by ID (not shown in the friends feed). Bulk repair applies to the current page.'}
+        : 'Browse sleep posts in the selected date range (paginated). Inspect the raw sleep_posts row, soft-delete, or open a post. Lookup any post by ID (not shown in the friends feed).'}
       error={error}
     >
       <AdminAnalyticsFilters
@@ -272,47 +174,6 @@ export default function AdminPosts({
         onAppVersionChange={onAppVersionChange}
       />
 
-      <AdminFilterBar nested>
-        <AdminFilterField label="Open post by ID" htmlFor="admin-post-id-lookup" className="admin-filter-field--wide">
-          <div className="admin-post-id-lookup">
-            <input
-              id="admin-post-id-lookup"
-              className="admin-input"
-              type="search"
-              inputMode="text"
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="Paste post UUID…"
-              value={postIdLookup}
-              onChange={(e) => {
-                setPostIdLookup(e.target.value);
-                if (lookupError) setLookupError(null);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  openRawById(postIdLookup);
-                }
-              }}
-            />
-            <button
-              type="button"
-              className="admin-button admin-button-ghost"
-              onClick={() => openRawById(postIdLookup)}
-            >
-              Raw
-            </button>
-            <button
-              type="button"
-              className="admin-button admin-button-ghost"
-              onClick={() => openPostById(postIdLookup)}
-            >
-              Open
-            </button>
-          </div>
-          {lookupError ? <p className="admin-error admin-filter-note">{lookupError}</p> : null}
-        </AdminFilterField>
-      </AdminFilterBar>
 
       {rawPost ? (
         <AdminPostRawPanel
@@ -322,6 +183,12 @@ export default function AdminPosts({
           onClose={closeRaw}
         />
       ) : null}
+
+      <AdminPostPreviewDialog
+        postId={previewPost?.id ?? null}
+        row={previewPost?.row}
+        onClose={() => setPreviewPost(null)}
+      />
 
       {!loading && metrics ? (
         <>
@@ -359,30 +226,7 @@ export default function AdminPosts({
             </div>
           ) : null}
 
-          <AdminListToolbar
-            actions={(
-              <>
-                <button
-                  type="button"
-                  className="admin-button admin-button-ghost"
-                  disabled={acting}
-                  onClick={() => void repairAllInflated()}
-                >
-                  {repairAllMutation.isPending ? 'Repairing…' : 'Repair inflated (50)'}
-                </button>
-                <button
-                  type="button"
-                  className="admin-button admin-button-ghost"
-                  disabled={acting || inflatedWearablePosts.length === 0}
-                  onClick={() => void repairLoadedInflated()}
-                >
-                  {repairBulkMutation.isPending
-                    ? 'Repairing…'
-                    : `Repair inflated on page (${inflatedWearablePosts.length})`}
-                </button>
-              </>
-            )}
-          >
+          <AdminListToolbar>
             <AdminTableSummary>
               <AdminGridClientFilterHint fullSentence />
               {' · '}
@@ -390,51 +234,93 @@ export default function AdminPosts({
             </AdminTableSummary>
           </AdminListToolbar>
 
+        </>
+      ) : null}
+
           {stageMessage ? (
-            <p className={
-              stageMessage.startsWith('Fixed') || stageMessage.startsWith('Updated')
-                || stageMessage.startsWith('Repaired')
-                ? 'admin-muted'
-                : 'admin-error'
-            }
+            <p className={stageMessage.startsWith('Removed') ? 'admin-muted' : 'admin-error'}
             >
               {stageMessage}
             </p>
           ) : null}
 
-          {postsTotal === 0 ? (
-            <p className="admin-muted">No posts match your filters.</p>
-          ) : (
-            <AdminDataGrid
-              persistKey="admin-posts"
-              rows={posts}
-              columns={columns}
-              getRowId={(row) => row.id}
-              loading={fetching || refreshing}
-              label="Sleep posts"
-              ignoreDiacritics
-              getRowHeight={(params) => (expandedRawIds.has(String(params.id)) ? 'auto' : undefined)}
-              serverPagination={{
-                rowCount: postsTotal,
-                paginationModel,
-                onPaginationModelChange: setPaginationModel,
-              }}
-              initialState={{
-                columns: {
-                  columnVisibilityModel: {
-                    id: false,
-                    user_id: false,
-                    source_device: false,
-                    is_custom: false,
-                  },
+          <AdminDataGrid
+            persistKey="admin-posts-v2"
+            rows={posts}
+            columns={columns}
+            mobileSummary={postMobileSummary}
+            search={(
+              <div className="admin-grid-search">
+                <span className="admin-grid-search-label" id="admin-post-id-lookup-label">Open post by ID</span>
+                <div className="admin-post-id-lookup">
+                  <input
+                    id="admin-post-id-lookup"
+                    className="admin-input"
+                    type="search"
+                    inputMode="text"
+                    autoComplete="off"
+                    spellCheck={false}
+                    aria-labelledby="admin-post-id-lookup-label"
+                    placeholder="Paste post UUID…"
+                    value={postIdLookup}
+                    onChange={(e) => {
+                      setPostIdLookup(e.target.value);
+                      if (lookupError) setLookupError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        openRawById(postIdLookup);
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="admin-button admin-button-ghost"
+                    onClick={() => openRawById(postIdLookup)}
+                  >
+                    Raw
+                  </button>
+                  <button
+                    type="button"
+                    className="admin-button admin-button-ghost"
+                    onClick={() => openPostById(postIdLookup)}
+                  >
+                    Open
+                  </button>
+                </div>
+                {lookupError ? <p className="admin-error admin-filter-note">{lookupError}</p> : null}
+              </div>
+            )}
+            getRowId={(row) => row.id}
+            loading={loading || fetching || refreshing}
+            label="Sleep posts"
+            ignoreDiacritics
+            localeText={{ noRowsLabel: 'No posts match your filters.' }}
+            getRowHeight={(params) => (expandedRawIds.has(String(params.id)) ? 'auto' : undefined)}
+            serverPagination={{
+              rowCount: postsTotal,
+              paginationModel,
+              onPaginationModelChange: setPaginationModel,
+            }}
+            initialState={{
+              columns: {
+                columnVisibilityModel: {
+                  id: false,
+                  user_id: false,
+                  source_device: false,
+                  is_custom: false,
+                  in_bed_minutes: false,
+                  core_minutes: false,
+                  deep_minutes: false,
+                  rem_minutes: false,
+                  awake_minutes: false,
+                  has_dream: false,
+                  raw: false,
                 },
-              }}
-            />
-          )}
-        </>
-      ) : null}
-
-      {loading ? <p className="admin-muted">Loading posts…</p> : null}
+              },
+            }}
+          />
     </AdminSection>
   );
 }

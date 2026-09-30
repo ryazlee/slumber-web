@@ -7,7 +7,6 @@ import SiteLayout from './components/SiteLayout';
 import { withDeepLinkAuthGate } from './components/DeepLinkAuthGate';
 import { trackPageview } from './lib/analytics';
 import AdminLayout from './pages/admin/AdminLayout';
-import AdminActivityPage from './pages/admin/AdminActivityPage';
 import AdminAnalyticsPage from './pages/admin/AdminAnalyticsPage';
 import AdminDreamsPage from './pages/admin/AdminDreamsPage';
 import AdminPostsPage from './pages/admin/AdminPostsPage';
@@ -84,7 +83,7 @@ export default function App() {
 
         <Route path="admin" element={<AdminLayout />}>
           <Route index element={<AdminAnalyticsPage />} />
-          <Route path="analytics" element={<AdminActivityPage />} />
+          <Route path="analytics" element={<Navigate to="/admin" replace />} />
           <Route path="tag-usage" element={<AdminTagUsagePage />} />
           <Route path="dreams" element={<AdminDreamsPage />} />
           <Route path="posts" element={<AdminPostsPage />} />

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
-import type { RecentUserRow } from '../../lib/admin';
+import type { RecentPostRow, RecentUserRow } from '../../lib/admin';
 import { getOptionalQueryErrorMessage } from '../../lib/queryError';
 import {
   useAdminUserDetail,
@@ -13,11 +13,11 @@ import { useAssignableRoles } from '../../hooks/useCatalog';
 import { getCachedRoleOptions } from '../../lib/userRoles';
 import AdminCopyButton from './AdminCopyButton';
 import AdminGridAction from './AdminGridAction';
-import AdminPanel from './AdminPanel';
+import AdminFormDialog from './AdminFormDialog';
+import AdminPostPreviewDialog from './AdminPostPreviewDialog';
 import AdminUserConnections from './AdminUserConnections';
 import AdminUserRoleEditor from './AdminUserRoleEditor';
 import { formatWhen } from './format';
-import { ADMIN_CATALOG_FORM_ID } from './adminScroll';
 
 type Props = {
   user: RecentUserRow;
@@ -52,6 +52,7 @@ export default function AdminUserDetailPanel({
   const [draftRoles, setDraftRoles] = useState<string[]>([]);
   const [roleError, setRoleError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [previewPost, setPreviewPost] = useState<RecentPostRow | null>(null);
 
   const knownRoleKeys = useMemo(
     () => new Set(roleOptions.map((opt) => opt.key)),
@@ -62,6 +63,7 @@ export default function AdminUserDetailPanel({
     setEditingRoles(false);
     setRoleError(null);
     setActionMessage(null);
+    setPreviewPost(null);
     const known = (user.user_roles ?? []).filter((r) => knownRoleKeys.has(r));
     setDraftRoles(known);
   }, [user.id, user.user_roles, knownRoleKeys]);
@@ -124,29 +126,22 @@ export default function AdminUserDetailPanel({
     email: detail?.email ?? user.email,
   }), [user, detail]);
 
+  const meta = [
+    detail?.email ?? user.email,
+    isSuspended ? 'Suspended' : null,
+    detail?.last_app_version ? `v${detail.last_app_version}` : null,
+  ].filter(Boolean).join(' · ');
+
   return (
-    <AdminPanel
-      id={ADMIN_CATALOG_FORM_ID}
-      title={`@${user.username}`}
-      meta={[
-        detail?.email ?? user.email,
-        isSuspended ? 'Suspended' : null,
-        detail?.last_app_version ? `v${detail.last_app_version}` : null,
-      ].filter(Boolean).join(' · ') || undefined}
-      highlighted
-      headerAction={(
+    <AdminFormDialog open onClose={onClose} title={`@${user.username}`} wide>
+      {onBack ? (
         <div className="admin-user-detail-header-actions">
-          {onBack ? (
-            <button type="button" className="admin-button admin-button-ghost" onClick={onBack}>
-              {backLabel ?? 'Back'}
-            </button>
-          ) : null}
-          <button type="button" className="admin-button admin-button-ghost" onClick={onClose}>
-            Close
+          <button type="button" className="admin-button admin-button-ghost" onClick={onBack}>
+            {backLabel ?? 'Back'}
           </button>
         </div>
-      )}
-    >
+      ) : null}
+      {meta ? <p className="admin-panel-meta">{meta}</p> : null}
       {error ? <p className="admin-error">{error}</p> : null}
 
       {detail ? (
@@ -210,7 +205,6 @@ export default function AdminUserDetailPanel({
           onChange={setDraftRoles}
           onSave={saveRoles}
           onCancel={() => setEditingRoles(false)}
-          embedded
         />
       ) : null}
 
@@ -224,12 +218,19 @@ export default function AdminUserDetailPanel({
           <ul className="admin-user-post-list">
             {posts.map((post) => (
               <li key={post.id}>
-                <Link to={`/post/${post.id}?from=admin`} className="admin-user-post-link">
+                <button
+                  type="button"
+                  className="admin-user-post-link"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewPost(post);
+                  }}
+                >
                   <span className="admin-user-post-title">{post.title || 'Untitled'}</span>
                   <span className="admin-user-post-meta">
                     {post.sleep_date} · {formatWhen(post.created_at)}
                   </span>
-                </Link>
+                </button>
               </li>
             ))}
           </ul>
@@ -240,6 +241,12 @@ export default function AdminUserDetailPanel({
           </Link>
         ) : null}
       </div>
-    </AdminPanel>
+
+      <AdminPostPreviewDialog
+        postId={previewPost?.id ?? null}
+        row={previewPost}
+        onClose={() => setPreviewPost(null)}
+      />
+    </AdminFormDialog>
   );
 }

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { GridColDef } from '@mui/x-data-grid';
 import type { AdminClubRow } from '../../lib/admin';
@@ -10,19 +10,23 @@ import {
 } from '../../hooks/useAdmin';
 import AdminClubRoster from './AdminClubRoster';
 import AdminDataGrid from './AdminDataGrid';
+import AdminGridAction from './AdminGridAction';
+import AdminGridActions from './AdminGridActions';
 import AdminMetricCard from './AdminMetricCard';
 import AdminSection from './AdminSection';
 import { dateColumn } from './dateColumn';
+import { gridActionsColumn } from './gridColumnHelpers';
 
 export default function AdminCommunity() {
   const [searchParams, setSearchParams] = useSearchParams();
   const clubId = searchParams.get('club');
 
-  const openClub = (id: string) => {
+  const openClub = useCallback((id: string) => {
     const next = new URLSearchParams(searchParams);
-    next.set('club', id);
+    if (clubId === id) next.delete('club');
+    else next.set('club', id);
     setSearchParams(next);
-  };
+  }, [clubId, searchParams, setSearchParams]);
 
   const closeClub = () => {
     const next = new URLSearchParams(searchParams);
@@ -44,34 +48,32 @@ export default function AdminCommunity() {
 
   const clubColumns = useMemo<GridColDef<AdminClubRow>[]>(() => [
     {
-      field: 'emoji',
-      headerName: '',
-      width: 48,
-      valueGetter: (_v, row) => row.emoji ?? '🌙',
-    },
-    {
       field: 'name',
       headerName: 'Club',
-      flex: 1,
-      minWidth: 140,
+      flex: 1.2,
+      minWidth: 160,
+      valueGetter: (_v, row) => `${row.emoji ? `${row.emoji} ` : ''}${row.name}`,
     },
     {
       field: 'owner_username',
       headerName: 'Owner',
-      width: 120,
+      flex: 1,
+      minWidth: 120,
       valueFormatter: (value) => `@${value}`,
     },
     {
       field: 'member_count',
       headerName: 'Members',
       type: 'number',
-      width: 96,
+      width: 100,
+      flex: 0,
     },
     {
       field: 'active_members_7d',
       headerName: 'Posted 7d',
       type: 'number',
-      width: 100,
+      width: 110,
+      flex: 0,
       valueGetter: (_v, row) => row.active_members_7d ?? null,
     },
     {
@@ -79,15 +81,44 @@ export default function AdminCommunity() {
       headerName: 'Pending',
       type: 'number',
       width: 96,
+      flex: 0,
     },
     dateColumn('created_at', 'Created'),
-  ], []);
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      ...gridActionsColumn,
+      width: 120,
+      renderCell: ({ row }) => (
+        <AdminGridActions>
+          <AdminGridAction
+            onClick={(e) => {
+              e.stopPropagation();
+              openClub(row.id);
+            }}
+          >
+            {clubId === row.id ? 'Close' : 'Members'}
+          </AdminGridAction>
+        </AdminGridActions>
+      ),
+    },
+  ], [clubId, openClub]);
+
+  const clubMobileSummary = useMemo(() => ({
+    title: (row: AdminClubRow) => `${row.emoji ? `${row.emoji} ` : ''}${row.name}`,
+    searchText: (row: AdminClubRow) => `${row.name} ${row.owner_username}`,
+    facts: [
+      { label: 'Owner', value: (row: AdminClubRow) => `@${row.owner_username}` },
+      { label: 'Members', value: (row: AdminClubRow) => row.member_count },
+      { label: 'Posted 7d', value: (row: AdminClubRow) => row.active_members_7d ?? 0 },
+    ],
+  }), []);
 
   return (
     <AdminSection
       className="admin-community"
       error={error}
-      lead="Clubs people belong to. Click a club to see who is in it and who posted this week."
+      lead="Clubs people belong to. Click a club to see who is in it and who posted this week. Click it again to close."
     >
       {metrics ? (
         <div className="admin-metric-grid admin-metric-grid--dense">
@@ -104,9 +135,10 @@ export default function AdminCommunity() {
 
       {clubId ? <AdminClubRoster clubId={clubId} onClose={closeClub} /> : null}
       <AdminDataGrid
-        persistKey="admin-community-clubs"
+        persistKey="admin-community-clubs-v2"
         rows={clubs}
         columns={clubColumns}
+        mobileSummary={clubMobileSummary}
         getRowId={(row) => row.id}
         loading={clubsQuery.isFetching}
         label="Clubs"

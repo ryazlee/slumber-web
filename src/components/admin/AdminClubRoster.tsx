@@ -5,6 +5,7 @@ import { isMissingAdminRpc } from '../../lib/adminRpc';
 import { pluralCount } from '../../lib/format';
 import { getOptionalQueryErrorMessage } from '../../lib/queryError';
 import { useAdminClubRoster } from '../../hooks/useAdmin';
+import AdminFormDialog from './AdminFormDialog';
 
 type Props = {
   clubId: string;
@@ -49,17 +50,12 @@ export default function AdminClubRoster({ clubId, onClose }: Props) {
     ? null
     : getOptionalQueryErrorMessage(query.error, 'Could not load this club.');
 
-  return (
-    <section className="admin-club-roster" aria-label="Club members">
-      <div className="admin-club-roster-head">
-        <h2 className="admin-subsection-title">
-          {roster ? `${roster.emoji ? `${roster.emoji} ` : ''}${roster.name}` : 'Club'}
-        </h2>
-        <button type="button" className="admin-button admin-button-sm admin-button-ghost" onClick={onClose}>
-          Close
-        </button>
-      </div>
+  const title = roster
+    ? `${roster.emoji ? `${roster.emoji} ` : ''}${roster.name}`
+    : 'Club';
 
+  return (
+    <AdminFormDialog open onClose={onClose} title={title} wide>
       {query.isLoading && !roster ? <p className="admin-muted">Loading members…</p> : null}
       {missing ? (
         <p className="admin-muted">Apply migration 166 to open a club’s members.</p>
@@ -96,6 +92,6 @@ export default function AdminClubRoster({ clubId, onClose }: Props) {
           )}
         </>
       ) : null}
-    </section>
+    </AdminFormDialog>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 type PopupProps = {
@@ -9,20 +9,46 @@ type PopupProps = {
   panelClassName?: string;
 };
 
+/** Open popups, oldest first. Only the top one handles Escape. */
+const popupStack: symbol[] = [];
+let bodyLockCount = 0;
+let savedBodyOverflow = '';
+
 export default function Popup({ open, onClose, title, children, panelClassName = '' }: PopupProps) {
+  const titleId = useId();
+  const tokenRef = useRef(Symbol('popup'));
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    if (!open) return undefined;
+    const token = tokenRef.current;
+    popupStack.push(token);
+    if (bodyLockCount === 0) {
+      savedBodyOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+    }
+    bodyLockCount += 1;
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key !== 'Escape') return;
+      if (popupStack[popupStack.length - 1] !== token) return;
+      e.preventDefault();
+      e.stopPropagation();
+      onCloseRef.current();
     };
     document.addEventListener('keydown', onKey);
     return () => {
-      document.body.style.overflow = prev;
+      const index = popupStack.lastIndexOf(token);
+      if (index !== -1) popupStack.splice(index, 1);
+      bodyLockCount -= 1;
+      if (bodyLockCount <= 0) {
+        bodyLockCount = 0;
+        document.body.style.overflow = savedBodyOverflow;
+      }
       document.removeEventListener('keydown', onKey);
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
@@ -32,11 +58,11 @@ export default function Popup({ open, onClose, title, children, panelClassName =
         className={`popup-panel${panelClassName ? ` ${panelClassName}` : ''}`}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="popup-title"
+        aria-labelledby={titleId}
         onClick={(e) => e.stopPropagation()}
       >
         <header className="popup-header">
-          <h2 id="popup-title" className="popup-title">{title}</h2>
+          <h2 id={titleId} className="popup-title">{title}</h2>
           <button type="button" className="popup-close" onClick={onClose} aria-label="Close">
             ×
           </button>

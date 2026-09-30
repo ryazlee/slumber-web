@@ -2,14 +2,13 @@ import type { FormEvent } from 'react';
 import type { RoleDefinitionDraft } from '../../lib/admin';
 import AdminColorField from './AdminColorField';
 import AdminEmojiPicker from './AdminEmojiPicker';
-import AdminPanel from './AdminPanel';
+import AdminFormDialog from './AdminFormDialog';
 
 type Props = {
   draft: RoleDefinitionDraft;
   editingKey: string | null;
   saving: boolean;
   formError: string | null;
-  panelId?: string;
   onChange: (draft: RoleDefinitionDraft) => void;
   onSubmit: (e: FormEvent) => void;
   onCancel: () => void;
@@ -53,7 +52,6 @@ export default function AdminRoleDefinitionForm({
   editingKey,
   saving,
   formError,
-  panelId,
   onChange,
   onSubmit,
   onCancel,
@@ -61,17 +59,13 @@ export default function AdminRoleDefinitionForm({
   const isEditing = editingKey !== null;
 
   return (
-    <AdminPanel
-      id={panelId}
+    <AdminFormDialog
+      open
+      onClose={onCancel}
       title={isEditing ? `Edit “${editingKey}”` : 'Add role'}
-      description="First assigned role sets the user’s avatar ring in the app."
-      headerAction={isEditing ? (
-        <button className="admin-button admin-button-ghost" type="button" onClick={onCancel} disabled={saving}>
-          Cancel
-        </button>
-      ) : null}
-      highlighted={isEditing}
+      wide
     >
+      <p className="admin-panel-desc">First assigned role sets the user’s avatar ring in the app.</p>
       <form className="admin-role-form-layout" onSubmit={onSubmit}>
         <RoleDefinitionPreview draft={draft} />
 
@@ -181,13 +175,16 @@ export default function AdminRoleDefinitionForm({
 
           {formError ? <p className="admin-error">{formError}</p> : null}
 
-          <div className="admin-form-actions admin-form-actions--sticky">
+          <div className="admin-form-actions">
             <button className="admin-button" type="submit" disabled={saving}>
               {saving ? 'Saving…' : isEditing ? 'Save changes' : 'Create role'}
+            </button>
+            <button className="admin-button admin-button-ghost" type="button" onClick={onCancel} disabled={saving}>
+              Cancel
             </button>
           </div>
         </div>
       </form>
-    </AdminPanel>
+    </AdminFormDialog>
   );
 }
