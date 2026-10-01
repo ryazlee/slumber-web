@@ -299,6 +299,14 @@ export default function AdminHealthSnapshot() {
         ...countPair(health.engagement.active_posters, prevEngagement?.active_posters),
       },
       {
+        key: 'posts',
+        label: 'Sleep posts',
+        value: health.engagement.posts,
+        sub: `${formatNumber(health.engagement.wearable_posts)} wearable · ${formatNumber(health.engagement.manual_posts)} manual`,
+        to: '/admin/posts',
+        ...countPair(health.engagement.posts, prevEngagement?.posts),
+      },
+      {
         key: 'dreams',
         label: 'Dream log rate',
         value: dreamValue,
