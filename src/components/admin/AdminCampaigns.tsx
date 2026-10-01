@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useMediaQuery } from '../../hooks/useMediaQuery';
 import type { FormEvent } from 'react';
 import type { AdminCampaignActionKind, AdminCampaignDraft, AdminCampaignRow } from '../../lib/admin';
 import { defaultAdminCampaignCta, uploadAdminCampaignImage } from '../../lib/admin';
@@ -136,7 +135,6 @@ export default function AdminCampaigns() {
   const campaigns = campaignsQuery.data ?? [];
   const error = getOptionalQueryErrorMessage(campaignsQuery.error, 'Could not load campaigns.');
   const editing = Boolean(draft.id);
-  const isNarrow = useMediaQuery('(max-width: 900px)');
 
   const setActionKind = (action_kind: AdminCampaignActionKind) => {
     setDraft((prev) => {
@@ -700,57 +698,9 @@ export default function AdminCampaigns() {
           <p className="admin-muted">Loading…</p>
         ) : campaigns.length === 0 ? (
           <p className="admin-empty-inline">No campaigns yet.</p>
-        ) : isNarrow ? (
-            <div className="admin-mobile-card-list">
-              <ul className="admin-mobile-card-list-items">
-                {campaigns.map((row) => {
-                  const kind = parseActionKind(row.action_kind);
-                  return (
-                    <li key={row.id} className="admin-mobile-card">
-                      <div className="admin-mobile-card-header">
-                        <div className="admin-campaign-title-row">
-                          {row.image_url ? <img src={row.image_url} alt="" className="admin-campaign-thumb" /> : null}
-                          <span className="admin-mobile-card-title">
-                            {row.emoji ? `${row.emoji} ` : ''}{row.title}
-                          </span>
-                        </div>
-                        <AdminStatusPill tone={row.enabled ? 'on' : 'off'}>
-                          {row.enabled ? 'On' : 'Off'}
-                        </AdminStatusPill>
-                      </div>
-                      {row.body?.trim() ? <p className="admin-campaign-sub">{snippet(row.body)}</p> : null}
-                      <dl className="admin-mobile-card-facts">
-                        <div>
-                          <dt>Action</dt>
-                          <dd>{actionLabel(kind)}</dd>
-                        </div>
-                        <div>
-                          <dt>Schedule</dt>
-                          <dd>{formatWindow(row.starts_at, row.ends_at)}</dd>
-                        </div>
-                        <div>
-                          <dt>Audience</dt>
-                          <dd>{audienceLabel(row.target_roles ?? [])}</dd>
-                        </div>
-                      </dl>
-                      <p className="admin-campaign-kicker">{actionDetail(row)}</p>
-                      {renderCampaignActions(row)}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ) : (
+        ) : (
           <div className="admin-table-wrap">
             <table className="admin-table admin-table--readable admin-campaign-table">
-              <colgroup>
-                <col className="admin-campaign-col-title" />
-                <col className="admin-campaign-col-status" />
-                <col className="admin-campaign-col-action" />
-                <col className="admin-campaign-col-when" />
-                <col className="admin-campaign-col-who" />
-                <col className="admin-campaign-col-actions" />
-              </colgroup>
               <thead>
                 <tr>
                   <th>Campaign</th>

@@ -324,7 +324,7 @@ export default function AdminActivityChart({
               <span
                 key={`${tick.edge}-${tick.value}`}
                 className={`admin-chart-yaxis-label admin-chart-yaxis-label--${tick.edge}`}
-                style={{ bottom: `calc((100% - 28px) * ${tick.percent / 100})` }}
+                style={{ bottom: `calc((100% - 12px) * ${tick.percent / 100})` }}
               >
                 {tick.label}
               </span>
@@ -386,12 +386,6 @@ export default function AdminActivityChart({
                       tabIndex={0}
                       aria-label={label}
                     >
-                      {isHovered && (
-                        <div className="admin-chart-tooltip">
-                          <span className="admin-chart-tooltip-value">{formatChartValue(value)}</span>
-                          <span className="admin-chart-tooltip-date">{formatDayTooltip(row.day)}</span>
-                        </div>
-                      )}
                       {variant === 'line' ? (
                         isHovered || rows.length === 1 ? (
                           <span

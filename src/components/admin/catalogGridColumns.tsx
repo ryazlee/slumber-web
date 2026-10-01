@@ -158,7 +158,7 @@ export function buildAdminRoleColumns(handlers: {
     {
       field: 'ring_color',
       headerName: 'Colors',
-      width: 180,
+      width: 280,
       flex: 0,
       valueGetter: (_value, row) => `${row.ring_color} ${row.badge_color ?? ''}`.trim(),
       renderCell: ({ row }) => (

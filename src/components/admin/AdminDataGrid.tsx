@@ -10,8 +10,7 @@ import {
   saveAdminGridState,
 } from '../../lib/adminGridState';
 import { ADMIN_SEARCH_DEBOUNCE_MS } from '../../lib/adminSearch';
-import { useMediaQuery } from '../../hooks/useMediaQuery';
-import { buildMobileColumns, type AdminMobileSummary } from './gridColumnHelpers';
+import type { AdminMobileSummary } from './gridColumnHelpers';
 
 const PERSIST_DEBOUNCE_MS = 300;
 
@@ -57,7 +56,7 @@ const GRID_CONTAINMENT_SX = {
     wordBreak: 'normal',
     maxWidth: '100%',
   },
-  '& .MuiDataGrid-cell:has(.admin-grid-actions), & .MuiDataGrid-cell:has(.admin-td-stack), & .MuiDataGrid-cell:has(.admin-mobile-summary), & .MuiDataGrid-cell:has(.admin-raw-cell--open)': {
+  '& .MuiDataGrid-cell:has(.admin-raw-cell--open)': {
     alignItems: 'flex-start',
     overflow: 'visible',
     whiteSpace: 'normal',
@@ -72,8 +71,8 @@ type AdminDataGridProps = DataGridProps & {
   /** Search or lookup rendered inside the table card, above the column headers. */
   search?: ReactNode;
   /**
-   * Narrow layout: one summary cell (title, status, a few facts) plus the row actions.
-   * Desktop keeps the full column set. The toolbar search still matches `searchText`.
+   * Kept so existing tables can still describe a row. Narrow screens scroll the full
+   * grid horizontally instead of stacking this into a multi-line card.
    */
   mobileSummary?: AdminMobileSummary;
 };
@@ -133,7 +132,7 @@ export default function AdminDataGrid({
   initialState,
   serverPagination,
   search,
-  mobileSummary,
+  mobileSummary: _mobileSummary,
   pageSizeOptions: pageSizeOptionsProp,
   paginationMode: paginationModeProp,
   rowCount: rowCountProp,
@@ -149,10 +148,6 @@ export default function AdminDataGrid({
   const apiRef = useGridApiRef();
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const lastSerializedRef = useRef<string | null>(null);
-  const isNarrow = useMediaQuery('(max-width: 900px)');
-  const cardLayout = isNarrow && Boolean(mobileSummary);
-  const cardLayoutRef = useRef(cardLayout);
-  cardLayoutRef.current = cardLayout;
 
   const [restoredInitialState] = useState(() => {
     const defaults = buildDefaultInitialState(initialState);
@@ -162,8 +157,6 @@ export default function AdminDataGrid({
 
   const persistState = useCallback(() => {
     if (!apiRef.current) return;
-    // Mobile summary columns must not overwrite the saved desktop layout.
-    if (cardLayoutRef.current) return;
     const exported = apiRef.current.exportState();
     if (exported.columns?.orderedFields?.includes('__summary')) return;
     const serialized = JSON.stringify(exported);
@@ -181,11 +174,6 @@ export default function AdminDataGrid({
     clearTimeout(saveTimerRef.current);
     persistState();
   }, [persistState]);
-
-  const displayColumns = useMemo(() => {
-    if (!cardLayout || !mobileSummary) return columns;
-    return buildMobileColumns(columns, mobileSummary);
-  }, [cardLayout, columns, mobileSummary]);
 
   const mergedSx = useMemo(() => ({ ...GRID_CONTAINMENT_SX, ...sx }), [sx]);
 
@@ -220,21 +208,13 @@ export default function AdminDataGrid({
         disableColumnSorting: disableColumnSortingProp,
       };
 
-  const gridInitialState = cardLayout
-    ? { pagination: restoredInitialState.pagination }
-    : restoredInitialState;
-
   return (
-    <div className={[
-      'admin-table-wrap',
-      'admin-data-grid-wrap',
-      cardLayout ? 'admin-data-grid-wrap--cards' : '',
-    ].filter(Boolean).join(' ')}>
+    <div className="admin-table-wrap admin-data-grid-wrap">
       {search ? <div className="admin-grid-searchbar">{search}</div> : null}
       <DataGrid
-        key={cardLayout ? `${persistKey}-cards` : persistKey}
+        key={persistKey}
         apiRef={apiRef}
-        columns={displayColumns}
+        columns={columns}
         disableRowSelectionOnClick
         autoHeight
         showToolbar
@@ -243,14 +223,9 @@ export default function AdminDataGrid({
         sx={mergedSx}
         slotProps={mergedSlotProps}
         pageSizeOptions={pageSizeOptions}
-        initialState={gridInitialState}
+        initialState={restoredInitialState}
         onStateChange={handleStateChange}
-        columnHeaderHeight={cardLayout ? 0 : undefined}
-        getRowHeight={(params) => {
-          if (cardLayout) return 'auto';
-          if (getRowHeight) return getRowHeight(params);
-          return 'auto';
-        }}
+        getRowHeight={getRowHeight}
         {...paginationProps}
         {...props}
         density={props.density ?? 'standard'}
