@@ -8,6 +8,25 @@ import {
 } from './adminDateUtils';
 
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'] as const;
+const MONTH_OPTIONS = Array.from({ length: 12 }, (_, month) => ({
+  month,
+  label: new Date(2020, month, 1).toLocaleDateString(undefined, { month: 'long' }),
+}));
+
+function yearBounds(min?: string, max?: string, viewYear?: number): { start: number; end: number } {
+  const now = new Date().getFullYear();
+  let start = now - 2;
+  let end = now + 15;
+  const minYear = min ? Number(min.slice(0, 4)) : NaN;
+  const maxYear = max ? Number(max.slice(0, 4)) : NaN;
+  if (Number.isFinite(minYear)) start = Math.min(start, minYear);
+  if (Number.isFinite(maxYear)) end = Math.max(end, maxYear);
+  if (viewYear != null) {
+    start = Math.min(start, viewYear);
+    end = Math.max(end, viewYear);
+  }
+  return { start, end };
+}
 
 type Props = {
   id?: string;
@@ -30,8 +49,12 @@ export default function AdminDateField({
 }: Props) {
   const autoId = useId();
   const id = idProp ?? autoId;
+  const monthSelectId = `${id}-month`;
+  const yearSelectId = `${id}-year`;
+  const yearInputId = `${id}-year-input`;
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
+  const [yearDraft, setYearDraft] = useState('');
 
   const selected = parseLocalDateISO(value);
   const initialView = selected ?? new Date();
@@ -43,9 +66,11 @@ export default function AdminDateField({
     const onPointerDown = (event: PointerEvent) => {
       const root = rootRef.current;
       if (!root) return;
-      if (event.target instanceof Node && !root.contains(event.target)) {
-        setOpen(false);
-      }
+      if (event.target instanceof Node && root.contains(event.target)) return;
+      // Native <select> menus can sit outside this node while open.
+      const active = document.activeElement;
+      if (active instanceof HTMLSelectElement && root.contains(active)) return;
+      setOpen(false);
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -67,6 +92,7 @@ export default function AdminDateField({
     const next = selected ?? new Date();
     setViewYear(next.getFullYear());
     setViewMonth(next.getMonth());
+    setYearDraft(String(next.getFullYear()));
     // Scroll the expanded calendar into view inside the modal body.
     requestAnimationFrame(() => {
       rootRef.current?.querySelector('.admin-date-popover')?.scrollIntoView({
@@ -81,16 +107,34 @@ export default function AdminDateField({
     [viewYear, viewMonth, min, max],
   );
 
-  const monthLabel = new Date(viewYear, viewMonth, 1).toLocaleDateString(undefined, {
-    month: 'long',
-    year: 'numeric',
-  });
+  const { start: yearStart, end: yearEnd } = yearBounds(min, max, viewYear);
+  const yearOptions = useMemo(() => {
+    const years: number[] = [];
+    for (let y = yearStart; y <= yearEnd; y += 1) years.push(y);
+    return years;
+  }, [yearStart, yearEnd]);
 
   const today = toLocalDateISO();
   const shiftMonth = (delta: number) => {
     const next = new Date(viewYear, viewMonth + delta, 1);
     setViewYear(next.getFullYear());
     setViewMonth(next.getMonth());
+    setYearDraft(String(next.getFullYear()));
+  };
+
+  const setYear = (year: number) => {
+    if (!Number.isFinite(year) || year < 1970 || year > 2100) return;
+    setViewYear(year);
+    setYearDraft(String(year));
+  };
+
+  const commitYearDraft = () => {
+    const parsed = Number(yearDraft.trim());
+    if (!Number.isInteger(parsed)) {
+      setYearDraft(String(viewYear));
+      return;
+    }
+    setYear(parsed);
   };
 
   const pick = (iso: string) => {
@@ -145,7 +189,30 @@ export default function AdminDateField({
             >
               ‹
             </button>
-            <div className="admin-date-month-label">{monthLabel}</div>
+            <div className="admin-date-selectors">
+              <label className="admin-date-sr-only" htmlFor={monthSelectId}>Month</label>
+              <select
+                id={monthSelectId}
+                className="admin-input admin-input-select admin-date-select admin-date-select--month"
+                value={viewMonth}
+                onChange={(e) => setViewMonth(Number(e.target.value))}
+              >
+                {MONTH_OPTIONS.map((option) => (
+                  <option key={option.month} value={option.month}>{option.label}</option>
+                ))}
+              </select>
+              <label className="admin-date-sr-only" htmlFor={yearSelectId}>Year</label>
+              <select
+                id={yearSelectId}
+                className="admin-input admin-input-select admin-date-select admin-date-select--year"
+                value={viewYear}
+                onChange={(e) => setYear(Number(e.target.value))}
+              >
+                {yearOptions.map((year) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
             <button
               type="button"
               className="admin-date-nav-btn"
@@ -154,6 +221,29 @@ export default function AdminDateField({
             >
               ›
             </button>
+          </div>
+
+          <div className="admin-date-year-jump">
+            <label className="admin-date-year-jump-label" htmlFor={yearInputId}>Jump to year</label>
+            <input
+              id={yearInputId}
+              className="admin-input admin-date-year-input"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              autoComplete="off"
+              maxLength={4}
+              value={yearDraft}
+              placeholder="YYYY"
+              onChange={(e) => setYearDraft(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              onBlur={commitYearDraft}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  commitYearDraft();
+                }
+              }}
+            />
           </div>
 
           <div className="admin-date-weekdays" aria-hidden>
