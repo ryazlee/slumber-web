@@ -18,6 +18,7 @@ export default function Popup({ open, onClose, title, children, panelClassName =
   const titleId = useId();
   const tokenRef = useRef(Symbol('popup'));
   const onCloseRef = useRef(onClose);
+  const backdropPointerDownRef = useRef(false);
   onCloseRef.current = onClose;
 
   useEffect(() => {
@@ -33,6 +34,8 @@ export default function Popup({ open, onClose, title, children, panelClassName =
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       if (popupStack[popupStack.length - 1] !== token) return;
+      // Nested pickers (date calendar, etc.) stop Escape before it reaches here.
+      if (e.defaultPrevented) return;
       e.preventDefault();
       e.stopPropagation();
       onCloseRef.current();
@@ -53,13 +56,28 @@ export default function Popup({ open, onClose, title, children, panelClassName =
   if (!open) return null;
 
   return createPortal(
-    <div className="popup-backdrop" onClick={onClose} role="presentation">
+    <div
+      className="popup-backdrop"
+      role="presentation"
+      onPointerDown={(e) => {
+        backdropPointerDownRef.current = e.target === e.currentTarget;
+      }}
+      onClick={(e) => {
+        // Require press + release on the dimmed backdrop so native date/select
+        // popovers (or drag-out clicks) don't dismiss the dialog mid-edit.
+        if (backdropPointerDownRef.current && e.target === e.currentTarget) {
+          onClose();
+        }
+        backdropPointerDownRef.current = false;
+      }}
+    >
       <div
         className={`popup-panel${panelClassName ? ` ${panelClassName}` : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
       >
         <header className="popup-header">
           <h2 id={titleId} className="popup-title">{title}</h2>

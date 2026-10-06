@@ -13,6 +13,14 @@ import {
 } from '../../hooks/useAdmin';
 import { useAssignableRoles } from '../../hooks/useCatalog';
 import { getCachedRoleOptions } from '../../lib/userRoles';
+import AdminDateField from './AdminDateField';
+import {
+  addDaysToLocalDateISO,
+  formatScheduleWindow,
+  isoToLocalDateInput,
+  localDateInputToIso,
+  toLocalDateISO,
+} from './adminDateUtils';
 import AdminFieldGroup from './AdminFieldGroup';
 import AdminGridAction from './AdminGridAction';
 import AdminGridActions from './AdminGridActions';
@@ -52,34 +60,6 @@ const DEFAULT_EMOJI: Record<AdminCampaignActionKind, string> = {
   message: '📣',
   url: '🔗',
 };
-
-function toDateInput(iso: string | null): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-function fromDateInput(value: string, edge: 'start' | 'end'): string | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return null;
-  const year = Number(match[1]);
-  const month = Number(match[2]) - 1;
-  const day = Number(match[3]);
-  const d = edge === 'start'
-    ? new Date(year, month, day, 0, 0, 0, 0)
-    : new Date(year, month, day, 23, 59, 59, 999);
-  return Number.isNaN(d.getTime()) ? null : d.toISOString();
-}
-
-function formatWindow(startsAt: string | null, endsAt: string | null): string {
-  const fmt = (iso: string) => new Date(iso).toLocaleDateString();
-  if (startsAt && endsAt) return `${fmt(startsAt)} – ${fmt(endsAt)}`;
-  if (startsAt) return `From ${fmt(startsAt)}`;
-  if (endsAt) return `Until ${fmt(endsAt)}`;
-  return 'Indefinite';
-}
 
 function audienceLabel(roles: string[]): string {
   return roles.length === 0 ? 'Everyone' : roles.join(', ');
@@ -614,45 +594,83 @@ export default function AdminCampaigns() {
             <p className="admin-muted">
               Optional. Leave both blank for an indefinite announcement, or set only a start or only an end.
             </p>
-            <AdminFilterBar nested>
-              <AdminFilterField label="Starts" htmlFor="campaign-starts">
-                <input
-                  id="campaign-starts"
-                  className="admin-input"
-                  type="date"
-                  value={toDateInput(draft.starts_at)}
-                  max={toDateInput(draft.ends_at) || undefined}
-                  onChange={(e) => setDraft((prev) => ({
+            <div className="admin-campaign-schedule">
+              <AdminDateField
+                id="campaign-starts"
+                label="Starts"
+                value={isoToLocalDateInput(draft.starts_at)}
+                max={isoToLocalDateInput(draft.ends_at) || undefined}
+                placeholder="Live immediately"
+                onChange={(next) => setDraft((prev) => ({
+                  ...prev,
+                  starts_at: localDateInputToIso(next, 'start'),
+                }))}
+              />
+              <AdminDateField
+                id="campaign-ends"
+                label="Ends"
+                value={isoToLocalDateInput(draft.ends_at)}
+                min={isoToLocalDateInput(draft.starts_at) || undefined}
+                placeholder="No end date"
+                onChange={(next) => setDraft((prev) => ({
+                  ...prev,
+                  ends_at: localDateInputToIso(next, 'end'),
+                }))}
+              />
+            </div>
+            <div className="admin-campaign-schedule-presets" role="group" aria-label="Schedule presets">
+              <button
+                type="button"
+                className="admin-button admin-button-ghost admin-button-sm"
+                onClick={() => {
+                  const today = toLocalDateISO();
+                  setDraft((prev) => ({
                     ...prev,
-                    starts_at: fromDateInput(e.target.value, 'start'),
-                  }))}
-                />
-              </AdminFilterField>
-              <AdminFilterField label="Ends" htmlFor="campaign-ends">
-                <input
-                  id="campaign-ends"
-                  className="admin-input"
-                  type="date"
-                  value={toDateInput(draft.ends_at)}
-                  min={toDateInput(draft.starts_at) || undefined}
-                  onChange={(e) => setDraft((prev) => ({
+                    starts_at: localDateInputToIso(today, 'start'),
+                    ends_at: localDateInputToIso(addDaysToLocalDateISO(today, 6), 'end'),
+                  }));
+                }}
+              >
+                Next 7 days
+              </button>
+              <button
+                type="button"
+                className="admin-button admin-button-ghost admin-button-sm"
+                onClick={() => {
+                  const today = toLocalDateISO();
+                  setDraft((prev) => ({
                     ...prev,
-                    ends_at: fromDateInput(e.target.value, 'end'),
-                  }))}
-                />
-              </AdminFilterField>
-            </AdminFilterBar>
-            {draft.starts_at || draft.ends_at ? (
-              <div className="admin-form-actions">
+                    starts_at: localDateInputToIso(today, 'start'),
+                    ends_at: localDateInputToIso(addDaysToLocalDateISO(today, 13), 'end'),
+                  }));
+                }}
+              >
+                Next 14 days
+              </button>
+              <button
+                type="button"
+                className="admin-button admin-button-ghost admin-button-sm"
+                onClick={() => setDraft((prev) => ({
+                  ...prev,
+                  starts_at: localDateInputToIso(toLocalDateISO(), 'start'),
+                  ends_at: null,
+                }))}
+              >
+                Start today
+              </button>
+              {(draft.starts_at || draft.ends_at) ? (
                 <button
                   type="button"
                   className="admin-button admin-button-ghost admin-button-sm"
                   onClick={() => setDraft((prev) => ({ ...prev, starts_at: null, ends_at: null }))}
                 >
-                  Clear dates
+                  Indefinite
                 </button>
-              </div>
-            ) : null}
+              ) : null}
+            </div>
+            <p className="admin-campaign-schedule-summary">
+              {formatScheduleWindow(draft.starts_at, draft.ends_at)}
+            </p>
           </AdminFieldGroup>
 
           <label className="admin-checkbox-label">
@@ -737,7 +755,7 @@ export default function AdminCampaigns() {
                         <div className="admin-campaign-name">{actionLabel(kind)}</div>
                         <div className="admin-campaign-sub">{actionDetail(row)}</div>
                       </td>
-                      <td className="admin-td-wrap">{formatWindow(row.starts_at, row.ends_at)}</td>
+                      <td className="admin-td-wrap">{formatScheduleWindow(row.starts_at, row.ends_at)}</td>
                       <td className="admin-td-wrap">{audienceLabel(row.target_roles ?? [])}</td>
                       <td className="admin-td-actions">{renderCampaignActions(row)}</td>
                     </tr>
