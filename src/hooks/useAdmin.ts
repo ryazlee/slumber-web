@@ -50,6 +50,7 @@ import {
   fetchHealthMetrics,
   resetUserStreak,
   setUserSuspended,
+  deleteAdminUserAccount,
   type AnalyticsFilters,
   type TagDraft,
   type ChallengeListFilters,
@@ -600,6 +601,20 @@ export function useSetUserSuspended() {
     onSuccess: (_data, { userId }) => {
       void qc.invalidateQueries({ queryKey: queryKeys.admin.userDetail(userId) });
       void qc.invalidateQueries({ queryKey: ['admin', 'user-search'] });
+    },
+  });
+}
+
+export function useDeleteAdminUserAccount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => deleteAdminUserAccount(userId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'user-search'] });
+      void qc.invalidateQueries({ queryKey: ['admin', 'analytics', 'users'] });
+      void qc.invalidateQueries({ queryKey: queryKeys.admin.dashboard });
+      void qc.invalidateQueries({ queryKey: queryKeys.admin.premiumMetrics });
+      void qc.invalidateQueries({ queryKey: ['admin', 'premium', 'users'] });
     },
   });
 }

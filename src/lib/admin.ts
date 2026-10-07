@@ -1005,6 +1005,13 @@ export async function setUserSuspended(
   return data as AdminUserOpResult;
 }
 
+export async function deleteAdminUserAccount(userId: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_delete_account', {
+    p_user_id: userId,
+  });
+  if (error) throw error;
+}
+
 export async function broadcastAdminNotification(
   message: string,
   options: {

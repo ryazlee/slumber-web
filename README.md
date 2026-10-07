@@ -49,7 +49,7 @@ npm install && npm run dev
 | `/profile/:userId` | Partial | Profile landing + app handoff |
 | `/challenge/join/:token` | Partial | Open challenge join landing |
 | `/club/:clubId/invite/:token` | Partial | Club invite landing |
-| `/admin` | OTP / Google + admin role | Health snapshot, people insights, notify, campaigns, moderation |
+| `/admin` | OTP / Google + admin role | Health snapshot, people insights, notify, campaigns, moderation, delete accounts |
 | `/admin/campaigns` | Admin | In-app campaign prompts (challenge, message, or link — image + popup + header + banner + inbox) |
 
 **Partial auth:** deep-link landings show preview when logged out; signed-in users get full in-app views where applicable. Friend invite links are generated in the iOS app (**Profile → Share**); URL shape matches `buildFriendInviteUrl()` in the main repo.

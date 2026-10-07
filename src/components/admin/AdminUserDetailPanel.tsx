@@ -5,6 +5,7 @@ import { getOptionalQueryErrorMessage } from '../../lib/queryError';
 import {
   useAdminUserDetail,
   useAdminUserPosts,
+  useDeleteAdminUserAccount,
   useResetUserStreak,
   useSetUserSuspended,
   useUpdateUserRoles,
@@ -23,6 +24,7 @@ type Props = {
   user: RecentUserRow;
   onClose: () => void;
   onOpenUser: (user: { id: string; username: string }) => void;
+  onDeleted?: () => void;
   onBack?: () => void;
   backLabel?: string;
 };
@@ -31,6 +33,7 @@ export default function AdminUserDetailPanel({
   user,
   onClose,
   onOpenUser,
+  onDeleted,
   onBack,
   backLabel,
 }: Props) {
@@ -44,6 +47,7 @@ export default function AdminUserDetailPanel({
   const updateRolesMutation = useUpdateUserRoles();
   const resetStreakMutation = useResetUserStreak();
   const suspendMutation = useSetUserSuspended();
+  const deleteAccountMutation = useDeleteAdminUserAccount();
 
   const detail = detailQuery.data ?? null;
   const posts = postsQuery.data?.rows ?? [];
@@ -115,9 +119,29 @@ export default function AdminUserDetailPanel({
     }
   };
 
+  const deleteAccount = async () => {
+    const confirmed = window.confirm(
+      `Permanently delete @${user.username}? This removes their login, sleep logs, and social connections. Comments they left on others' posts stay as a deleted account. This cannot be undone.`,
+    );
+    if (!confirmed) return;
+    const typed = window.prompt(`Type @${user.username} to confirm deletion:`);
+    if (typed !== `@${user.username}` && typed !== user.username) {
+      if (typed != null) setActionMessage('Delete cancelled — username did not match.');
+      return;
+    }
+    setActionMessage(null);
+    try {
+      await deleteAccountMutation.mutateAsync(user.id);
+      onDeleted?.();
+      onClose();
+    } catch (e: unknown) {
+      setActionMessage(e instanceof Error ? e.message : 'Could not delete account.');
+    }
+  };
+
   const error = getOptionalQueryErrorMessage(detailQuery.error, 'Could not load user detail.');
   const isSuspended = detail?.is_suspended ?? user.is_suspended ?? false;
-  const acting = resetStreakMutation.isPending || suspendMutation.isPending;
+  const acting = resetStreakMutation.isPending || suspendMutation.isPending || deleteAccountMutation.isPending;
 
   const editorUser = useMemo<RecentUserRow>(() => ({
     ...user,
@@ -187,6 +211,13 @@ export default function AdminUserDetailPanel({
           disabled={acting}
         >
           {isSuspended ? 'Unsuspend' : 'Suspend'}
+        </AdminGridAction>
+        <AdminGridAction
+          variant="danger"
+          onClick={() => void deleteAccount()}
+          disabled={acting}
+        >
+          Delete account
         </AdminGridAction>
         {!editingRoles ? (
           <AdminGridAction onClick={startRoleEdit}>Edit roles</AdminGridAction>
