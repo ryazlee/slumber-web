@@ -1,7 +1,10 @@
 import type { AdminPostRaw, RecentPostRow } from '../../lib/admin';
 import { getOptionalQueryErrorMessage } from '../../lib/queryError';
 import { useAdminPost } from '../../hooks/useAdmin';
+import CollapsibleSection from '../CollapsibleSection';
 import AdminFormDialog from './AdminFormDialog';
+import AdminPostEngagement from './AdminPostEngagement';
+import { AdminJsonBlock } from './AdminPostRawJson';
 
 type Props = {
   postId: string | null;
@@ -96,7 +99,7 @@ export default function AdminPostPreviewDialog({ postId, row = null, onClose }: 
   const waiting = Boolean(postId) && query.isLoading && facts.length === 0 && !dreamText;
 
   return (
-    <AdminFormDialog open={Boolean(postId)} onClose={onClose} title={heading}>
+    <AdminFormDialog open={Boolean(postId)} onClose={onClose} title={heading} wide>
       {deletedAt ? <p className="admin-error">Soft-deleted {deletedAt}</p> : null}
       {error ? <p className="admin-error">{error}</p> : null}
       {waiting ? <p className="admin-muted">Loading post…</p> : null}
@@ -120,6 +123,12 @@ export default function AdminPostPreviewDialog({ postId, row = null, onClose }: 
         </section>
       ) : null}
       {showDreamFallback ? <p className="admin-muted">Dream logged.</p> : null}
+      <AdminPostEngagement postId={postId} />
+      {raw ? (
+        <CollapsibleSection title="Raw post" defaultOpen={false} compact>
+          <AdminJsonBlock value={raw} />
+        </CollapsibleSection>
+      ) : null}
     </AdminFormDialog>
   );
 }

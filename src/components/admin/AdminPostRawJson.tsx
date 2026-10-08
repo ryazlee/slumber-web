@@ -10,12 +10,29 @@ function stringField(data: AdminPostRaw, key: string): string | null {
   return typeof value === 'string' && value ? value : null;
 }
 
+export function AdminJsonBlock({ value, label = 'JSON' }: { value: unknown; label?: string }) {
+  const json = JSON.stringify(value, null, 2);
+  return (
+    <div className="admin-json-block">
+      <div className="admin-post-raw-toolbar">
+        <span className="admin-post-raw-toolbar-label">{label}</span>
+        <AdminCopyButton
+          value={json}
+          label="Copy JSON"
+          title="Copy JSON"
+          className="admin-button admin-button-sm"
+        />
+      </div>
+      <pre className="admin-json-pre">{json}</pre>
+    </div>
+  );
+}
+
 type Props = {
   data: AdminPostRaw;
 };
 
 export default function AdminPostRawJson({ data }: Props) {
-  const json = stringifyAdminPost(data);
   const postId = stringField(data, 'id');
   const userId = stringField(data, 'user_id');
   const deletedAt = stringField(data, 'deleted_at');
@@ -57,18 +74,7 @@ export default function AdminPostRawJson({ data }: Props) {
           <dd>{stringField(data, 'session_kind') ?? '—'}</dd>
         </div>
       </dl>
-      <div className="admin-json-block">
-        <div className="admin-post-raw-toolbar">
-          <span className="admin-post-raw-toolbar-label">JSON</span>
-          <AdminCopyButton
-            value={json}
-            label="Copy JSON"
-            title="Copy JSON"
-            className="admin-button admin-button-sm"
-          />
-        </div>
-        <pre className="admin-json-pre">{json}</pre>
-      </div>
+      <AdminJsonBlock value={data} />
     </div>
   );
 }

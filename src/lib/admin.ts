@@ -667,6 +667,48 @@ export async function fetchAdminPost(postId: string): Promise<AdminPostRaw | nul
   return data as AdminPostRaw;
 }
 
+export type AdminRawRow = Record<string, unknown>;
+
+export type AdminPostEngagement = {
+  comments: AdminRawRow[];
+  kudos: AdminRawRow[];
+  commentLikes: AdminRawRow[];
+  usernames: Record<string, string>;
+};
+
+export async function fetchAdminPostEngagement(postId: string): Promise<AdminPostEngagement> {
+  const [commentsRes, kudosRes] = await Promise.all([
+    supabase.from('comments').select('*').eq('post_id', postId).order('created_at', { ascending: true }),
+    supabase.from('kudos').select('*').eq('post_id', postId).order('created_at', { ascending: true }),
+  ]);
+  if (commentsRes.error) throw commentsRes.error;
+  if (kudosRes.error) throw kudosRes.error;
+  const comments = (commentsRes.data ?? []) as AdminRawRow[];
+  const kudos = (kudosRes.data ?? []) as AdminRawRow[];
+
+  const commentIds = comments.map((c) => String(c.id));
+  let commentLikes: AdminRawRow[] = [];
+  if (commentIds.length > 0) {
+    const { data, error } = await supabase.from('comment_likes').select('*').in('comment_id', commentIds);
+    if (error) throw error;
+    commentLikes = (data ?? []) as AdminRawRow[];
+  }
+
+  const userIds = [...new Set(
+    [...comments, ...kudos, ...commentLikes]
+      .map((r) => (typeof r.user_id === 'string' ? r.user_id : ''))
+      .filter(Boolean),
+  )];
+  const usernames: Record<string, string> = {};
+  if (userIds.length > 0) {
+    const { data, error } = await supabase.from('profiles').select('id, username').in('id', userIds);
+    if (error) throw error;
+    for (const p of data ?? []) usernames[p.id] = p.username;
+  }
+
+  return { comments, kudos, commentLikes, usernames };
+}
+
 export async function fetchAdminTags(
   filters: AnalyticsFilters & CatalogListFilters = {},
 ): Promise<PaginatedResult<AdminTagRow>> {

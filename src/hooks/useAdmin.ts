@@ -32,6 +32,7 @@ import {
   checkIsModerator,
   formatAdminRpcError,
   fetchAdminPost,
+  fetchAdminPostEngagement,
   broadcastAdminNotification,
   fetchAdminCampaigns,
   upsertAdminCampaign,
@@ -490,6 +491,15 @@ export function useAdminPost(postId: string | null) {
   return useQuery({
     queryKey: queryKeys.admin.postRaw(postId ?? ''),
     queryFn: () => fetchAdminPost(postId!),
+    enabled: Boolean(postId),
+    ...adminQueryOptions,
+  });
+}
+
+export function useAdminPostEngagement(postId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.admin.postEngagement(postId ?? ''),
+    queryFn: () => fetchAdminPostEngagement(postId!),
     enabled: Boolean(postId),
     ...adminQueryOptions,
   });

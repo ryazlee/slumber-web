@@ -5189,6 +5189,34 @@ a.admin-user-rel-row:hover {
   margin: 0;
 }
 
+.admin-engagement-list,
+.admin-engagement-kudos {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-engagement-item {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-engagement-item .admin-report-quote {
+  max-height: 160px;
+}
+
+.admin-engagement-kudo {
+  font-size: 14px;
+}
+
+.admin-engagement-meta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
 .admin-grid-searchbar {
   display: flex;
   flex-wrap: wrap;
