@@ -17,7 +17,8 @@ export type DeepLinkIntent =
   | 'club-invite'
   | 'profile'
   | 'post'
-  | 'challenge';
+  | 'challenge'
+  | 'monthly-recap';
 
 const INTENT_LABEL: Record<DeepLinkIntent, string> = {
   'friend-invite': 'Friend invite',
@@ -26,6 +27,7 @@ const INTENT_LABEL: Record<DeepLinkIntent, string> = {
   profile: 'Profile',
   post: 'Sleep post',
   challenge: 'Challenge',
+  'monthly-recap': 'Monthly recap',
 };
 
 const INTENT_ICON: Record<DeepLinkIntent, string> = {
@@ -35,6 +37,7 @@ const INTENT_ICON: Record<DeepLinkIntent, string> = {
   profile: '👤',
   post: '🌙',
   challenge: '🏁',
+  'monthly-recap': '✨',
 };
 
 type Props = {

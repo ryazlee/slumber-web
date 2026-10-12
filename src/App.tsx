@@ -40,6 +40,7 @@ import DeleteData from './pages/DeleteData';
 import Download from './pages/Download';
 import HealthCallback from './pages/HealthCallback';
 import InviteLandingPage from './pages/InviteLandingPage';
+import RecapLandingPage from './pages/RecapLandingPage';
 import LoginCallback from './pages/LoginCallback';
 import NotFound from './pages/NotFound';
 import Privacy from './pages/Privacy';
@@ -74,6 +75,7 @@ export default function App() {
       <Routes>
       <Route element={<SiteLayout />}>
         <Route path="invite/:token" element={<InviteLandingPage />} />
+        <Route path="recap/:month" element={<RecapLandingPage />} />
         <Route path="challenge/join/:token" element={<InviteLandingPage />} />
         <Route path="club/:clubId/invite/:token" element={<InviteLandingPage />} />
         <Route path="post/:id" element={<GatedPostDetail />} />
