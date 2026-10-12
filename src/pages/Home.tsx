@@ -125,6 +125,10 @@ export default function Home() {
               <strong>Privacy</strong>
               <span>Mutual friends by default. Private posts, blurred dreams, block anytime.</span>
             </li>
+            <li>
+              <strong>Logging</strong>
+              <span>Auto-publish when sleep syncs, or post last night from an iPhone Home Screen widget.</span>
+            </li>
           </ul>
         </section>
 

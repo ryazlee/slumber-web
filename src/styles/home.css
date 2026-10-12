@@ -818,6 +818,10 @@
   border-left-color: var(--accent);
 }
 
+.home-essentials-list li:nth-child(5) {
+  border-left-color: var(--awake);
+}
+
 .home-essentials-list strong {
   color: var(--text);
   font-family: var(--font);
