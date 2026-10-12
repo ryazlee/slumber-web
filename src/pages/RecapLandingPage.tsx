@@ -19,7 +19,7 @@ export default function RecapLandingPage() {
   );
 
   if (!monthKey || !title) {
-    return <DeepLinkNotFound />;
+    return <DeepLinkNotFound message="This URL doesn't match a monthly recap." />;
   }
 
   return (
