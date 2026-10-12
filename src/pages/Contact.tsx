@@ -27,35 +27,26 @@ export default function Contact() {
 
           <h1 id="contact-headline">Get in touch</h1>
           <p className="home-lead download-lead">
-            Support, privacy, or just say hi. Email the team, or reach the person who
-            builds Slumber.
+            Support, privacy, or just say hi.
           </p>
 
-          <ul className="contact-links">
-            <li>
-              <a className="contact-link" href={`mailto:${SUPPORT_EMAIL}`}>
-                <span className="contact-link-label">Email</span>
-                {SUPPORT_EMAIL}
-              </a>
-            </li>
-            <li>
-              <a
-                className="contact-link"
-                href={DEV_CONTACT_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <span className="contact-link-label">Developer</span>
-                Ryan
-              </a>
-            </li>
-          </ul>
+          <a className="contact-email home-cta home-cta--primary" href={`mailto:${SUPPORT_EMAIL}`}>
+            <span className="contact-email-label">Email</span>
+            <span className="contact-email-address">{SUPPORT_EMAIL}</span>
+          </a>
 
           <p className="home-login-prompt contact-delete-hint">
             Need to delete your account?{' '}
             <Link to="/delete-account" className="home-login-link">
               Request deletion
             </Link>
+          </p>
+
+          <p className="contact-dev">
+            Built by{' '}
+            <a href={DEV_CONTACT_URL} target="_blank" rel="noopener noreferrer">
+              Ryan
+            </a>{' '}🐸
           </p>
         </div>
       </section>
