@@ -299,7 +299,7 @@ export default function AdminCampaigns() {
       } else if (message.includes('challenge_not_found')) {
         setFormError('Challenge not found.');
       } else if (message.includes('cta_url_required')) {
-        setFormError('Use an http(s), slumber://, or / path.');
+        setFormError('Use an http(s), slumber://, / path, or mailto:useslumber@gmail.com.');
       } else if (message.includes('image_url_invalid')) {
         setFormError('Promo image must be an https URL.');
       } else {
@@ -570,7 +570,7 @@ export default function AdminCampaigns() {
                 className="admin-input"
                 value={draft.cta_url}
                 onChange={(e) => setDraft((prev) => ({ ...prev, cta_url: e.target.value }))}
-                placeholder="https://useslumber.com/…"
+                placeholder="https://useslumber.com/… or mailto:useslumber@gmail.com"
               />
             </>
           ) : null}
