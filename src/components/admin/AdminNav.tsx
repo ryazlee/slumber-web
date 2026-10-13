@@ -50,30 +50,20 @@ function buildAdminNavGroups(pendingReports = 0, pendingTags = 0): AdminNavGroup
         { to: '/admin/dreams', label: 'Dreams' },
         { to: '/admin/community', label: 'Clubs' },
         { to: '/admin/challenges', label: 'Challenges' },
-        { to: '/admin/races', label: 'Slumber races' },
-        { to: '/admin/premium', label: 'Premium' },
       ],
     },
     {
-      label: 'Actions',
+      label: 'Tools',
       items: [
         { to: '/admin/notify', label: 'Notify' },
         { to: '/admin/campaigns', label: 'Campaigns' },
-      ],
-    },
-    {
-      label: 'Moderation',
-      items: [
         {
           to: '/admin/reports',
           label: 'Reports',
           badge: pendingReports > 0 ? pendingReports : undefined,
         },
-      ],
-    },
-    {
-      label: 'Configure',
-      items: [
+        { to: '/admin/races', label: 'Slumber races' },
+        { to: '/admin/premium', label: 'Premium' },
         {
           to: '/admin/configure/tags',
           label: 'Tag catalog',
