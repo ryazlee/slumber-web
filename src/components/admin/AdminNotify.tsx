@@ -13,6 +13,8 @@ import {
 import { useAssignableRoles } from '../../hooks/useCatalog';
 import { getCachedRoleOptions } from '../../lib/userRoles';
 import { AdminUserPickerList, AdminUserPickerSearchField } from './AdminUserPicker';
+import GrowingTextarea from '../GrowingTextarea';
+import { WEB_TEXT_AREA_MAX_LINES } from '../../lib/commentInputGrow';
 import AdminFieldGroup from './AdminFieldGroup';
 import AdminFilterBar, { AdminFilterField } from './AdminFilterBar';
 import AdminFormDialog from './AdminFormDialog';
@@ -236,11 +238,12 @@ export default function AdminNotify() {
 
           <form className="admin-compose-form" onSubmit={handleSend}>
             <label className="admin-label" htmlFor="notify-message">Message</label>
-            <textarea
+            <GrowingTextarea
               ref={messageRef}
               id="notify-message"
               className="admin-input admin-textarea"
               rows={5}
+              maxLines={WEB_TEXT_AREA_MAX_LINES}
               maxLength={MESSAGE_MAX}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -342,10 +345,11 @@ export default function AdminNotify() {
           </AdminFilterBar>
 
           <AdminFieldGroup title="Message">
-            <textarea
+            <GrowingTextarea
               id="broadcast-message"
               className="admin-input admin-textarea"
               rows={4}
+              maxLines={WEB_TEXT_AREA_MAX_LINES}
               maxLength={MESSAGE_MAX}
               value={broadcastMessage}
               onChange={(e) => setBroadcastMessage(e.target.value)}

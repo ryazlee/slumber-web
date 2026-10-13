@@ -4171,6 +4171,10 @@ a.admin-user-rel-row:hover {
   line-height: 1.45;
 }
 
+textarea.growing-textarea {
+  resize: none;
+}
+
 .admin-user-list {
   display: grid;
   gap: 12px;

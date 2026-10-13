@@ -1,19 +1,20 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import type { AdminCampaignActionKind, AdminCampaignDraft, AdminCampaignRow } from '../../lib/admin';
-import { defaultAdminCampaignCta, uploadAdminCampaignImage } from '../../lib/admin';
-import { getOptionalQueryErrorMessage } from '../../lib/queryError';
+import { adminErrorMessage, defaultAdminCampaignCta, uploadAdminCampaignImage } from '../../lib/admin';
 import {
   useAdminCampaigns,
-  useCreateAdminSlumberChallenge,
   useDeleteAdminCampaign,
+  useEndAdminSlumberChallenge,
   useSetAdminCampaignEnabled,
-  useStartAdminSlumberChallenge,
   useUpsertAdminCampaign,
+  useUpsertAdminSlumberChallenge,
 } from '../../hooks/useAdmin';
 import { useAssignableRoles } from '../../hooks/useCatalog';
 import { getCachedRoleOptions } from '../../lib/userRoles';
 import AdminDateField from './AdminDateField';
+import GrowingTextarea from '../GrowingTextarea';
+import { WEB_TEXT_AREA_MAX_LINES } from '../../lib/commentInputGrow';
 import {
   addDaysToLocalDateISO,
   formatScheduleWindow,
@@ -50,10 +51,15 @@ const EMPTY_DRAFT: AdminCampaignDraft = {
 const EMPTY_SLUMBER = {
   title: '',
   goalHours: '40',
-  days: '10',
-  noExpiration: false,
   maxParticipants: '',
+  joinEnabled: true,
 };
+
+function goalHoursLabel(minutes: number | null | undefined): string {
+  if (!minutes) return '40';
+  const hours = minutes / 60;
+  return String(Number.isInteger(hours) ? hours : Math.round(hours * 10) / 10);
+}
 
 const DEFAULT_EMOJI: Record<AdminCampaignActionKind, string> = {
   challenge: '🏁',
@@ -97,24 +103,29 @@ function actionDetail(row: AdminCampaignRow): string {
 export default function AdminCampaigns() {
   const campaignsQuery = useAdminCampaigns();
   const upsertMutation = useUpsertAdminCampaign();
+  const slumberMutation = useUpsertAdminSlumberChallenge();
+  const endSlumberMutation = useEndAdminSlumberChallenge();
   const enabledMutation = useSetAdminCampaignEnabled();
   const deleteMutation = useDeleteAdminCampaign();
-  const createSlumberMutation = useCreateAdminSlumberChallenge();
-  const startSlumberMutation = useStartAdminSlumberChallenge();
   const rolesQuery = useAssignableRoles();
   const roleOptions = rolesQuery.data ?? getCachedRoleOptions();
 
   const [composerOpen, setComposerOpen] = useState(false);
   const [draft, setDraft] = useState<AdminCampaignDraft>(EMPTY_DRAFT);
   const [slumber, setSlumber] = useState(EMPTY_SLUMBER);
-  const [slumberNote, setSlumberNote] = useState<string | null>(null);
+  const [raceHost, setRaceHost] = useState<'slumber' | 'user'>('slumber');
+  const [raceStatus, setRaceStatus] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [listError, setListError] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
 
   const campaigns = campaignsQuery.data ?? [];
-  const error = getOptionalQueryErrorMessage(campaignsQuery.error, 'Could not load campaigns.');
+  const error = campaignsQuery.error
+    ? adminErrorMessage(campaignsQuery.error, 'Could not load campaigns.')
+    : null;
   const editing = Boolean(draft.id);
+  const slumberForm = draft.action_kind === 'challenge' && raceHost !== 'user';
+  const raceFieldsLocked = slumberForm && !!raceStatus && !['pending', 'active'].includes(raceStatus);
 
   const setActionKind = (action_kind: AdminCampaignActionKind) => {
     setDraft((prev) => {
@@ -126,17 +137,30 @@ export default function AdminCampaigns() {
         }).includes(prev.cta_label);
       const wasDefaultEmoji = !prev.emoji.trim()
         || Object.values(DEFAULT_EMOJI).includes(prev.emoji);
-      return {
+      const next = {
         ...prev,
         action_kind,
         cta_label: wasDefaultCta ? defaultAdminCampaignCta(action_kind) : prev.cta_label,
         emoji: wasDefaultEmoji ? DEFAULT_EMOJI[action_kind] : prev.emoji,
       };
+      if (action_kind === 'challenge' && raceHost !== 'user' && !next.starts_at) {
+        next.starts_at = localDateInputToIso(toLocalDateISO(), 'start');
+      }
+      return next;
     });
   };
 
   const handleEdit = (row: AdminCampaignRow) => {
     const action_kind = parseActionKind(row.action_kind);
+    const isSlumber = action_kind === 'challenge' && row.hosted_by !== 'user';
+    setRaceHost(isSlumber ? 'slumber' : 'user');
+    setRaceStatus(row.challenge_status);
+    setSlumber({
+      title: row.challenge_title ?? '',
+      goalHours: goalHoursLabel(row.goal_minutes),
+      maxParticipants: row.max_participants != null ? String(row.max_participants) : '',
+      joinEnabled: row.open_link_enabled !== false,
+    });
     setDraft({
       id: row.id,
       title: row.title,
@@ -148,8 +172,10 @@ export default function AdminCampaigns() {
       cta_url: row.cta_url ?? '',
       image_url: row.image_url ?? '',
       target_roles: row.target_roles ?? [],
-      starts_at: row.starts_at,
-      ends_at: row.ends_at,
+      starts_at: isSlumber ? (row.challenge_started_at ?? row.starts_at) : row.starts_at,
+      ends_at: isSlumber
+        ? (row.no_expiration ? null : (row.challenge_expires_at ?? row.ends_at))
+        : row.ends_at,
       enabled: row.enabled,
       priority: row.priority,
     });
@@ -158,9 +184,13 @@ export default function AdminCampaigns() {
   };
 
   const clearDraft = () => {
-    setDraft(EMPTY_DRAFT);
+    setDraft({
+      ...EMPTY_DRAFT,
+      starts_at: localDateInputToIso(toLocalDateISO(), 'start'),
+    });
     setSlumber(EMPTY_SLUMBER);
-    setSlumberNote(null);
+    setRaceHost('slumber');
+    setRaceStatus(null);
     setFormError(null);
   };
 
@@ -174,56 +204,6 @@ export default function AdminCampaigns() {
     setComposerOpen(true);
   };
 
-  const handleCreateSlumber = async () => {
-    setFormError(null);
-    setSlumberNote(null);
-    const title = slumber.title.trim() || draft.title.trim();
-    const goalHours = Number(slumber.goalHours);
-    const days = Number(slumber.days);
-    const maxRaw = slumber.maxParticipants.trim();
-    const maxParticipants = maxRaw ? Number(maxRaw) : null;
-    if (!title) {
-      setFormError('Add a title for the Slumber challenge.');
-      return;
-    }
-    if (!Number.isFinite(goalHours) || goalHours < 10 || goalHours > 100) {
-      setFormError('Goal must be between 10 and 100 hours.');
-      return;
-    }
-    if (!slumber.noExpiration && (!Number.isFinite(days) || days < 1 || days > 100)) {
-      setFormError('Duration must be between 1 and 100 days.');
-      return;
-    }
-    if (maxParticipants != null && (!Number.isInteger(maxParticipants) || maxParticipants < 2)) {
-      setFormError('Max racers must be at least 2, or left blank.');
-      return;
-    }
-    try {
-      const created = await createSlumberMutation.mutateAsync({
-        title,
-        goalMinutes: Math.round(goalHours * 60),
-        noExpiration: slumber.noExpiration,
-        expiresInDays: slumber.noExpiration ? 10 : days,
-        maxParticipants,
-      });
-      setDraft((prev) => ({ ...prev, challenge_id: created.id }));
-      setSlumberNote(`Created “${created.title}”. Save the campaign to publish it. You are not a racer, so the join banner can show on your phone.`);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Could not create challenge.';
-      if (message.includes('invalid_goal')) {
-        setFormError('Goal must be between 10 and 100 hours.');
-      } else if (message.includes('invalid_title')) {
-        setFormError('Challenge title must be 1–80 characters.');
-      } else if (message.includes('invalid_expiration_days')) {
-        setFormError('Duration must be between 1 and 100 days.');
-      } else if (message.includes('invalid_max_participants')) {
-        setFormError('Max racers must be between 2 and 10,000.');
-      } else {
-        setFormError(message);
-      }
-    }
-  };
-
   const handleDelete = async (row: AdminCampaignRow) => {
     const msg = `Delete “${row.title}”? This removes it from the app. A linked race is left as-is.`;
     if (!window.confirm(msg)) return;
@@ -232,20 +212,25 @@ export default function AdminCampaigns() {
       await deleteMutation.mutateAsync(row.id);
       if (draft.id === row.id) closeComposer();
     } catch (err: unknown) {
-      setListError(err instanceof Error ? err.message : 'Could not delete campaign.');
+      setListError(adminErrorMessage(err, 'Could not delete campaign.'));
     }
   };
 
-  const handleStartSlumber = async (challengeId: string) => {
+  const handleEndSlumber = async (row: AdminCampaignRow) => {
+    if (!row.challenge_id) return;
+    const pending = row.challenge_status === 'pending';
+    const name = row.challenge_title?.trim() || row.title;
+    const msg = pending
+      ? `Cancel “${name}”? It will not start, and the join link will close.`
+      : `End “${name}” now? Racers get a catch-up window, then it finishes. The join link will close.`;
+    if (!window.confirm(msg)) return;
     setListError(null);
     try {
-      await startSlumberMutation.mutateAsync(challengeId);
+      await endSlumberMutation.mutateAsync(row.challenge_id);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Could not start challenge.';
-      if (message.includes('insufficient_participants')) {
-        setListError('Need at least one racer before starting.');
-      } else if (message.includes('challenge_not_pending')) {
-        setListError('That race has already started.');
+      const message = adminErrorMessage(err, 'Could not end the race.');
+      if (message.includes('challenge_not_endable')) {
+        setListError('That race has already finished.');
       } else {
         setListError(message);
       }
@@ -268,8 +253,12 @@ export default function AdminCampaigns() {
       setFormError('Title and body are required.');
       return;
     }
-    if (draft.action_kind === 'challenge' && !draft.challenge_id.trim()) {
+    if (draft.action_kind === 'challenge' && raceHost === 'user' && !draft.challenge_id.trim()) {
       setFormError('Paste the open-link challenge id.');
+      return;
+    }
+    if (slumberForm && !draft.starts_at) {
+      setFormError('Pick a start date for the race.');
       return;
     }
     if (draft.action_kind === 'url' && !draft.cta_url.trim()) {
@@ -281,19 +270,57 @@ export default function AdminCampaigns() {
       return;
     }
     try {
-      await upsertMutation.mutateAsync({
-        ...draft,
-        title: draft.title.trim(),
-        body: draft.body.trim(),
-        emoji: draft.emoji.trim(),
-        cta_label: draft.cta_label.trim() || defaultAdminCampaignCta(draft.action_kind),
-        challenge_id: draft.challenge_id.trim(),
-        cta_url: draft.cta_url.trim(),
-        image_url: draft.image_url.trim(),
-      });
+      if (slumberForm) {
+        const goalHours = Number(slumber.goalHours);
+        const maxRaw = slumber.maxParticipants.trim();
+        const maxParticipants = maxRaw ? Number(maxRaw) : null;
+        const raceTitle = slumber.title.trim() || draft.title.trim();
+        if (!raceTitle) {
+          setFormError('Add a title for the race.');
+          return;
+        }
+        if (!Number.isFinite(goalHours) || goalHours < 10 || goalHours > 100) {
+          setFormError('Goal must be between 10 and 100 hours.');
+          return;
+        }
+        if (maxParticipants != null && (!Number.isInteger(maxParticipants) || maxParticipants < 2 || maxParticipants > 10000)) {
+          setFormError('Max racers must be between 2 and 10,000, or left blank.');
+          return;
+        }
+        await slumberMutation.mutateAsync({
+          challengeId: draft.challenge_id.trim() || null,
+          campaignId: draft.id ?? null,
+          title: raceTitle,
+          goalMinutes: Math.round(goalHours * 60),
+          startsAt: draft.starts_at as string,
+          endsAt: draft.ends_at,
+          noEnd: !draft.ends_at,
+          maxParticipants,
+          joinEnabled: slumber.joinEnabled,
+          campaignTitle: draft.title.trim(),
+          campaignBody: draft.body.trim(),
+          emoji: draft.emoji.trim(),
+          ctaLabel: draft.cta_label.trim() || defaultAdminCampaignCta('challenge'),
+          imageUrl: draft.image_url.trim(),
+          targetRoles: draft.target_roles,
+          enabled: draft.enabled,
+          priority: draft.priority,
+        });
+      } else {
+        await upsertMutation.mutateAsync({
+          ...draft,
+          title: draft.title.trim(),
+          body: draft.body.trim(),
+          emoji: draft.emoji.trim(),
+          cta_label: draft.cta_label.trim() || defaultAdminCampaignCta(draft.action_kind),
+          challenge_id: draft.challenge_id.trim(),
+          cta_url: draft.cta_url.trim(),
+          image_url: draft.image_url.trim(),
+        });
+      }
       closeComposer();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Could not save campaign.';
+      const message = adminErrorMessage(err, 'Could not save campaign.');
       if (message.includes('challenge_not_open_link')) {
         setFormError('That challenge needs an active invite link.');
       } else if (message.includes('challenge_not_found')) {
@@ -302,6 +329,14 @@ export default function AdminCampaigns() {
         setFormError('Use an http(s), slumber://, / path, or mailto:useslumber@gmail.com.');
       } else if (message.includes('image_url_invalid')) {
         setFormError('Promo image must be an https URL.');
+      } else if (message.includes('invalid_goal')) {
+        setFormError('Goal must be between 10 and 100 hours.');
+      } else if (message.includes('invalid_window') || message.includes('start_required') || message.includes('starts_at_required')) {
+        setFormError('Pick a start date. The end date has to be after it, or leave the end blank.');
+      } else if (message.includes('invalid_max_participants')) {
+        setFormError('Max racers must be between 2 and 10,000.');
+      } else if (message.includes('invalid_title') || message.includes('title_too_long')) {
+        setFormError('Titles must be 1–80 characters.');
       } else {
         setFormError(message);
       }
@@ -317,12 +352,14 @@ export default function AdminCampaigns() {
       >
         {row.enabled ? 'Disable' : 'Enable'}
       </AdminGridAction>
-      {row.hosted_by === 'slumber' && row.challenge_status === 'pending' && row.challenge_id ? (
+      {row.hosted_by === 'slumber' && row.challenge_id
+        && (row.challenge_status === 'pending' || row.challenge_status === 'active') ? (
         <AdminGridAction
-          disabled={startSlumberMutation.isPending}
-          onClick={() => { void handleStartSlumber(row.challenge_id as string); }}
+          variant="danger"
+          disabled={endSlumberMutation.isPending}
+          onClick={() => { void handleEndSlumber(row); }}
         >
-          Start
+          End race
         </AdminGridAction>
       ) : null}
       <AdminGridAction
@@ -361,6 +398,7 @@ export default function AdminCampaigns() {
             id="campaign-kind"
             className="admin-input"
             value={draft.action_kind}
+            disabled={editing && raceHost === 'slumber'}
             onChange={(e) => setActionKind(e.target.value as AdminCampaignActionKind)}
           >
             <option value="challenge">Challenge — join an open-link race</option>
@@ -379,10 +417,11 @@ export default function AdminCampaigns() {
           />
 
           <label className="admin-label" htmlFor="campaign-body">Body</label>
-          <textarea
+          <GrowingTextarea
             id="campaign-body"
             className="admin-input admin-textarea"
             rows={4}
+            maxLines={WEB_TEXT_AREA_MAX_LINES}
             maxLength={500}
             value={draft.body}
             onChange={(e) => setDraft((prev) => ({ ...prev, body: e.target.value }))}
@@ -419,7 +458,7 @@ export default function AdminCampaigns() {
                     const url = await uploadAdminCampaignImage(file);
                     setDraft((prev) => ({ ...prev, image_url: url }));
                   } catch (err: unknown) {
-                    const message = err instanceof Error ? err.message : 'Could not upload image.';
+                    const message = adminErrorMessage(err, 'Could not upload image.');
                     if (message.includes('image_too_large')) {
                       setFormError('Image must be 5 MB or smaller.');
                     } else {
@@ -479,85 +518,73 @@ export default function AdminCampaigns() {
             </AdminFilterField>
           </AdminFilterBar>
 
-          {draft.action_kind === 'challenge' ? (
-            <>
-              <AdminFieldGroup title="Slumber challenge">
-                <p className="admin-muted">
-                  Creates an open-link race hosted by Slumber. You are not added as a racer.
-                </p>
-                <label className="admin-label" htmlFor="slumber-title">Challenge title</label>
-                <input
-                  id="slumber-title"
-                  className="admin-input"
-                  maxLength={80}
-                  value={slumber.title}
-                  onChange={(e) => setSlumber((prev) => ({ ...prev, title: e.target.value }))}
-                  placeholder={draft.title.trim() || 'Same as the campaign title if left blank'}
-                />
-                <AdminFilterBar nested>
-                  <AdminFilterField label="Goal (hours)" htmlFor="slumber-goal">
-                    <input
-                      id="slumber-goal"
-                      className="admin-input"
-                      type="number"
-                      min={10}
-                      max={100}
-                      value={slumber.goalHours}
-                      onChange={(e) => setSlumber((prev) => ({ ...prev, goalHours: e.target.value }))}
-                    />
-                  </AdminFilterField>
-                  <AdminFilterField label="Days" htmlFor="slumber-days">
-                    <input
-                      id="slumber-days"
-                      className="admin-input"
-                      type="number"
-                      min={1}
-                      max={100}
-                      disabled={slumber.noExpiration}
-                      value={slumber.days}
-                      onChange={(e) => setSlumber((prev) => ({ ...prev, days: e.target.value }))}
-                    />
-                  </AdminFilterField>
-                  <AdminFilterField label="Max racers" htmlFor="slumber-max">
-                    <input
-                      id="slumber-max"
-                      className="admin-input"
-                      type="number"
-                      min={2}
-                      value={slumber.maxParticipants}
-                      onChange={(e) => setSlumber((prev) => ({ ...prev, maxParticipants: e.target.value }))}
-                      placeholder="No cap"
-                    />
-                  </AdminFilterField>
-                </AdminFilterBar>
-                <label className="admin-checkbox-label">
+          {slumberForm ? (
+            <AdminFieldGroup title="Slumber race">
+              <p className="admin-muted">
+                Saving publishes the race and this campaign together. You are not added as a racer.
+                A start date that has already arrived makes the race live. Leave the end date blank for no end.
+                Nights already posted in that window count for people who join later.
+              </p>
+              {raceFieldsLocked ? (
+                <p className="admin-muted">This race has finished. You can still edit the announcement.</p>
+              ) : null}
+              <label className="admin-label" htmlFor="slumber-title">Race title</label>
+              <input
+                id="slumber-title"
+                className="admin-input"
+                maxLength={80}
+                disabled={raceFieldsLocked}
+                value={slumber.title}
+                onChange={(e) => setSlumber((prev) => ({ ...prev, title: e.target.value }))}
+                placeholder={draft.title.trim() || 'Same as the campaign title if left blank'}
+              />
+              <AdminFilterBar nested>
+                <AdminFilterField label="Goal (hours)" htmlFor="slumber-goal">
                   <input
-                    type="checkbox"
-                    checked={slumber.noExpiration}
-                    onChange={(e) => setSlumber((prev) => ({ ...prev, noExpiration: e.target.checked }))}
+                    id="slumber-goal"
+                    className="admin-input"
+                    type="number"
+                    min={10}
+                    max={100}
+                    step="0.5"
+                    disabled={raceFieldsLocked}
+                    value={slumber.goalHours}
+                    onChange={(e) => setSlumber((prev) => ({ ...prev, goalHours: e.target.value }))}
                   />
-                  <span>No end date</span>
-                </label>
-                <div className="admin-form-actions">
-                  <button
-                    type="button"
-                    className="admin-button admin-button-ghost"
-                    disabled={createSlumberMutation.isPending}
-                    onClick={() => { void handleCreateSlumber(); }}
-                  >
-                    {createSlumberMutation.isPending ? 'Creating…' : 'Create Slumber challenge'}
-                  </button>
-                </div>
-                {slumberNote ? <p className="admin-muted">{slumberNote}</p> : null}
-              </AdminFieldGroup>
+                </AdminFilterField>
+                <AdminFilterField label="Max racers" htmlFor="slumber-max">
+                  <input
+                    id="slumber-max"
+                    className="admin-input"
+                    type="number"
+                    min={2}
+                    disabled={raceFieldsLocked}
+                    value={slumber.maxParticipants}
+                    onChange={(e) => setSlumber((prev) => ({ ...prev, maxParticipants: e.target.value }))}
+                    placeholder="No cap"
+                  />
+                </AdminFilterField>
+              </AdminFilterBar>
+              <label className="admin-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={slumber.joinEnabled}
+                  onChange={(e) => setSlumber((prev) => ({ ...prev, joinEnabled: e.target.checked }))}
+                />
+                <span>Join link open</span>
+              </label>
+            </AdminFieldGroup>
+          ) : null}
 
+          {draft.action_kind === 'challenge' && raceHost === 'user' ? (
+            <>
               <label className="admin-label" htmlFor="campaign-challenge">Challenge id</label>
               <input
                 id="campaign-challenge"
                 className="admin-input"
                 value={draft.challenge_id}
                 onChange={(e) => setDraft((prev) => ({ ...prev, challenge_id: e.target.value }))}
-                placeholder="Filled in when you create a Slumber challenge, or paste an existing open-link id"
+                placeholder="Open-link challenge id"
               />
             </>
           ) : null}
@@ -592,7 +619,9 @@ export default function AdminCampaigns() {
 
           <AdminFieldGroup title="Schedule">
             <p className="admin-muted">
-              Optional. Leave both blank for an indefinite announcement, or set only a start or only an end.
+              {slumberForm
+                ? 'The start date is when the race begins scoring. Leave the end blank to run until someone hits the goal.'
+                : 'Optional. Leave both blank for an indefinite announcement, or set only a start or only an end.'}
             </p>
             <div className="admin-campaign-schedule">
               <AdminDateField
@@ -662,7 +691,11 @@ export default function AdminCampaigns() {
                 <button
                   type="button"
                   className="admin-button admin-button-ghost admin-button-sm"
-                  onClick={() => setDraft((prev) => ({ ...prev, starts_at: null, ends_at: null }))}
+                  onClick={() => setDraft((prev) => ({
+                    ...prev,
+                    starts_at: slumberForm ? localDateInputToIso(toLocalDateISO(), 'start') : null,
+                    ends_at: null,
+                  }))}
                 >
                   Indefinite
                 </button>
@@ -685,15 +718,15 @@ export default function AdminCampaigns() {
           {formError ? <p className="admin-error">{formError}</p> : null}
 
           <div className="admin-form-actions">
-            <button className="admin-button" type="submit" disabled={upsertMutation.isPending}>
-              {upsertMutation.isPending ? 'Saving…' : editing ? 'Save campaign' : 'Create campaign'}
+            <button className="admin-button" type="submit" disabled={upsertMutation.isPending || slumberMutation.isPending}>
+              {(upsertMutation.isPending || slumberMutation.isPending) ? 'Saving…' : editing ? 'Save campaign' : 'Create campaign'}
             </button>
             {editing ? (
               <button
                 type="button"
                 className="admin-button admin-button-ghost"
                 onClick={clearDraft}
-                disabled={upsertMutation.isPending}
+                disabled={upsertMutation.isPending || slumberMutation.isPending}
               >
                 Start over
               </button>
@@ -702,7 +735,7 @@ export default function AdminCampaigns() {
               type="button"
               className="admin-button admin-button-ghost"
               onClick={closeComposer}
-              disabled={upsertMutation.isPending}
+              disabled={upsertMutation.isPending || slumberMutation.isPending}
             >
               Cancel
             </button>
@@ -755,7 +788,12 @@ export default function AdminCampaigns() {
                         <div className="admin-campaign-name">{actionLabel(kind)}</div>
                         <div className="admin-campaign-sub">{actionDetail(row)}</div>
                       </td>
-                      <td className="admin-td-wrap">{formatScheduleWindow(row.starts_at, row.ends_at)}</td>
+                      <td className="admin-td-wrap">{formatScheduleWindow(
+                        row.hosted_by === 'slumber' ? (row.challenge_started_at ?? row.starts_at) : row.starts_at,
+                        row.hosted_by === 'slumber' && row.no_expiration
+                          ? null
+                          : (row.hosted_by === 'slumber' ? (row.challenge_expires_at ?? row.ends_at) : row.ends_at),
+                      )}</td>
                       <td className="admin-td-wrap">{audienceLabel(row.target_roles ?? [])}</td>
                       <td className="admin-td-actions">{renderCampaignActions(row)}</td>
                     </tr>
