@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import type { AdminRoleDefinitionRow, RoleDefinitionDraft } from '../../lib/admin';
 import { getOptionalQueryErrorMessage } from '../../lib/queryError';
@@ -9,6 +9,7 @@ import { buildAdminRoleColumns, roleMobileSummary } from './catalogGridColumns';
 import AdminDataGrid from './AdminDataGrid';
 import AdminGridClientFilterHint from './AdminGridClientFilterHint';
 import AdminListToolbar from './AdminListToolbar';
+import AdminRoleBatchAdd from './AdminRoleBatchAdd';
 import AdminRoleDefinitionForm from './AdminRoleDefinitionForm';
 import AdminSection, { AdminTableSummary } from './AdminSection';
 import { pluralCount } from './format';
@@ -45,6 +46,8 @@ export default function AdminRoles() {
   const loading = rolesQuery.isLoading;
   const error = getOptionalQueryErrorMessage(rolesQuery.error, 'Could not load roles.');
 
+  const [grantRole, setGrantRole] = useState<AdminRoleDefinitionRow | null>(null);
+
   const upsertMutation = useUpsertAdminRole();
   const deleteMutation = useDeleteAdminRole();
   const saving = upsertMutation.isPending || deleteMutation.isPending;
@@ -61,6 +64,7 @@ export default function AdminRoles() {
   };
 
   const handleEdit = (role: AdminRoleDefinitionRow) => {
+    setGrantRole(null);
     setEditingKey(role.key);
     setDraft({
       key: role.key,
@@ -99,6 +103,10 @@ export default function AdminRoles() {
       editingKey,
       onEdit: handleEdit,
       onCloseEdit: closeForm,
+      onAddUsers: (role) => {
+        closeForm();
+        setGrantRole(role);
+      },
       onDelete: (role) => { void handleDelete(role); },
     }),
     [editingKey, closeForm, handleEdit, handleDelete],
@@ -108,11 +116,12 @@ export default function AdminRoles() {
     <AdminSection
       className="admin-roles"
       error={error}
-      lead="Admin and avatar roles. Assign them on a user from People → Users."
+      lead="Admin and avatar roles. Use Add users on a role to grant it to many people at once. The first role on a profile still sets the avatar ring."
     >
       <AdminListToolbar
         actions={(
           <button className="admin-button" type="button" onClick={() => {
+            setGrantRole(null);
             openCreate();
           }}
           >
@@ -126,6 +135,14 @@ export default function AdminRoles() {
           <AdminGridClientFilterHint suffix=" · click Edit to change" />
         </AdminTableSummary>
       </AdminListToolbar>
+
+      {grantRole ? (
+        <AdminRoleBatchAdd
+          key={grantRole.key}
+          role={grantRole}
+          onClose={() => setGrantRole(null)}
+        />
+      ) : null}
 
       {showForm ? (
         <AdminRoleDefinitionForm

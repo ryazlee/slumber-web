@@ -116,6 +116,7 @@ export function buildAdminRoleColumns(handlers: {
   editingKey: string | null;
   onEdit: (role: AdminRoleDefinitionRow) => void;
   onCloseEdit: () => void;
+  onAddUsers: (role: AdminRoleDefinitionRow) => void;
   onDelete: (role: AdminRoleDefinitionRow) => void;
 }): GridColDef<AdminRoleDefinitionRow>[] {
   return [
@@ -179,9 +180,9 @@ export function buildAdminRoleColumns(handlers: {
       field: 'actions',
       headerName: 'Actions',
       ...gridActionsColumn,
-      width: 168,
+      width: 268,
       renderCell: ({ row }) => (
-        <AdminGridActions>
+        <AdminGridActions className="admin-grid-actions--wrap">
           <AdminGridAction
             active={handlers.editingKey === row.key}
             onClick={(e) => {
@@ -194,6 +195,14 @@ export function buildAdminRoleColumns(handlers: {
             }}
           >
             {handlers.editingKey === row.key ? 'Editing' : 'Edit'}
+          </AdminGridAction>
+          <AdminGridAction
+            onClick={(e) => {
+              e.stopPropagation();
+              handlers.onAddUsers(row);
+            }}
+          >
+            Add users
           </AdminGridAction>
           <AdminGridAction
             variant="danger"

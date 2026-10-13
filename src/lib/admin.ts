@@ -799,6 +799,79 @@ export async function updateUserRoles(userId: string, roles: string[]): Promise<
   if (error) throw error;
 }
 
+/** Matches admin_grant_role_to_users. Pasted lists above this are rejected. */
+export const ROLE_GRANT_BATCH_LIMIT = 200;
+
+export type RoleGrantUser = {
+  id: string;
+  username: string;
+  email: string | null;
+};
+
+export type RoleGrantResult = {
+  added: RoleGrantUser[];
+  already: RoleGrantUser[];
+  missing: string[];
+};
+
+/** Usernames and emails, split on commas or whitespace. Strips a leading @. */
+export function parseRoleGrantIdentifiers(text: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of text.split(/[\s,]+/)) {
+    let token = part.trim().toLowerCase();
+    if (token.startsWith('@')) token = token.slice(1).trim();
+    if (!token || seen.has(token)) continue;
+    seen.add(token);
+    out.push(token);
+  }
+  return out;
+}
+
+export function mergeRoleGrantIdentifiers(...groups: string[][]): string[] {
+  return parseRoleGrantIdentifiers(groups.flat().join('\n'));
+}
+
+export async function grantRoleToUsers(
+  roleKey: string,
+  identifiers: string[],
+): Promise<RoleGrantResult> {
+  const { data, error } = await supabase.rpc('admin_grant_role_to_users', {
+    p_role: roleKey,
+    p_identifiers: identifiers,
+  });
+  if (error) throw error;
+  const raw = (data ?? {}) as Partial<RoleGrantResult>;
+  return {
+    added: Array.isArray(raw.added) ? raw.added : [],
+    already: Array.isArray(raw.already) ? raw.already : [],
+    missing: Array.isArray(raw.missing) ? raw.missing : [],
+  };
+}
+
+export function roleGrantErrorMessage(err: unknown): string {
+  if (
+    err
+    && typeof err === 'object'
+    && 'message' in err
+    && isMissingAdminRpc(err as PostgrestError, 'admin_grant_role_to_users')
+  ) {
+    return `Batch add is not available yet. ${ADMIN_MIGRATION_HINT}`;
+  }
+  const message = err && typeof err === 'object' && 'message' in err
+    ? String((err as { message: unknown }).message)
+    : err instanceof Error
+      ? err.message
+      : '';
+  if (message.includes('not_authorized')) return 'You need an admin role to add users.';
+  if (message.includes('invalid_role')) return 'That role no longer exists. Refresh and try again.';
+  if (message.includes('too_many_users')) {
+    return `Add at most ${ROLE_GRANT_BATCH_LIMIT} people at a time.`;
+  }
+  if (message.includes('no_users')) return 'Add at least one username or email.';
+  return message || 'Could not add users to this role.';
+}
+
 export async function updateUserPremium(
   userId: string,
   isPremium: boolean,

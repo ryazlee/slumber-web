@@ -22,6 +22,7 @@ import {
   sendAdminNotification,
   updateUserPremium,
   updateUserRoles,
+  grantRoleToUsers,
   upsertAdminRoleDefinition,
   approveAdminTagSuggestion,
   upsertAdminTag,
@@ -423,6 +424,21 @@ export function useDeleteAdminRole() {
       void qc.invalidateQueries({ queryKey: ['admin', 'role-definitions'] });
       void qc.invalidateQueries({ queryKey: queryKeys.assignableRoles });
       void qc.invalidateQueries({ queryKey: queryKeys.avatarRoleStyles });
+    },
+  });
+}
+
+export function useGrantRoleToUsers() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ roleKey, identifiers }: { roleKey: string; identifiers: string[] }) =>
+      grantRoleToUsers(roleKey, identifiers),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'role-definitions'] });
+      void qc.invalidateQueries({ queryKey: ['admin', 'user-search'] });
+      void qc.invalidateQueries({ queryKey: ['admin', 'user-detail'] });
+      void qc.invalidateQueries({ queryKey: ['admin', 'analytics', 'users'] });
+      void qc.invalidateQueries({ queryKey: queryKeys.admin.dashboard });
     },
   });
 }
