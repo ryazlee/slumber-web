@@ -26,7 +26,7 @@ export default function Feed() {
         hasMore={hasMore}
         onLoadMore={loadMore}
         onPatchPost={patchPost}
-        emptyMessage="No posts yet. Log sleep in the iOS app to see it here."
+        emptyMessage="No posts yet. Log sleep in the app to see it here."
       />
     </div>
   );

@@ -8,10 +8,11 @@ import { queryKeys } from './queryKeys';
 export function useGlobalSleepLeaderboard(
   enabled = true,
   period: GlobalLeaderboardPeriod = 'all_time',
+  clubId: string | null = null,
 ) {
   return useQuery({
-    queryKey: queryKeys.globalSleepLeaderboard(period),
-    queryFn: () => fetchGlobalSleepLeaderboard({ period, limit: 10 }),
+    queryKey: queryKeys.globalSleepLeaderboard(period, clubId),
+    queryFn: () => fetchGlobalSleepLeaderboard({ period, limit: 10, clubId }),
     staleTime: 60_000,
     placeholderData: keepPreviousData,
     enabled,

@@ -10,6 +10,14 @@ export const VIBE_CONFIG: Record<Vibe, { emoji: string; label: string }> = {
   ZOMBIE: { emoji: '🧟', label: 'Zombie' },
 };
 
+export const DREAM_MOOD_OPTIONS: { value: DreamMood; emoji: string; label: string }[] = [
+  { value: 'NIGHTMARE', emoji: '😱', label: 'Nightmare' },
+  { value: 'WEIRD', emoji: '🌀', label: 'Weird' },
+  { value: 'NEUTRAL', emoji: '😶', label: 'Neutral' },
+  { value: 'GOOD', emoji: '✨', label: 'Good' },
+  { value: 'VIVID', emoji: '🌙', label: 'Vivid' },
+];
+
 export const DREAM_MOOD_CONFIG: Record<DreamMood, { emoji: string; label: string }> = {
   NIGHTMARE: { emoji: '😱', label: 'Nightmare' },
   WEIRD: { emoji: '🌀', label: 'Weird' },

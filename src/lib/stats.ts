@@ -245,7 +245,10 @@ function computeMonthlyBests(rows: SleepPostRow[]): MonthBest[] {
     bedtimeSums: number[];
     wakeTimeSums: number[];
     awakeEventSums: number[];
-    nightCount: number;
+    asleepSum: number;
+    deepSum: number;
+    remSum: number;
+    coreSum: number;
   };
   const monthMap = new Map<string, MonthAccum>();
 
@@ -271,13 +274,22 @@ function computeMonthlyBests(rows: SleepPostRow[]): MonthBest[] {
         deepPct: stageSharePct(deep, asleep),
         remPct: stageSharePct(rem, asleep),
         corePct: stageSharePct(core, asleep),
+        nightCount: 1,
+        avgAsleepMinutes: asleep,
+        avgDeepPct: stageSharePct(deep, asleep),
+        avgRemPct: stageSharePct(rem, asleep),
+        avgCorePct: stageSharePct(core, asleep),
+        nights: [{ sleepDate: r.sleep_date, asleepMinutes: asleep }],
         avgAwakeEvents: null,
         avgBedtime: null,
         avgWakeTime: null,
         bedtimeSums: bt != null ? [bt] : [],
         wakeTimeSums: wt != null ? [wt] : [],
         awakeEventSums: [wakes],
-        nightCount: 1,
+        asleepSum: asleep,
+        deepSum: deep,
+        remSum: rem,
+        coreSum: core,
       });
       continue;
     }
@@ -285,7 +297,12 @@ function computeMonthlyBests(rows: SleepPostRow[]): MonthBest[] {
     if (bt != null) existing.bedtimeSums.push(bt);
     if (wt != null) existing.wakeTimeSums.push(wt);
     existing.awakeEventSums.push(wakes);
+    existing.nights.push({ sleepDate: r.sleep_date, asleepMinutes: asleep });
     existing.nightCount += 1;
+    existing.asleepSum += asleep;
+    existing.deepSum += deep;
+    existing.remSum += rem;
+    existing.coreSum += core;
 
     if (asleep > existing.asleepMinutes) existing.asleepMinutes = asleep;
     if (deep > existing.deepMinutes) {
@@ -313,6 +330,12 @@ function computeMonthlyBests(rows: SleepPostRow[]): MonthBest[] {
       return {
         month: v.month,
         label: v.label,
+        nightCount: v.nightCount,
+        avgAsleepMinutes: v.nightCount > 0 ? Math.round(v.asleepSum / v.nightCount) : 0,
+        avgDeepPct: stageSharePct(v.deepSum, v.asleepSum),
+        avgRemPct: stageSharePct(v.remSum, v.asleepSum),
+        avgCorePct: stageSharePct(v.coreSum, v.asleepSum),
+        nights: [...v.nights].sort((a, b) => a.sleepDate.localeCompare(b.sleepDate)),
         asleepMinutes: v.asleepMinutes,
         deepMinutes: v.deepMinutes,
         remMinutes: v.remMinutes,

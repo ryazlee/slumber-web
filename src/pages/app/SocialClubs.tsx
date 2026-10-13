@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Avatar from '../../components/Avatar';
+import ClubAnalyticsPanel from '../../components/ClubAnalyticsPanel';
 import UserListRowsSkeleton from '../../components/UserListRowsSkeleton';
 import { useClubMembers, useClubs, useRespondToClubInvite } from '../../hooks/useSocial';
 import type { WebClub, WebClubMember } from '../../lib/types';
@@ -121,6 +122,8 @@ function ClubDetail({
         </div>
       ) : null}
 
+      {isAccepted ? <ClubAnalyticsPanel clubId={club.id} /> : null}
+
       {isAccepted ? (
         <div className="social-club-members">
           <h3>Members</h3>
@@ -141,7 +144,7 @@ function ClubDetail({
       ) : null}
 
       <p className="social-footnote app-muted">
-        Create clubs, invite people, and browse as a club (feed, races, compare) in the Slumber iOS app.
+        Create clubs and send invites in the app. Analytics for clubs you&apos;re in are here. Club feeds, races, and compare still use the club filter in the app.
       </p>
     </section>
   );
@@ -172,7 +175,7 @@ export default function SocialClubs() {
     <>
       {clubs.length === 0 ? (
         <p className="app-muted social-empty">
-          No clubs yet. Create a club for your household or crew in the iOS app.
+          No clubs yet. Create one for your household or crew in the app.
         </p>
       ) : (
         <div className="social-list social-list--clubs">

@@ -1,25 +1,21 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import StatsScreenSkeleton from '../../components/StatsScreenSkeleton';
 import { useQueryClient } from '@tanstack/react-query';
-import StatsInsightChips from '../../components/stats/StatsInsightChips';
+import SleepCompatibilityPanel from '../../components/stats/SleepCompatibilityPanel';
+import StatsCollapsible from '../../components/stats/StatsCollapsible';
+import StatsDreamAnalytics from '../../components/stats/StatsDreamAnalytics';
+import StatsMonthlySection from '../../components/stats/StatsMonthlySection';
 import StatsPeriodMetrics from '../../components/stats/StatsPeriodMetrics';
 import StatsPrStrip from '../../components/stats/StatsPrStrip';
 import StatsStageMix from '../../components/stats/StatsStageMix';
-import StatsTopList from '../../components/stats/StatsTopList';
 import StatsWeekChart from '../../components/stats/StatsWeekChart';
 import { useAuth } from '../../context/AuthContext';
 import { useComparePeriods } from '../../hooks/useCompare';
 import { useLifetimeStats, useUserStats } from '../../hooks/useStats';
 import { queryKeys } from '../../hooks/queryKeys';
-import {
-  chronotypeInsight,
-  consistencyInsight,
-  dreamInsight,
-  weekVsMonthInsight,
-} from '../../lib/statsInsights';
+import { weekVsMonthDeltaLabel } from '../../lib/statsInsights';
 import { buildMonthMetrics } from '../../lib/statsMetrics';
 import { resolvePctPr, resolvePr } from '../../lib/statsPr';
-import { stageColor } from '../../lib/stageColors';
 import { formatMins, formatPct } from '../../lib/format';
 import { getQueryErrorMessage } from '../../lib/queryError';
 
@@ -44,19 +40,11 @@ export default function MyStats() {
 
   const { data: compare } = useComparePeriods(userId);
 
-  const insightChips = useMemo(() => {
-    if (!stats) return [];
-    const chips = [];
-    const weekTrend = weekVsMonthInsight(stats.avgAsleepMinutes, compare?.month?.asleep ?? null);
-    if (weekTrend) chips.push(weekTrend);
-    const consistency = consistencyInsight(stats.weeklyPosts);
-    if (consistency) chips.push(consistency);
-    const chrono = chronotypeInsight(compare?.month?.avgBedtime ?? lifetime?.avgBedtime ?? null);
-    if (chrono) chips.push(chrono);
-    const dream = dreamInsight(compare?.month?.dreamRate ?? null, compare?.month?.dreamsCount ?? null);
-    if (dream) chips.push(dream);
-    return chips;
-  }, [stats, compare, lifetime]);
+  const [dreamsOpened, setDreamsOpened] = useState(false);
+  const weekComparison = weekVsMonthDeltaLabel(
+    compare?.week?.asleep ?? null,
+    compare?.month?.asleep ?? null,
+  );
 
   const monthMetrics = useMemo(
     () => buildMonthMetrics(compare?.month ?? null),
@@ -136,179 +124,73 @@ export default function MyStats() {
         </button>
       </div>
 
-      {insightChips.length > 0 ? (
-        <section className="stats-section">
-          <h2 className="stats-section-label">Insights</h2>
-          <StatsInsightChips insights={insightChips} />
-        </section>
-      ) : null}
-
       {stats ? (
         <section className="stats-section">
           <h2 className="stats-section-label">This week</h2>
-          <StatsWeekChart posts={stats.weeklyPosts} />
+          <StatsWeekChart
+            posts={stats.weeklyPosts}
+            avgMinutes={compare?.week?.asleep ?? null}
+            comparisonLabel={weekComparison}
+          />
         </section>
       ) : null}
 
-      {monthMetrics.length > 0 ? (
-        <StatsPeriodMetrics metrics={monthMetrics} />
-      ) : null}
-
-      {compare?.month ? (
-        <StatsStageMix
-          deepPct={compare.month.deepPct}
-          remPct={compare.month.remPct}
-          corePct={compare.month.corePct}
-        />
-      ) : null}
-
-      {(stats || lifetime) ? (
+      {monthMetrics.length > 0 || compare?.month ? (
         <section className="stats-section">
-          <h2 className="stats-section-label">Personal records</h2>
-          {stats ? <StatsPrStrip sections={personalRecordSections} /> : null}
-          {lifetime ? (
-            <div className="stats-lifetime-summary">
-              <div className="stats-summary-row">
-                <div className="stats-summary-card">
-                  <span className="stats-summary-value">{lifetime.totalNights}</span>
-                  <span className="stats-summary-label">Nights</span>
-                </div>
-                <div className="stats-summary-card">
-                  <span className="stats-summary-value">{formatMins(lifetime.avgAsleepMinutes)}</span>
-                  <span className="stats-summary-label">Avg Sleep</span>
-                </div>
-                <div className="stats-summary-card">
-                  <span className="stats-summary-value">{stats?.longestStreak ?? 0}</span>
-                  <span className="stats-summary-label">Best Streak</span>
-                </div>
-              </div>
-              {(lifetime.avgBedtime || lifetime.avgWakeTime) ? (
-                <div className="stats-summary-row">
-                  <div className="stats-summary-card">
-                    <span className="stats-summary-value">{lifetime.avgBedtime ?? '—'}</span>
-                    <span className="stats-summary-label">Avg Bedtime</span>
-                  </div>
-                  <div className="stats-summary-card">
-                    <span className="stats-summary-value">{lifetime.avgWakeTime ?? '—'}</span>
-                    <span className="stats-summary-label">Avg Wake-up</span>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </section>
-      ) : null}
-
-      {lifetime && lifetime.monthlyBests.length > 0 ? (
-        <section className="stats-section">
-          <h2 className="stats-section-label">Monthly Bests</h2>
-          <div className="stats-table-scroll">
-            <div className="stats-table-card stats-table-card--wide">
-              <div className="stats-table-row stats-table-row--header">
-                <span className="stats-table-cell stats-table-cell--label">Month</span>
-                <span className="stats-table-cell" style={{ color: 'var(--accent)' }}>Sleep</span>
-                <span className="stats-table-cell" style={{ color: stageColor('core') }}>Core</span>
-                <span className="stats-table-cell" style={{ color: stageColor('deep') }}>Deep</span>
-                <span className="stats-table-cell" style={{ color: stageColor('rem') }}>REM</span>
-                <span className="stats-table-cell">Wakes</span>
-              </div>
-              {lifetime.monthlyBests.map((m) => (
-                <div key={m.month} className="stats-table-row">
-                  <span className="stats-table-cell stats-table-cell--label">{m.label}</span>
-                  <span className="stats-table-cell" style={{ color: 'var(--accent)' }}>{formatMins(m.asleepMinutes)}</span>
-                  <span className="stats-table-cell" style={{ color: stageColor('core') }}>
-                    {m.coreMinutes > 0
-                      ? `${formatMins(m.coreMinutes)}${m.corePct != null ? ` · ${formatPct(m.corePct)}` : ''}`
-                      : '—'}
-                  </span>
-                  <span className="stats-table-cell" style={{ color: stageColor('deep') }}>
-                    {m.deepMinutes > 0
-                      ? `${formatMins(m.deepMinutes)}${m.deepPct != null ? ` · ${formatPct(m.deepPct)}` : ''}`
-                      : '—'}
-                  </span>
-                  <span className="stats-table-cell" style={{ color: stageColor('rem') }}>
-                    {m.remMinutes > 0
-                      ? `${formatMins(m.remMinutes)}${m.remPct != null ? ` · ${formatPct(m.remPct)}` : ''}`
-                      : '—'}
-                  </span>
-                  <span className="stats-table-cell">
-                    {m.avgAwakeEvents != null ? m.avgAwakeEvents : '—'}
-                  </span>
-                </div>
-              ))}
-            </div>
+          <h2 className="stats-section-label">Last 30 days</h2>
+          <div className="stats-card stats-month-card">
+            <StatsPeriodMetrics metrics={monthMetrics} embedded variant="list" />
+            {compare?.month ? (
+              <StatsStageMix
+                deepPct={compare.month.deepPct}
+                remPct={compare.month.remPct}
+                corePct={compare.month.corePct}
+                embedded
+                showHeader={false}
+              />
+            ) : null}
           </div>
         </section>
       ) : null}
 
-      {lifetime && lifetime.monthlyBests.some((m) => m.avgBedtime || m.avgWakeTime) ? (
-        <section className="stats-section">
-          <h2 className="stats-section-label">Monthly Timing</h2>
-          <div className="stats-table-card">
-            <div className="stats-table-row stats-table-row--header">
-              <span className="stats-table-cell stats-table-cell--label">Month</span>
-              <span className="stats-table-cell">Avg Bed</span>
-              <span className="stats-table-cell">Avg Wake</span>
-            </div>
-            {lifetime.monthlyBests.map((m) => (
-              <div key={`${m.month}-timing`} className="stats-table-row">
-                <span className="stats-table-cell stats-table-cell--label">{m.label}</span>
-                <span className="stats-table-cell">{m.avgBedtime ?? '—'}</span>
-                <span className="stats-table-cell">{m.avgWakeTime ?? '—'}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
+      <SleepCompatibilityPanel />
 
-      <section className="stats-section">
-        <h2 className="stats-section-label">Streaks</h2>
-        <div className="stats-card stats-streak-card">
-          <div className="stats-streak-row">
-            <span className="stats-streak-emoji" aria-hidden>🔥</span>
-            <span className="stats-streak-label">Log streak</span>
-            <span className="stats-streak-value">{stats?.currentStreak ?? 0} nights</span>
-          </div>
-          <div className="stats-streak-row">
-            <span className="stats-streak-emoji" aria-hidden>📈</span>
-            <span className="stats-streak-label">Best log streak</span>
-            <span className="stats-streak-value">{stats?.longestStreak ?? 0} nights</span>
-          </div>
-        </div>
-      </section>
+      {stats ? (
+        <StatsCollapsible title="Personal records">
+          <StatsPrStrip sections={personalRecordSections} />
+        </StatsCollapsible>
+      ) : null}
 
       {lifetime ? (
-        <section className="stats-section">
-          <h2 className="stats-section-label">All-Time Records</h2>
-          <StatsTopList
-            title="Best Nights"
-            emoji="💤"
-            nights={lifetime.bestNights}
-            valueKey="asleepMinutes"
-            accentColor="var(--accent)"
-          />
-          <StatsTopList
-            title="Most Deep Sleep"
-            emoji="💜"
-            nights={lifetime.mostDeepNights}
-            valueKey="deepMinutes"
-            accentColor={stageColor('deep')}
-          />
-          <StatsTopList
-            title="Most REM"
-            emoji="💗"
-            nights={lifetime.mostRemNights}
-            valueKey="remMinutes"
-            accentColor={stageColor('rem')}
-          />
-          <StatsTopList
-            title="Most Core Sleep"
-            emoji="💙"
-            nights={lifetime.mostCoreNights}
-            valueKey="coreMinutes"
-            accentColor={stageColor('core')}
-          />
-        </section>
+        <StatsCollapsible title="Lifetime">
+          <div className="stats-card stats-lifetime-card">
+            <div className="stats-metric-list">
+              <div className="stats-metric-row"><span>Nights</span><span>{lifetime.totalNights}</span></div>
+              <div className="stats-metric-row">
+                <span>Avg sleep</span>
+                <span>{formatMins(Math.round(lifetime.avgAsleepMinutes))}</span>
+              </div>
+              {lifetime.avgBedtime ? (
+                <div className="stats-metric-row"><span>Avg bedtime</span><span>{lifetime.avgBedtime}</span></div>
+              ) : null}
+              {lifetime.avgWakeTime ? (
+                <div className="stats-metric-row"><span>Avg wake-up</span><span>{lifetime.avgWakeTime}</span></div>
+              ) : null}
+              <div className="stats-metric-row"><span>Log streak</span><span>{stats?.currentStreak ?? 0} nights</span></div>
+              <div className="stats-metric-row"><span>Best streak</span><span>{stats?.longestStreak ?? 0} nights</span></div>
+            </div>
+          </div>
+        </StatsCollapsible>
+      ) : null}
+
+      <StatsCollapsible title="Dreams" onOpen={() => setDreamsOpened(true)}>
+        {dreamsOpened ? <StatsDreamAnalytics /> : null}
+      </StatsCollapsible>
+
+      {lifetime && lifetime.monthlyBests.length > 0 ? (
+        <StatsCollapsible title="Monthly">
+          <StatsMonthlySection months={lifetime.monthlyBests} />
+        </StatsCollapsible>
       ) : null}
     </div>
   );

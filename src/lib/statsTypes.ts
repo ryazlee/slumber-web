@@ -32,13 +32,30 @@ export type TopNight = {
   awakeEvents: number;
 };
 
+export type MonthNightBar = {
+  sleepDate: string;
+  asleepMinutes: number;
+};
+
 export type MonthBest = {
   month: string;
   label: string;
+  /** Wearable nights in the month. */
+  nightCount: number;
+  /** Average asleep minutes per night. */
+  avgAsleepMinutes: number;
+  /** Stage mix of monthly totals (share of asleep). */
+  avgDeepPct: number | null;
+  avgRemPct: number | null;
+  avgCorePct: number | null;
+  /** One bar per wake day (naps merged into that date). */
+  nights: MonthNightBar[];
+  /** Best night asleep minutes. */
   asleepMinutes: number;
   deepMinutes: number;
   remMinutes: number;
   coreMinutes: number;
+  /** Stage share on the night that set that stage best. */
   deepPct: number | null;
   remPct: number | null;
   corePct: number | null;

@@ -30,10 +30,10 @@ npm install && npm run dev
 | `/feed` | Yes | Friends feed — kudos + comments; stage metrics on one line (dynamic sizing) |
 | `/profile` | Yes | Your profile and recent posts (header avatar; not a tab) |
 | `/social` | Yes | Redirects to Leaderboards (`/social/global`) |
-| `/social/global` | Yes | Leaderboards (sleep rankings) — All-time (default) / Weekly (rolling last 7 days); Avg hours / Deep / REM / Core / Dream rate; place Δ vs board 7 days ago |
-| `/social/clubs` | Yes | Clubs you’re in |
+| `/social/global` | Yes | Leaderboards — All-time (default) / Weekly (rolling last 7 days); one Rank by metric (Avg hours / Deep / REM / Core / Dream rate); optional club scope; place Δ vs board 7 days ago |
+| `/social/clubs` | Yes | Clubs you’re in, plus club analytics (last night, 7 days, 30 days) |
 | `/social/friends` | Yes | Friends list + inbound requests |
-| `/stats` | Yes | My Stats (30-day averages, charts, PRs) |
+| `/stats` | Yes | My Stats — this week, last 30 days, sleep compatibility, personal records, lifetime, dreams, monthly recap |
 | `/stats/compare` | Yes | Friend compare table (wearable-only; bedtime/wake not rankable) |
 | `/challenges` | Yes | Active and completed challenges |
 | `/home` | No | Same marketing home as `/` (About / legacy links) |

@@ -4,6 +4,7 @@ import UserLink from '../../components/UserLink';
 import UserListRowsSkeleton from '../../components/UserListRowsSkeleton';
 import { useAuth } from '../../context/AuthContext';
 import { useGlobalSleepLeaderboard } from '../../hooks/useGlobalSleepLeaderboard';
+import { useClubs } from '../../hooks/useSocial';
 import { formatPct } from '../../lib/format';
 import {
   LEADERBOARD_PERIODS,
@@ -68,11 +69,13 @@ function emptyCopy(
   period: GlobalLeaderboardPeriod,
   minNights: number,
   days: number | null | undefined,
+  clubName: string | null,
 ): string {
+  const scope = clubName ? ` in ${clubName}` : '';
   if (period === 'all_time' || days == null) {
-    return `No rankings yet. Need at least ${minNights} wearable nights all-time.`;
+    return `No rankings yet${scope}. Need at least ${minNights} wearable nights all-time.`;
   }
-  return `No rankings yet. Need at least ${minNights} wearable nights in the rolling last ${days} days.`;
+  return `No rankings yet${scope}. Need at least ${minNights} wearable nights in the rolling last ${days} days.`;
 }
 
 function LeaderboardRow({
@@ -136,7 +139,11 @@ export default function SocialGlobal() {
   const { user } = useAuth();
   const [period, setPeriod] = useState<GlobalLeaderboardPeriod>('all_time');
   const [metric, setMetric] = useState<GlobalLeaderboardMetric>('avgHours');
-  const { data, isLoading, isError, refetch, isFetching } = useGlobalSleepLeaderboard(true, period);
+  const [clubId, setClubId] = useState<string | null>(null);
+  const clubsQuery = useClubs();
+  const acceptedClubs = (clubsQuery.data ?? []).filter((club) => club.myInviteStatus === 'accepted');
+  const clubName = acceptedClubs.find((club) => club.id === clubId)?.name ?? null;
+  const { data, isLoading, isError, refetch, isFetching } = useGlobalSleepLeaderboard(true, period, clubId);
 
   const periodConfig = leaderboardPeriodConfig(period);
   const activeMeta = METRICS.find((m) => m.key === metric) ?? METRICS[0];
@@ -174,24 +181,38 @@ export default function SocialGlobal() {
   );
 
   const metricSwitcher = (
-    <div className="global-lb-chip-scroll">
-      <div className="global-lb-chips" role="tablist" aria-label="Leaderboard metrics">
-        {METRICS.map((m) => {
-          const active = m.key === metric;
-          return (
-            <button
-              key={m.key}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              className={`global-lb-chip${active ? ' global-lb-chip--active' : ''}`}
-              onClick={() => setMetric(m.key)}
-            >
-              {m.label}
-            </button>
-          );
-        })}
-      </div>
+    <div className="global-lb-filters">
+      <label className="global-lb-rank">
+        <span>Rank by</span>
+        <select
+          className="global-lb-rank-select"
+          value={metric}
+          aria-label="Rank by"
+          onChange={(event) => setMetric(event.target.value as GlobalLeaderboardMetric)}
+        >
+          {METRICS.map((item) => (
+            <option key={item.key} value={item.key}>{item.label}</option>
+          ))}
+        </select>
+      </label>
+      {acceptedClubs.length > 0 ? (
+        <label className="global-lb-rank">
+          <span>Club</span>
+          <select
+            className="global-lb-rank-select"
+            value={clubId ?? ''}
+            aria-label="Leaderboard club"
+            onChange={(event) => setClubId(event.target.value || null)}
+          >
+            <option value="">Everyone</option>
+            {acceptedClubs.map((club) => (
+              <option key={club.id} value={club.id}>
+                {club.emoji ? `${club.emoji} ` : ''}{club.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
     </div>
   );
 
@@ -232,7 +253,7 @@ export default function SocialGlobal() {
 
       {!anyEntries ? (
         <p className="social-empty app-muted">
-          {emptyCopy(period, minNights, resolvedDays)}
+          {emptyCopy(period, minNights, resolvedDays, clubName)}
         </p>
       ) : entries.length === 0 ? (
         <p className="social-empty app-muted">

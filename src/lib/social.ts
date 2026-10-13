@@ -1,3 +1,5 @@
+import { mapClubAnalyticsRow, type ClubAnalytics } from './clubAnalytics';
+import { addDaysToDateISO, getLastNightSleepDateISO, getLocalDateISO } from './dates';
 import { supabase } from './supabase';
 import type {
   ClubInviteStatus,
@@ -202,6 +204,19 @@ export async function fetchClubMembers(clubId: string): Promise<WebClubMember[]>
   return (data ?? [])
     .map(mapMemberRow)
     .filter((member: WebClubMember) => member.inviteStatus === 'accepted');
+}
+
+export async function fetchClubAnalytics(clubId: string): Promise<ClubAnalytics> {
+  const day = getLastNightSleepDateISO();
+  const today = getLocalDateISO();
+  const { data, error } = await supabase.rpc('get_club_analytics', {
+    p_club_id: clubId,
+    p_day: day,
+    p_week_start: addDaysToDateISO(today, -7),
+    p_month_start: addDaysToDateISO(today, -30),
+  });
+  if (error) throw error;
+  return mapClubAnalyticsRow(data);
 }
 
 export async function respondToClubInvite(clubId: string, accept: boolean): Promise<void> {

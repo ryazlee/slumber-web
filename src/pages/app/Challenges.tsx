@@ -30,14 +30,14 @@ export default function Challenges() {
       <header className="app-page-header app-page-header--compact">
         <h1>Challenges</h1>
         <p className="app-muted challenges-page-note">
-          Create races and accept invites in the Slumber iOS app or from push notifications.
+          Create races and accept invites in the app or from push notifications.
         </p>
       </header>
 
       {pendingInvites.length > 0 ? (
         <p className="challenges-pending-banner" role="status">
           You have {pendingInvites.length} pending challenge invite
-          {pendingInvites.length === 1 ? '' : 's'}. Open the iOS app or tap the notification to accept or decline.
+          {pendingInvites.length === 1 ? '' : 's'}. Open the app or tap the notification to accept or decline.
         </p>
       ) : null}
 

@@ -22,9 +22,9 @@ export const homeScreenshots: HomeScreenshot[] = [
   },
   {
     src: `${base}screenshots/stats.png`,
-    alt: 'My Stats with 30-day averages, stage mix, and personal records',
+    alt: 'My Stats with this week, the last 30 days, sleep compatibility, and personal records',
     caption: 'Stats',
-    description: '30-day averages, stage mix, trends, and your personal records.',
+    description: 'This week, the last 30 days, who you sleep like, and your records.',
   },
   {
     src: `${base}screenshots/compare.png`,

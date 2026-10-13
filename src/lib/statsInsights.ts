@@ -1,3 +1,4 @@
+import { formatMins } from './format';
 import type { SleepPost } from './types';
 import { getRecentSleepNightISOs } from './dates';
 import { pickNightOpenPost } from './sessionPost';
@@ -84,6 +85,20 @@ export function weekVsMonthInsight(
     return { emoji: '📈', label: `${sign}${rounded}m vs 30-day avg`, detail: 'Sleeping more this week' };
   }
   return { emoji: '📉', label: `-${rounded}m vs 30-day avg`, detail: 'Shorter nights this week' };
+}
+
+/** Quiet comparison line under the week chart. */
+export function weekVsMonthDeltaLabel(
+  weekAvg: number | null,
+  monthAvg: number | null,
+): string | null {
+  if (weekAvg == null || monthAvg == null || monthAvg === 0) return null;
+  const delta = Math.round(weekAvg - monthAvg);
+  if (Math.abs(delta) < 8) return 'On par with your 30-day avg';
+  const formatted = formatMins(Math.abs(delta));
+  return delta > 0
+    ? `${formatted} more than your 30-day avg`
+    : `${formatted} less than your 30-day avg`;
 }
 
 export function dreamInsight(dreamRate: number | null, dreamsCount: number | null): InsightChip | null {

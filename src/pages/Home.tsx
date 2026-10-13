@@ -91,7 +91,7 @@ export default function Home() {
               <span className="home-step-mark home-step-mark--rem" aria-hidden="true" />
               <div>
                 <h3>Post</h3>
-                <p>Add a vibe, note, or dream — or turn on auto-publish and skip it.</p>
+                <p>Add a vibe, note, or dream — or turn on auto-publish. On iPhone, the Home Screen widget can post it too.</p>
               </div>
             </li>
             <li>
@@ -111,23 +111,23 @@ export default function Home() {
           <ul className="home-essentials-list">
             <li>
               <strong>Feed</strong>
-              <span>Nights as they land — hypnograms, vibes, dreams, PRs.</span>
+              <span>Nights and naps as they land — hypnograms, vibes, dreams, PRs.</span>
+            </li>
+            <li>
+              <strong>Stats</strong>
+              <span>This week, the last 30 days, who sleeps like you, and a monthly recap.</span>
             </li>
             <li>
               <strong>Compare</strong>
               <span>Your sleep next to theirs, not a random population score.</span>
             </li>
             <li>
-              <strong>Challenges &amp; clubs</strong>
-              <span>Race for sleep logged, or keep one room for your people.</span>
+              <strong>Challenges, clubs &amp; boards</strong>
+              <span>Race for sleep logged, keep a room for your people, and rank wearable nights.</span>
             </li>
             <li>
               <strong>Privacy</strong>
               <span>Mutual friends by default. Private posts, blurred dreams, block anytime.</span>
-            </li>
-            <li>
-              <strong>Logging</strong>
-              <span>Auto-publish when sleep syncs, or post last night from an iPhone Home Screen widget.</span>
             </li>
           </ul>
         </section>

@@ -7,7 +7,7 @@ export const privacySections = [
   {
     heading: 'Overview',
     body: [
-      'Slumber is a social sleep-tracking app for iOS and Android. You log nights from Apple Health, Health Connect, Google Health (optional), or manually, add context (notes, dreams, photos, tags), and share with friends you mutually approve. You can also join sleep clubs, compare with friends, appear on optional leaderboards, and race in challenges.',
+      'Slumber is a social sleep-tracking app for iOS and Android. You log nights and naps from Apple Health, Health Connect, Google Health (optional), or manually, add context (notes, dreams, photos, tags), and share with friends you mutually approve. You can also join sleep clubs, compare with friends, see who you sleep most like, open a monthly recap, appear on optional leaderboards, and race in challenges.',
       'An optional web companion lets signed-in users browse their feed, profile, stats, Compare, Leaderboards, Clubs, Friends, and challenges in a browser and leave kudos and comments. Sleep logging, health sync, contacts matching, auto-publish, and most account and privacy settings stay in the mobile app.',
       'This policy describes what we collect through the Slumber mobile app and website, how we use it, and the choices you have.',
     ],

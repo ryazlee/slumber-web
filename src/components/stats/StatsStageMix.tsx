@@ -5,6 +5,9 @@ type Props = {
   remPct: number | null;
   corePct: number | null;
   periodLabel?: string;
+  /** Omit the card chrome when a parent section already frames this block. */
+  embedded?: boolean;
+  showHeader?: boolean;
 };
 
 export default function StatsStageMix({
@@ -12,6 +15,8 @@ export default function StatsStageMix({
   remPct,
   corePct,
   periodLabel = '30 days',
+  embedded = false,
+  showHeader = true,
 }: Props) {
   const stages = [
     { key: 'deep' as const, label: 'Deep', pct: deepPct },
@@ -24,11 +29,15 @@ export default function StatsStageMix({
   const total = stages.reduce((s, st) => s + (st.pct ?? 0), 0);
 
   return (
-    <div className="stats-card stats-stage-mix">
-      <div className="stats-card-header">
-        <h3 className="stats-card-title">Stage mix</h3>
-        <span className="stats-card-subtitle">{periodLabel}</span>
-      </div>
+    <div className={embedded ? 'stats-stage-mix stats-stage-mix--embedded' : 'stats-card stats-stage-mix'}>
+      {showHeader ? (
+        <div className="stats-card-header">
+          <h3 className="stats-card-title">Stage mix</h3>
+          <span className="stats-card-subtitle">{periodLabel}</span>
+        </div>
+      ) : (
+        <p className="stats-inline-label">Stage mix</p>
+      )}
 
       <div className="stats-stage-stacked">
         {stages.map((s) => (

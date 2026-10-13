@@ -3,6 +3,7 @@ import {
   acceptFriendRequest,
   cancelFriendRequest,
   declineFriendRequest,
+  fetchClubAnalytics,
   fetchClubMembers,
   fetchClubs,
   fetchFriends,
@@ -85,6 +86,15 @@ export function useDeclineFriendRequest() {
   });
 }
 
+export function useClubAnalytics(clubId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.clubAnalytics(clubId ?? ''),
+    queryFn: () => fetchClubAnalytics(clubId!),
+    staleTime: 60_000,
+    enabled: Boolean(clubId) && enabled,
+  });
+}
+
 export function useRespondToClubInvite() {
   const qc = useQueryClient();
   return useMutation({
@@ -93,6 +103,7 @@ export function useRespondToClubInvite() {
     onSuccess: (_data, { clubId }) => {
       void qc.invalidateQueries({ queryKey: queryKeys.clubs });
       void qc.invalidateQueries({ queryKey: queryKeys.clubMembers(clubId) });
+      void qc.invalidateQueries({ queryKey: queryKeys.clubAnalytics(clubId) });
     },
   });
 }

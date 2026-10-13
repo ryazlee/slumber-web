@@ -8,9 +8,11 @@ const BAR_MAX = 56;
 
 type Props = {
   posts: SleepPost[];
+  avgMinutes?: number | null;
+  comparisonLabel?: string | null;
 };
 
-export default function StatsWeekChart({ posts }: Props) {
+export default function StatsWeekChart({ posts, avgMinutes = null, comparisonLabel = null }: Props) {
   const nights = weekChartNights(posts);
   const logged = nights.filter((n) => n.post);
   const maxMins = Math.max(...logged.map((n) => n.asleepMinutes), 1);
@@ -21,6 +23,12 @@ export default function StatsWeekChart({ posts }: Props) {
         <h3 className="stats-card-title">Last 7 Nights</h3>
         <span className="stats-card-subtitle">{logged.length}/{nights.length} logged</span>
       </div>
+      {avgMinutes != null || comparisonLabel ? (
+        <p className="stats-week-summary">
+          {avgMinutes != null ? <strong>{formatMins(Math.round(avgMinutes))} avg</strong> : null}
+          {comparisonLabel ? <span>{comparisonLabel}</span> : null}
+        </p>
+      ) : null}
 
       <div className="stats-week-bars">
         {nights.map(({ dateISO, post, asleepMinutes }) => {

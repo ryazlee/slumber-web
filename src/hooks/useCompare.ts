@@ -11,13 +11,13 @@ export function useComparePeriods(userId: string | null) {
   });
 }
 
-export function useComparePeriodsBatch(userIds: string[]) {
+export function useComparePeriodsBatch(userIds: string[], enabled = true) {
   return useQueries({
     queries: userIds.map((userId) => ({
       queryKey: queryKeys.comparePeriods(userId),
       queryFn: () => fetchComparePeriods(userId),
       staleTime: 5 * 60_000,
-      enabled: !!userId,
+      enabled: enabled && !!userId,
     })),
   });
 }

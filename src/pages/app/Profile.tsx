@@ -14,6 +14,7 @@ import {
   useSendFriendRequest,
 } from '../../hooks/useSocial';
 import { useUserPosts } from '../../hooks/useUserPosts';
+import ProfileSleepCompatibility from '../../components/stats/ProfileSleepCompatibility';
 import { formatChallengeRecord, formatMins } from '../../lib/format';
 import { formatRoleList } from '../../lib/userRoles';
 
@@ -122,6 +123,9 @@ export default function Profile() {
             {profile.friendsCount} friends
             {canViewPosts ? ` · ${profile.postsCount} nights` : ''}
           </p>
+          {!isOwnProfile && profile.friendStatus === 'friends' ? (
+            <ProfileSleepCompatibility friendId={profile.id} friendName={profile.username} />
+          ) : null}
           {!isOwnProfile ? (
             <div className="profile-actions">
               {profile.friendStatus === 'none' ? (
