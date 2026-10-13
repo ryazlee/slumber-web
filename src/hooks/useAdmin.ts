@@ -39,10 +39,14 @@ import {
   upsertAdminCampaign,
   setAdminCampaignEnabled,
   deleteAdminCampaign,
-  createAdminSlumberChallenge,
-  startAdminSlumberChallenge,
+  upsertAdminSlumberChallenge,
+  endAdminSlumberChallenge,
   adminCancelChallenge,
+  createAdminSlumberChallenge,
   fetchAdminChallenges,
+  fetchAdminSlumberChallenges,
+  startAdminSlumberChallenge,
+  updateAdminSlumberChallenge,
   fetchAdminClubs,
   fetchAdminClubRoster,
   fetchAdminUserDetail,
@@ -63,6 +67,8 @@ import {
   type UserSearchFilters,
   type CatalogListFilters,
   type AdminCampaignDraft,
+  type AdminSlumberChallengeDraft,
+  type AdminSlumberRaceInput,
 } from '../lib/admin';
 import {
   ADMIN_CATALOG_STALE_MS,
@@ -543,6 +549,48 @@ export function useCommunityMetrics(enabled = true) {
   });
 }
 
+export function useAdminSlumberChallenges(filters: ChallengeListFilters, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.admin.slumberChallenges(filters),
+    queryFn: () => fetchAdminSlumberChallenges(filters),
+    enabled,
+    placeholderData: keepPreviousData,
+    ...adminQueryOptions,
+  });
+}
+
+function invalidateSlumberChallenges(qc: ReturnType<typeof useQueryClient>) {
+  void qc.invalidateQueries({ queryKey: ['admin', 'slumber-challenges'] });
+  void qc.invalidateQueries({ queryKey: ['admin', 'community', 'challenges'] });
+  void qc.invalidateQueries({ queryKey: queryKeys.admin.campaigns });
+  void qc.invalidateQueries({ queryKey: ['challenge'] });
+}
+
+export function useCreateAdminSlumberChallenge() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: createAdminSlumberChallenge,
+    onSuccess: () => invalidateSlumberChallenges(qc),
+  });
+}
+
+export function useUpdateAdminSlumberChallenge() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ challengeId, draft }: { challengeId: string; draft: AdminSlumberChallengeDraft }) =>
+      updateAdminSlumberChallenge(challengeId, draft),
+    onSuccess: () => invalidateSlumberChallenges(qc),
+  });
+}
+
+export function useStartAdminSlumberChallenge() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (challengeId: string) => startAdminSlumberChallenge(challengeId),
+    onSuccess: () => invalidateSlumberChallenges(qc),
+  });
+}
+
 export function useAdminChallenges(filters: ChallengeListFilters, enabled = true) {
   return useQuery({
     queryKey: queryKeys.admin.challenges(filters),
@@ -651,6 +699,7 @@ export function useAdminCancelChallenge() {
     mutationFn: (challengeId: string) => adminCancelChallenge(challengeId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['admin', 'community'] });
+      void qc.invalidateQueries({ queryKey: ['admin', 'slumber-challenges'] });
       void qc.invalidateQueries({ queryKey: queryKeys.admin.dashboard });
     },
   });
@@ -711,16 +760,20 @@ export function useDeleteAdminCampaign() {
   });
 }
 
-export function useCreateAdminSlumberChallenge() {
+export function useUpsertAdminSlumberChallenge() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: createAdminSlumberChallenge,
+    mutationFn: (input: AdminSlumberRaceInput) => upsertAdminSlumberChallenge(input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.admin.campaigns });
+    },
   });
 }
 
-export function useStartAdminSlumberChallenge() {
+export function useEndAdminSlumberChallenge() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (challengeId: string) => startAdminSlumberChallenge(challengeId),
+    mutationFn: (challengeId: string) => endAdminSlumberChallenge(challengeId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.admin.campaigns });
     },

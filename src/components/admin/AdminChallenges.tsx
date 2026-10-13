@@ -149,7 +149,12 @@ export default function AdminChallenges() {
     <AdminSection
       className="admin-challenges"
       error={error}
-      lead="Active and pending sleep challenges. Cancel a challenge that should not stay live."
+      lead={(
+        <>
+          User and club races. Cancel a challenge that should not stay live. Edit official races on{' '}
+          <Link to="/admin/races">Slumber races</Link>.
+        </>
+      )}
     >
       {metrics ? (
         <div className="admin-metric-grid admin-metric-grid--dense">

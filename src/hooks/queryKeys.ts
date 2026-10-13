@@ -63,6 +63,7 @@ export const queryKeys = {
       ['admin', 'health', range.start, range.end] as const,
     communityMetrics: ['admin', 'community', 'metrics'] as const,
     challenges: (filters: ChallengeListFilters) => ['admin', 'community', 'challenges', filters] as const,
+    slumberChallenges: (filters: ChallengeListFilters) => ['admin', 'slumber-challenges', filters] as const,
     clubs: (filters: PaginationFilters) => ['admin', 'community', 'clubs', filters] as const,
     clubRoster: (clubId: string) => ['admin', 'community', 'club-roster', clubId] as const,
     dataIssues: (filters: DataIssueFilters) => ['admin', 'data-issues', filters] as const,

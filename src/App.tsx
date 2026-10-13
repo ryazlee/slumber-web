@@ -20,6 +20,7 @@ import AdminTagsPage from './pages/admin/AdminTagsPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminCommunityPage from './pages/admin/AdminCommunityPage';
 import AdminChallengesPage from './pages/admin/AdminChallengesPage';
+import AdminSlumberChallengesPage from './pages/admin/AdminSlumberChallengesPage';
 import AppEntry from './pages/app/AppEntry';
 import ChallengeDetail from './pages/app/ChallengeDetail';
 import Challenges from './pages/app/Challenges';
@@ -93,6 +94,7 @@ export default function App() {
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="community" element={<AdminCommunityPage />} />
           <Route path="challenges" element={<AdminChallengesPage />} />
+          <Route path="races" element={<AdminSlumberChallengesPage />} />
           <Route path="premium" element={<AdminPremiumPage />} />
           <Route path="notify" element={<AdminNotifyPage />} />
           <Route path="campaigns" element={<AdminCampaignsPage />} />

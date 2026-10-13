@@ -13,17 +13,30 @@ import { supabase } from './supabase';
 /** Pre-migration 100 cap on admin_get_recent_posts(p_limit, …). */
 const LEGACY_RECENT_POSTS_CAP = 200;
 
-export function formatAdminRpcError(label: string, err: unknown): string {
+/** Supabase errors are often plain objects. Never stringify those to "[object Object]". */
+export function adminErrorMessage(err: unknown, fallback: string): string {
   if (err && typeof err === 'object' && 'message' in err) {
-    const pg = err as PostgrestError;
-    const parts = [`${label}: ${pg.message}`];
-    if (pg.code) parts.push(`(${pg.code})`);
-    if (pg.details) parts.push(pg.details);
-    if (pg.hint) parts.push(pg.hint);
+    const message = (err as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim() && message !== '[object Object]') {
+      return message;
+    }
+  }
+  if (err instanceof Error && err.message && err.message !== '[object Object]') return err.message;
+  if (typeof err === 'string' && err.trim() && err !== '[object Object]') return err;
+  return fallback;
+}
+
+export function formatAdminRpcError(label: string, err: unknown): string {
+  const message = adminErrorMessage(err, 'Could not load data.');
+  if (err && typeof err === 'object') {
+    const pg = err as Partial<PostgrestError>;
+    const parts = [`${label}: ${message}`];
+    if (typeof pg.code === 'string' && pg.code) parts.push(`(${pg.code})`);
+    if (typeof pg.details === 'string' && pg.details) parts.push(pg.details);
+    if (typeof pg.hint === 'string' && pg.hint) parts.push(pg.hint);
     return parts.join(' ');
   }
-  if (err instanceof Error) return `${label}: ${err.message}`;
-  return `${label}: Could not load data.`;
+  return `${label}: ${message}`;
 }
 
 export type PostReportRow = {
@@ -1034,6 +1047,114 @@ export async function fetchAdminClubRoster(clubId: string): Promise<AdminClubRos
   return data as AdminClubRoster;
 }
 
+export type AdminSlumberChallengeRow = {
+  id: string;
+  title: string | null;
+  status: string;
+  goal_minutes: number;
+  no_expiration: boolean;
+  expiration_days: number;
+  started_at: string | null;
+  expires_at: string | null;
+  participant_count: number;
+  max_participants: number | null;
+  join_enabled: boolean;
+  created_at: string;
+};
+
+export type AdminSlumberChallengeDraft = {
+  title: string;
+  goalMinutes: number;
+  noExpiration: boolean;
+  expirationDays: number;
+  expiresAt: string | null;
+  maxParticipants: number | null;
+  joinEnabled: boolean;
+};
+
+export async function fetchAdminSlumberChallenges(
+  filters: ChallengeListFilters = {},
+): Promise<PaginatedResult<AdminSlumberChallengeRow>> {
+  const pageSize = resolvePageSize(filters.pageSize, filters.limit, 25);
+  const page = filters.page ?? 0;
+  const { data, error } = await supabase.rpc('admin_list_slumber_challenges', {
+    p_limit: pageSize,
+    p_offset: resolvePageOffset(page, pageSize),
+    p_status: filters.status || null,
+  });
+  if (error) throw error;
+  return parsePaginatedResult<AdminSlumberChallengeRow>(data);
+}
+
+export async function createAdminSlumberChallenge(input: {
+  title: string;
+  goalMinutes: number;
+  noExpiration: boolean;
+  expiresInDays: number;
+  maxParticipants: number | null;
+}): Promise<{ id: string; title: string }> {
+  const { data, error } = await supabase.rpc('admin_create_slumber_challenge', {
+    p_title: input.title,
+    p_goal_minutes: input.goalMinutes,
+    p_no_expiration: input.noExpiration,
+    p_expires_in_days: input.expiresInDays,
+    p_max_participants: input.maxParticipants,
+  });
+  if (error) throw error;
+  const row = (data ?? {}) as { id?: string; title?: string };
+  if (!row.id) throw new Error('Could not create the race.');
+  return { id: row.id, title: row.title ?? input.title };
+}
+
+export async function startAdminSlumberChallenge(challengeId: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_start_slumber_challenge', {
+    p_challenge_id: challengeId,
+  });
+  if (error) throw error;
+}
+
+export async function updateAdminSlumberChallenge(
+  challengeId: string,
+  draft: AdminSlumberChallengeDraft,
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_update_slumber_challenge', {
+    p_challenge_id: challengeId,
+    p_title: draft.title,
+    p_goal_minutes: draft.goalMinutes,
+    p_no_expiration: draft.noExpiration,
+    p_expiration_days: draft.expirationDays,
+    p_expires_at: draft.expiresAt,
+    p_max_participants: draft.maxParticipants,
+    p_join_enabled: draft.joinEnabled,
+  });
+  if (error) throw error;
+}
+
+function mentionsAdminRpc(err: unknown, rpcName: string): boolean {
+  if (!err || typeof err !== 'object' || !('message' in err)) return false;
+  const pg = err as PostgrestError;
+  return isMissingAdminRpc(pg, rpcName) && new RegExp(rpcName, 'i').test(pg.message ?? '');
+}
+
+export function slumberChallengeErrorMessage(err: unknown, fallback: string): string {
+  if (mentionsAdminRpc(err, 'admin_list_slumber_challenges')) {
+    return `Slumber races are not available yet. ${ADMIN_MIGRATION_HINT}`;
+  }
+  if (mentionsAdminRpc(err, 'admin_update_slumber_challenge')) {
+    return `Editing Slumber races is not available yet. ${ADMIN_MIGRATION_HINT}`;
+  }
+  const message = adminErrorMessage(err, fallback);
+  if (message.includes('invalid_title')) return 'Title must be 1–80 characters.';
+  if (message.includes('invalid_goal')) return 'Goal must be between 10 and 100 hours.';
+  if (message.includes('invalid_expiration_days')) return 'Duration must be between 1 and 100 days.';
+  if (message.includes('invalid_window')) return 'The end date has to be after the race started.';
+  if (message.includes('invalid_max_participants')) return 'Max racers must be between 2 and 10,000, or left blank.';
+  if (message.includes('not_slumber_challenge')) return 'That race is not hosted by Slumber.';
+  if (message.includes('challenge_not_pending')) return 'That race has already started.';
+  if (message.includes('not_authorized')) return 'You need an admin role to edit races.';
+  return message;
+}
+
 export async function adminCancelChallenge(challengeId: string): Promise<void> {
   const { error } = await supabase.rpc('admin_cancel_challenge', {
     p_challenge_id: challengeId,
@@ -1178,6 +1299,11 @@ export type AdminCampaignRow = {
   priority: number;
   created_at: string;
   updated_at: string;
+  goal_minutes?: number | null;
+  challenge_started_at?: string | null;
+  challenge_expires_at?: string | null;
+  no_expiration?: boolean | null;
+  max_participants?: number | null;
 };
 
 export type AdminCampaignDraft = {
@@ -1247,34 +1373,51 @@ export async function uploadAdminCampaignImage(file: File): Promise<string> {
   return supabase.storage.from(CAMPAIGN_IMAGE_BUCKET).getPublicUrl(path).data.publicUrl;
 }
 
-export type AdminSlumberChallenge = {
-  id: string;
-  joinToken: string;
-  title: string;
-};
-
-export async function createAdminSlumberChallenge(input: {
+export type AdminSlumberRaceInput = {
+  challengeId: string | null;
+  campaignId: string | null;
   title: string;
   goalMinutes: number;
-  noExpiration: boolean;
-  expiresInDays: number;
+  startsAt: string;
+  endsAt: string | null;
+  noEnd: boolean;
   maxParticipants: number | null;
-}): Promise<AdminSlumberChallenge> {
-  const { data, error } = await supabase.rpc('admin_create_slumber_challenge', {
+  joinEnabled: boolean;
+  campaignTitle: string;
+  campaignBody: string;
+  emoji: string;
+  ctaLabel: string;
+  imageUrl: string;
+  targetRoles: string[];
+  enabled: boolean;
+  priority: number;
+};
+
+export async function upsertAdminSlumberChallenge(input: AdminSlumberRaceInput): Promise<void> {
+  const { error } = await supabase.rpc('admin_upsert_slumber_challenge', {
+    p_challenge_id: input.challengeId,
     p_title: input.title,
     p_goal_minutes: input.goalMinutes,
-    p_no_expiration: input.noExpiration,
-    p_expires_in_days: input.expiresInDays,
+    p_starts_at: input.startsAt,
+    p_ends_at: input.endsAt,
+    p_no_end: input.noEnd,
     p_max_participants: input.maxParticipants,
+    p_join_enabled: input.joinEnabled,
+    p_campaign_id: input.campaignId,
+    p_campaign_title: input.campaignTitle,
+    p_campaign_body: input.campaignBody,
+    p_campaign_emoji: input.emoji || null,
+    p_campaign_cta: input.ctaLabel,
+    p_campaign_image: input.imageUrl.trim() || null,
+    p_target_roles: input.targetRoles,
+    p_campaign_enabled: input.enabled,
+    p_campaign_priority: input.priority,
   });
   if (error) throw error;
-  const row = data as AdminSlumberChallenge | null;
-  if (!row?.id) throw new Error('Could not create challenge.');
-  return row;
 }
 
-export async function startAdminSlumberChallenge(challengeId: string): Promise<void> {
-  const { error } = await supabase.rpc('admin_start_slumber_challenge', {
+export async function endAdminSlumberChallenge(challengeId: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_end_slumber_challenge', {
     p_challenge_id: challengeId,
   });
   if (error) throw error;

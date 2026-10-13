@@ -158,7 +158,7 @@ export default function AdminRoles() {
 
       {!loading && rolesTotal > 0 ? (
         <AdminDataGrid
-          persistKey="admin-roles-v2"
+          persistKey="admin-roles-v3"
           mobileSummary={roleMobileSummary}
           rows={roles}
           columns={columns}

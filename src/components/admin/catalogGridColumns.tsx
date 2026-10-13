@@ -180,9 +180,10 @@ export function buildAdminRoleColumns(handlers: {
       field: 'actions',
       headerName: 'Actions',
       ...gridActionsColumn,
-      width: 268,
+      width: 300,
+      minWidth: 300,
       renderCell: ({ row }) => (
-        <AdminGridActions className="admin-grid-actions--wrap">
+        <AdminGridActions>
           <AdminGridAction
             active={handlers.editingKey === row.key}
             onClick={(e) => {

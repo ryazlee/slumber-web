@@ -5623,12 +5623,6 @@ span.admin-mobile-card-title:hover {
   }
 }
 
-.admin-grid-actions.admin-grid-actions--wrap {
-  flex-wrap: wrap;
-  white-space: normal;
-  row-gap: 6px;
-}
-
 .admin-role-grant-form {
   display: grid;
   gap: 14px;
