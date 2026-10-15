@@ -1151,6 +1151,7 @@ export function slumberChallengeErrorMessage(err: unknown, fallback: string): st
   if (message.includes('invalid_max_participants')) return 'Max racers must be between 2 and 10,000, or left blank.';
   if (message.includes('not_slumber_challenge')) return 'That race is not hosted by Slumber.';
   if (message.includes('challenge_not_pending')) return 'That race has already started.';
+  if (message.includes('challenge_not_endable')) return 'That race has already finished.';
   if (message.includes('not_authorized')) return 'You need an admin role to edit races.';
   return message;
 }
@@ -1371,49 +1372,6 @@ export async function uploadAdminCampaignImage(file: File): Promise<string> {
   });
   if (error) throw error;
   return supabase.storage.from(CAMPAIGN_IMAGE_BUCKET).getPublicUrl(path).data.publicUrl;
-}
-
-export type AdminSlumberRaceInput = {
-  challengeId: string | null;
-  campaignId: string | null;
-  title: string;
-  goalMinutes: number;
-  startsAt: string;
-  endsAt: string | null;
-  noEnd: boolean;
-  maxParticipants: number | null;
-  joinEnabled: boolean;
-  campaignTitle: string;
-  campaignBody: string;
-  emoji: string;
-  ctaLabel: string;
-  imageUrl: string;
-  targetRoles: string[];
-  enabled: boolean;
-  priority: number;
-};
-
-export async function upsertAdminSlumberChallenge(input: AdminSlumberRaceInput): Promise<void> {
-  const { error } = await supabase.rpc('admin_upsert_slumber_challenge', {
-    p_challenge_id: input.challengeId,
-    p_title: input.title,
-    p_goal_minutes: input.goalMinutes,
-    p_starts_at: input.startsAt,
-    p_ends_at: input.endsAt,
-    p_no_end: input.noEnd,
-    p_max_participants: input.maxParticipants,
-    p_join_enabled: input.joinEnabled,
-    p_campaign_id: input.campaignId,
-    p_campaign_title: input.campaignTitle,
-    p_campaign_body: input.campaignBody,
-    p_campaign_emoji: input.emoji || null,
-    p_campaign_cta: input.ctaLabel,
-    p_campaign_image: input.imageUrl.trim() || null,
-    p_target_roles: input.targetRoles,
-    p_campaign_enabled: input.enabled,
-    p_campaign_priority: input.priority,
-  });
-  if (error) throw error;
 }
 
 export async function endAdminSlumberChallenge(challengeId: string): Promise<void> {

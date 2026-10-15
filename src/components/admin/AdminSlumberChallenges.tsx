@@ -5,9 +5,9 @@ import type { GridColDef } from '@mui/x-data-grid';
 import type { AdminSlumberChallengeRow } from '../../lib/admin';
 import { slumberChallengeErrorMessage } from '../../lib/admin';
 import {
-  useAdminCancelChallenge,
   useAdminSlumberChallenges,
   useCreateAdminSlumberChallenge,
+  useEndAdminSlumberChallenge,
   useStartAdminSlumberChallenge,
   useUpdateAdminSlumberChallenge,
 } from '../../hooks/useAdmin';
@@ -177,7 +177,7 @@ function RaceForm({
             : started
               ? 'The start time stays put. A later end date keeps the race going. An end date that has already passed opens the catch-up window.'
               : 'Start the race from the table when it should go live. Duration is how many days it runs after that.'
-          : 'This creates a pending race hosted by Slumber. You are not added as a racer.'}
+          : 'This creates a pending race hosted by Slumber. Start it from the table when it should go live. Link a campaign separately if you want a promo — you are not added as a racer.'}
       </p>
       <form className="admin-role-grant-form" onSubmit={(e) => { void handleSubmit(e); }}>
         <div className="admin-field">
@@ -285,7 +285,7 @@ export default function AdminSlumberChallenges() {
   const { paginationModel, setPaginationModel, filters: applied } = usePaginatedFilters(filters, [statusFilter]);
   const racesQuery = useAdminSlumberChallenges(applied);
   const startMutation = useStartAdminSlumberChallenge();
-  const cancelMutation = useAdminCancelChallenge();
+  const endMutation = useEndAdminSlumberChallenge();
 
   const races = racesQuery.data?.rows ?? [];
   const total = racesQuery.data?.total ?? 0;
@@ -398,23 +398,27 @@ export default function AdminSlumberChallenges() {
               onClick={(e) => {
                 e.stopPropagation();
                 const name = row.title?.trim() || 'this race';
-                if (!window.confirm(`Cancel “${name}”?`)) return;
-                void runAction(row.id, () => cancelMutation.mutateAsync(row.id), 'Could not cancel the race.');
+                const pending = row.status === 'pending';
+                const msg = pending
+                  ? `Cancel “${name}”? It will not start, and the join link will close. Linked campaigns stay up until you end them.`
+                  : `End “${name}” now? Racers get a catch-up window, then it finishes. The join link will close. Linked campaigns stay up until you end them.`;
+                if (!window.confirm(msg)) return;
+                void runAction(row.id, () => endMutation.mutateAsync(row.id), 'Could not end the race.');
               }}
             >
-              Cancel
+              {row.status === 'pending' ? 'Cancel' : 'End'}
             </AdminGridAction>
           ) : null}
         </AdminGridActions>
       ),
     },
-  ], [actingId, cancelMutation, startMutation]);
+  ], [actingId, endMutation, startMutation]);
 
   return (
     <AdminSection
       className="admin-slumber-races"
       error={error}
-      lead="Official races hosted by Slumber. Edit the name, goal, length, racer cap, and join link."
+      lead="Official races hosted by Slumber. Create them here, Start when they should score, and link a campaign separately if you want a promo. Campaign dates do not have to match the race window."
     >
       <AdminListToolbar
         actions={(

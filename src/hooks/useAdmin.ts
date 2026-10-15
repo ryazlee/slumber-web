@@ -39,7 +39,6 @@ import {
   upsertAdminCampaign,
   setAdminCampaignEnabled,
   deleteAdminCampaign,
-  upsertAdminSlumberChallenge,
   endAdminSlumberChallenge,
   adminCancelChallenge,
   createAdminSlumberChallenge,
@@ -68,7 +67,6 @@ import {
   type CatalogListFilters,
   type AdminCampaignDraft,
   type AdminSlumberChallengeDraft,
-  type AdminSlumberRaceInput,
 } from '../lib/admin';
 import {
   ADMIN_CATALOG_STALE_MS,
@@ -760,23 +758,11 @@ export function useDeleteAdminCampaign() {
   });
 }
 
-export function useUpsertAdminSlumberChallenge() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input: AdminSlumberRaceInput) => upsertAdminSlumberChallenge(input),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: queryKeys.admin.campaigns });
-    },
-  });
-}
-
 export function useEndAdminSlumberChallenge() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (challengeId: string) => endAdminSlumberChallenge(challengeId),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: queryKeys.admin.campaigns });
-    },
+    onSuccess: () => invalidateSlumberChallenges(qc),
   });
 }
 
