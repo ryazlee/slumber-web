@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { isNavActive } from '../lib/appNav';
+import { NavLabel } from './AppBottomNav';
 
-type SubnavItem = { to: string; label: string; end?: boolean };
+type SubnavItem = { to: string; label: string; end?: boolean; badgeCount?: number };
 
 type Props = {
   title: string;
@@ -41,7 +42,7 @@ export default function AppHubLayout({
             className={hubTabClass(active)}
             aria-current={active ? 'page' : undefined}
           >
-            {item.label}
+            <NavLabel label={item.label} badgeCount={item.badgeCount} />
           </NavLink>
         );
       })}

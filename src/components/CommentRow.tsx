@@ -50,7 +50,9 @@ export default function CommentRow({
   const profilePath = `/profile/${comment.userId}`;
   const isOwnComment = !!currentUserId && comment.userId === currentUserId;
   const showLikeRail = canInteract && !isEditing && !!onLike;
-  const showMenu = canInteract && !isEditing && !!(onLike || onReply || (isOwnComment && (onStartEdit || onDelete)));
+  const showMenu = canInteract && !isEditing && !!(
+    onLike || onReply || (isOwnComment && (onStartEdit || onDelete))
+  );
 
   const menuBtnRef = useRef<HTMLButtonElement>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
@@ -193,7 +195,7 @@ export default function CommentRow({
         isOwnComment={isOwnComment}
         hasLiked={comment.hasLiked}
         onClose={() => setMenuOpen(false)}
-        onLike={() => onLike?.()}
+        onLike={onLike ? () => onLike() : undefined}
         onReply={onReply}
         onEdit={isOwnComment ? onStartEdit : undefined}
         onDelete={isOwnComment ? onDelete : undefined}

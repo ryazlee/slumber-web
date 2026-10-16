@@ -30,6 +30,13 @@ export const queryKeys = {
   lifetimeStats: (userId: string) => ['lifetime-stats', userId] as const,
   challengeProgress: (id: string) => ['challenge-progress', id] as const,
   challengeContributions: (id: string) => ['challenge-contributions', id] as const,
+  /** Infinite keyset pages (newest-first batches, displayed ascending). */
+  boardMessages: (entityType: string, entityId: string) =>
+    ['board-messages', 'v2', entityType, entityId] as const,
+  boardMessageCount: (entityType: string, entityId: string) =>
+    ['board-message-count', entityType, entityId] as const,
+  /** Tab badges: boards with unread messages (challenge vs club). */
+  boardUnreadBadges: ['board-unread-badges'] as const,
   postKudos: (postId: string) => ['post-kudos', postId] as const,
   postComments: (postId: string) => ['post-comments', postId] as const,
   postCommentLikes: (commentId: string) => ['post-comment-likes', commentId] as const,

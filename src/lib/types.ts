@@ -134,6 +134,26 @@ export type Comment = {
   likeCount: number;
   hasLiked: boolean;
   isEdited: boolean;
+  /** Optimistic comment still posting to the server. */
+  pending?: boolean;
+};
+
+/** Polymorphic message-board entity (challenge race or sleep club). */
+export type BoardEntityType = 'challenge' | 'club';
+
+/** Flat board message (no likes in v1). Maps into Comment for CommentRow. */
+export type BoardMessage = {
+  id: string;
+  entityType: BoardEntityType;
+  entityId: string;
+  userId: string;
+  username: string;
+  avatarUrl?: string;
+  userRoles?: string[];
+  text: string;
+  createdAt: string;
+  isEdited?: boolean;
+  pending?: boolean;
 };
 
 export type KudosUser = {

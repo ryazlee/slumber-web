@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import ChallengeContributionsByDay from '../../components/ChallengeContributionsByDay';
 import ChallengeGraceCountdown from '../../components/ChallengeGraceCountdown';
 import ChallengeProgressRow from '../../components/ChallengeProgressRow';
+import EntityMessageBoard from '../../components/EntityMessageBoard';
 import UserLink from '../../components/UserLink';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -89,6 +90,13 @@ export default function ChallengeDetail() {
     return rows;
   }, [progress, splitBarByUser, challenge?.isGroup, currentUserId]);
 
+  const boardMentionUsers = useMemo(
+    () => (challenge?.participants ?? [])
+      .filter((p) => p.inviteStatus === 'accepted')
+      .map((p) => ({ id: p.userId, username: p.username })),
+    [challenge?.participants],
+  );
+
   if (loading) {
     return (
       <div className="app-page">
@@ -114,6 +122,8 @@ export default function ChallengeDetail() {
   const winner = challenge.winnerId
     ? accepted.find((p) => p.userId === challenge.winnerId)
     : null;
+  const canUseChallengeBoard = !!currentUserId
+    && accepted.some((p) => p.userId === currentUserId);
 
   return (
     <div className="app-page">
@@ -245,6 +255,18 @@ export default function ChallengeDetail() {
 
       {rankedProgress.length === 0 && contributions.length === 0 && challenge.status === 'pending' && (
         <p className="app-muted">Waiting for participants to accept.</p>
+      )}
+
+      {canUseChallengeBoard && currentUserId && (
+        <section className="app-section">
+          <EntityMessageBoard
+            entityType="challenge"
+            entityId={challenge.id}
+            currentUserId={currentUserId}
+            mentionUsers={boardMentionUsers}
+            canCompose={canUseChallengeBoard}
+          />
+        </section>
       )}
     </div>
   );

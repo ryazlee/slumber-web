@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Avatar from '../../components/Avatar';
 import ClubAnalyticsPanel from '../../components/ClubAnalyticsPanel';
+import EntityMessageBoard from '../../components/EntityMessageBoard';
 import UserListRowsSkeleton from '../../components/UserListRowsSkeleton';
+import { useAuth } from '../../context/AuthContext';
 import { useClubMembers, useClubs, useRespondToClubInvite } from '../../hooks/useSocial';
 import type { WebClub, WebClubMember } from '../../lib/types';
 
@@ -64,11 +66,18 @@ function ClubDetail({
   club: WebClub;
   onClose: () => void;
 }) {
+  const { user } = useAuth();
   const isPending = club.myInviteStatus === 'pending';
   const isAccepted = club.myInviteStatus === 'accepted';
   const membersQuery = useClubMembers(club.id, isAccepted);
   const respondMutation = useRespondToClubInvite();
   const busy = respondMutation.isPending;
+  const boardMentionUsers = useMemo(
+    () => (membersQuery.data ?? [])
+      .filter((m) => m.inviteStatus === 'accepted')
+      .map((m) => ({ id: m.userId, username: m.username })),
+    [membersQuery.data],
+  );
 
   const handleRespond = async (accept: boolean) => {
     try {
@@ -124,6 +133,18 @@ function ClubDetail({
 
       {isAccepted ? <ClubAnalyticsPanel clubId={club.id} /> : null}
 
+      {isAccepted && user?.id ? (
+        <div className="social-club-board">
+          <EntityMessageBoard
+            entityType="club"
+            entityId={club.id}
+            currentUserId={user.id}
+            mentionUsers={boardMentionUsers}
+            canCompose
+          />
+        </div>
+      ) : null}
+
       {isAccepted ? (
         <div className="social-club-members">
           <h3>Members</h3>
@@ -144,7 +165,7 @@ function ClubDetail({
       ) : null}
 
       <p className="social-footnote app-muted">
-        Create clubs and send invites in the app. Analytics for clubs you&apos;re in are here. Club feeds, races, and compare still use the club filter in the app.
+        Create clubs and send invites in the app. Message boards, analytics, and members are here. Club feeds, races, and compare still use the club filter in the app.
       </p>
     </section>
   );

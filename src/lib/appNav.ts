@@ -3,6 +3,8 @@ export type PrimaryNavItem = {
   label: string;
   end?: boolean;
   matchPrefix?: string;
+  /** Optional unread count badge (e.g. message boards). */
+  badgeCount?: number;
 };
 
 export const MAIN_NAV_ITEMS: PrimaryNavItem[] = [

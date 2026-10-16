@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useIsModerator } from '../hooks/useAdmin';
 import { isNavActive } from '../lib/appNav';
-import AppBottomNav, { useBottomNavItems, usePrimaryNavItems } from './AppBottomNav';
+import AppBottomNav, { NavLabel, useBottomNavItems, usePrimaryNavItems } from './AppBottomNav';
 import HeaderMenu from './HeaderMenu';
 import HeaderProfileLink from './HeaderProfileLink';
 import HeaderSearch from './HeaderSearch';
@@ -46,7 +46,7 @@ export default function SiteHeader() {
                       className={desktopTabClass(active)}
                       aria-current={active ? 'page' : undefined}
                     >
-                      {item.label}
+                      <NavLabel label={item.label} badgeCount={item.badgeCount} />
                     </NavLink>
                   );
                 })}
