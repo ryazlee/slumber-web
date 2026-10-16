@@ -10,7 +10,7 @@ import type {
 } from './types';
 
 const BASE_CHALLENGE_SELECT = `
-  id, creator_id, title, is_group, goal_minutes, no_expiration, scoring_mode, status,
+  id, creator_id, title, description, is_group, goal_minutes, no_expiration, scoring_mode, status,
   created_at, started_at, expires_at, winner_id, goal_reached_at, goal_reached_by, grace_ends_at,
   hosted_by
 `;
@@ -75,6 +75,7 @@ function attachParticipants(challenges: Record<string, unknown>[], participantRo
     return {
       id: c.id as string,
       title: (c.title as string | null) ?? null,
+      description: (c.description as string | null) ?? null,
       isGroup: (c.is_group as boolean) ?? false,
       goalMinutes: c.goal_minutes as number,
       noExpiration: (c.no_expiration as boolean) ?? false,

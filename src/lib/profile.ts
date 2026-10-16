@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { avatarRoleKeysFromProfile } from './avatarRoles';
+import { fetchCurrentStreakMap } from './currentStreaks';
 import { normalizeUsername } from './username';
 import type { WebProfile } from './types';
 
@@ -65,9 +66,13 @@ export async function fetchProfileSummary(userId: string): Promise<WebProfile | 
 
   if (error || !row) return null;
 
-  const [lifetimeSleep, streakRes, friendsCountRes, recordRes, friendStatus] = await Promise.all([
+  const isOwn = viewerId === userId;
+  const [lifetimeSleep, currentStreakMap, ownStreakRes, friendsCountRes, recordRes, friendStatus] = await Promise.all([
     fetchProfileLifetimeSleep(userId),
-    supabase.from('streaks').select('*').eq('user_id', userId).maybeSingle(),
+    fetchCurrentStreakMap([userId]),
+    isOwn
+      ? supabase.from('streaks').select('longest_streak').eq('user_id', userId).maybeSingle()
+      : Promise.resolve({ data: null as { longest_streak: number } | null }),
     supabase.rpc('get_user_friends_count', { target_user: userId }),
     supabase.rpc('get_challenge_record', { p_user_id: userId }),
     resolveFriendStatus(viewerId, userId),
@@ -83,8 +88,8 @@ export async function fetchProfileSummary(userId: string): Promise<WebProfile | 
     isPremium: row.is_premium ?? false,
     friendsCount: typeof friendsCountRes.data === 'number' ? friendsCountRes.data : 0,
     postsCount: lifetimeSleep.postsCount,
-    streak: streakRes.data?.current_streak ?? 0,
-    longestStreak: streakRes.data?.longest_streak ?? 0,
+    streak: currentStreakMap.get(userId) ?? 0,
+    longestStreak: ownStreakRes.data?.longest_streak ?? 0,
     avgAsleepMinutes: lifetimeSleep.avgAsleepMinutes,
     sleepGoalMinutes: row.sleep_goal_minutes ?? 480,
     challengeRecord: {

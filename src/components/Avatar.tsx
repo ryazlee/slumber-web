@@ -76,7 +76,7 @@ export default function Avatar({
   const role = resolveAvatarRole(userRoles, isPremium);
   const slotClass = `${SLOT_CLASS[size]} ${className}`.trim();
   const initials = username.slice(0, 2).toUpperCase();
-  const faceStyle: CSSProperties = { background: avatarColorFromName(userId || username) };
+  const faceStyle: CSSProperties = { background: avatarColorFromName(username || userId) };
   const slotPx = SLOT_PX[size];
   const layout = avatarLayoutMetrics(slotPx);
 

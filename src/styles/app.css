@@ -5384,6 +5384,12 @@ button.app-back-link {
   font-size: 13px;
 }
 
+.compat-popup-with {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .compat-table {
   margin-top: 14px;
 }
@@ -5412,22 +5418,47 @@ button.app-back-link {
   cursor: default;
 }
 
-.compat-table-row span:not(:first-child),
-.compat-factor-detail p span {
+.compat-table-row span:not(:first-child) {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
 .compat-factor-detail {
-  padding: 8px 0 4px;
-  font-size: 14px;
+  padding: 2px 0 8px;
 }
 
-.compat-factor-detail p {
-  display: flex;
-  justify-content: space-between;
+.compat-factor-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
-  margin: 0 0 4px;
+  margin-top: 6px;
+}
+
+.compat-factor-person {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.compat-factor-person span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.compat-factor-person strong {
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.compat-factor-person--end,
+.compat-factor-person--end span,
+.compat-factor-person--end strong {
+  text-align: right;
 }
 
 .profile-compat {

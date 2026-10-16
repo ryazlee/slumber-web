@@ -11,6 +11,8 @@ type UserLinkProps = {
   showAvatar?: boolean;
   avatarSize?: 'sm' | 'md' | 'lg';
   showStreak?: boolean;
+  /** When set, skip the streaks fetch (leaderboard / challenge rows). */
+  streak?: number;
   minStreakToShow?: number;
   className?: string;
 };
@@ -24,11 +26,12 @@ export default function UserLink({
   showAvatar = false,
   avatarSize = 'sm',
   showStreak = true,
+  streak,
   minStreakToShow = 3,
   className = '',
 }: UserLinkProps) {
-  const { data: streakData } = useStreak(showStreak ? userId : undefined);
-  const currentStreak = streakData?.currentStreak ?? 0;
+  const { data: streakData } = useStreak(showStreak && streak == null ? userId : undefined);
+  const currentStreak = streak ?? streakData?.currentStreak ?? 0;
   const shouldShowStreak = showStreak && currentStreak >= minStreakToShow;
 
   return (

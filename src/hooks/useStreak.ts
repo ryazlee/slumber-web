@@ -1,17 +1,23 @@
-import { useProfile } from './useProfile';
+import { useQuery } from '@tanstack/react-query';
+import { fetchCurrentStreak } from '../lib/currentStreaks';
 
-/** Streak data for a user, derived from the profile query cache. */
+/** Current streak for any user via get_current_streaks (streaks RLS is select-own). */
 export function useStreak(userId?: string) {
-  const { data: profile, isLoading, error } = useProfile(userId ?? null);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['current-streak', userId],
+    queryFn: () => fetchCurrentStreak(userId!),
+    enabled: !!userId,
+    staleTime: 5 * 60_000,
+  });
 
   return {
     data: userId
       ? {
-          currentStreak: profile?.streak ?? 0,
-          longestStreak: profile?.longestStreak ?? 0,
+          currentStreak: data ?? 0,
+          longestStreak: 0,
         }
       : undefined,
-    isLoading,
+    isLoading: !!userId && isLoading,
     error,
   };
 }

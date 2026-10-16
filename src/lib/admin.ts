@@ -1050,6 +1050,7 @@ export async function fetchAdminClubRoster(clubId: string): Promise<AdminClubRos
 export type AdminSlumberChallengeRow = {
   id: string;
   title: string | null;
+  description?: string | null;
   status: string;
   goal_minutes: number;
   no_expiration: boolean;
@@ -1064,6 +1065,7 @@ export type AdminSlumberChallengeRow = {
 
 export type AdminSlumberChallengeDraft = {
   title: string;
+  description?: string | null;
   goalMinutes: number;
   noExpiration: boolean;
   expirationDays: number;
@@ -1088,6 +1090,7 @@ export async function fetchAdminSlumberChallenges(
 
 export async function createAdminSlumberChallenge(input: {
   title: string;
+  description?: string | null;
   goalMinutes: number;
   noExpiration: boolean;
   expiresInDays: number;
@@ -1099,6 +1102,7 @@ export async function createAdminSlumberChallenge(input: {
     p_no_expiration: input.noExpiration,
     p_expires_in_days: input.expiresInDays,
     p_max_participants: input.maxParticipants,
+    p_description: input.description?.trim() || null,
   });
   if (error) throw error;
   const row = (data ?? {}) as { id?: string; title?: string };
@@ -1126,6 +1130,7 @@ export async function updateAdminSlumberChallenge(
     p_expires_at: draft.expiresAt,
     p_max_participants: draft.maxParticipants,
     p_join_enabled: draft.joinEnabled,
+    p_description: draft.description?.trim() ?? '',
   });
   if (error) throw error;
 }
@@ -1145,6 +1150,7 @@ export function slumberChallengeErrorMessage(err: unknown, fallback: string): st
   }
   const message = adminErrorMessage(err, fallback);
   if (message.includes('invalid_title')) return 'Title must be 1–80 characters.';
+  if (message.includes('invalid_description')) return 'Description must be 280 characters or fewer.';
   if (message.includes('invalid_goal')) return 'Goal must be between 10 and 100 hours.';
   if (message.includes('invalid_expiration_days')) return 'Duration must be between 1 and 100 days.';
   if (message.includes('invalid_window')) return 'The end date has to be after the race started.';

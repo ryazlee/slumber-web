@@ -122,6 +122,9 @@ export default function ChallengeDetail() {
       <header className="challenge-detail-header">
         <div className="challenge-card-top">
           <h1>{title}</h1>
+          {challenge.description?.trim() ? (
+            <p className="challenge-detail-description">{challenge.description.trim()}</p>
+          ) : null}
           <span className={`challenge-status challenge-status--${challenge.status}`}>
             {formatChallengeStatus(challenge.status)}
           </span>

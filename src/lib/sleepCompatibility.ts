@@ -1,4 +1,4 @@
-import { formatMins } from './format';
+import { formatMins, formatPct } from './format';
 import { parseClockToMinutes } from './napDay';
 
 /**
@@ -7,13 +7,19 @@ import { parseClockToMinutes } from './napDay';
  * Works for rolling 30-day `PeriodStats` and calendar-month `MonthBest`
  * (via `habitsFromMonthBest`). Same formula either way.
  *
- * Timing and duration carry the score. Stage mix and wakes count less, because
- * watches disagree on them. Timing similarity hits 0 at 98 minutes and duration
- * at 75. 90+ means quite similar sleep: clocks within about 25 minutes when
- * time asleep matches, or time asleep within about 25 minutes when the clocks
- * match, with a close stage mix and wake count. Dream logging is not scored.
+ * Timing carries the score, then duration. Stage mix and wakes count less,
+ * because watches disagree on them. Each gap uses exp(-gap / tau): identical
+ * inputs are 100, a larger gap always scores lower, and there is no cliff
+ * where extra minutes stop mattering. Taus are set so ordinary friend gaps
+ * (clocks roughly 30–120 minutes apart, or a closer clock with a different
+ * length) usually land in the 55–86 range. A 30-minute shift on both clocks,
+ * with the same time asleep, stages, wakes, and dream rate, is about 86.
+ * 90+ means the clocks and time asleep are within about 20 minutes. Dream
+ * rate is scored, but only a few points, and it is dropped when either side
+ * has no rate.
  *
- * A factor is dropped when either person lacks it, and the rest are
+ * Only the size of each gap counts, not which person is earlier or sleeps
+ * longer. A factor is dropped when either person lacks it, and the rest are
  * renormalized, so a Whoop user (no deep or REM) still compares with someone
  * on a staged watch using bedtime, wake, duration, and wakes. 100 means the
  * factors both people have are the same.
@@ -23,26 +29,32 @@ export const SLEEP_COMPAT_WINDOW_DAYS = 30;
 export const MIN_SLEEP_COMPAT_NIGHTS = 3;
 
 const DAY_MINUTES = 1440;
-/** Bedtime or wake gap at which that clock's similarity hits 0. */
-const CLOCK_SCALE_MINUTES = 98;
-/** |Δ asleep| at which duration similarity hits 0. */
-const DURATION_SCALE_MINUTES = 75;
-/** |Δ avg wakes| at which wake similarity hits 0. */
-const WAKES_SCALE = 3;
+/**
+ * Gap that multiplies that factor's similarity by 1/e (~0.37).
+ * Clock tau is the main knob for the 55–86 band: 30 minutes on both clocks,
+ * everything else matched, is about 86.
+ */
+const CLOCK_TAU_MINUTES = 105;
+const DURATION_TAU_MINUTES = 90;
+const WAKES_TAU = 4.2;
 /** Combined deep + REM below this is undifferentiated sleep, not a stage mix. */
 const MIN_STAGED_PCT = 8;
-/** L1 of shared stage percentages at which stage similarity hits 0. */
-const STAGE_L1_SCALE = 40;
+/** L1 of shared stage percentages (deep + REM + core). */
+const STAGE_L1_TAU = 60;
+/** Dream-rate gap, in percentage points, that leaves ~37% of this factor. */
+const DREAM_RATE_TAU = 50;
 
 const WEIGHTS = {
   /** Average of bedtime and wake closeness. The main, device-independent signal. */
-  schedule: 40,
+  schedule: 55,
   /** Similar average asleep minutes. Also comparable across Whoop and staged watches. */
-  duration: 30,
+  duration: 23,
   /** Similar deep/REM/core mix, only when both sides have a real breakdown. */
-  stageMix: 12,
+  stageMix: 8,
   /** Similar average wake events. */
-  wakes: 18,
+  wakes: 10,
+  /** Similar share of nights with a dream. Small on purpose. */
+  dreams: 4,
 } as const;
 
 export type SleepCompatibilityHabits = {
@@ -91,13 +103,15 @@ export type SleepCompatibilityDimensionKey =
   | 'schedule'
   | 'duration'
   | 'stageMix'
-  | 'wakes';
+  | 'wakes'
+  | 'dreams';
 
 export const SLEEP_COMPAT_FACTOR_LABELS: Record<SleepCompatibilityDimensionKey, string> = {
   schedule: 'Sleep timing',
   duration: 'Duration',
   stageMix: 'Stage mix',
   wakes: 'Wakes',
+  dreams: 'Dreams',
 };
 
 export type SleepCompatibilityDimension = {
@@ -147,9 +161,11 @@ function clamp01(n: number): number {
   return n;
 }
 
-function linearSimilarity(absDiff: number, zeroAt: number): number {
-  if (zeroAt <= 0) return absDiff === 0 ? 1 : 0;
-  return clamp01(1 - absDiff / zeroAt);
+/** Symmetric decay. A gap of `tau` leaves about 37% of that factor's similarity. */
+function gapSimilarity(absGap: number, tau: number): number {
+  if (tau <= 0) return absGap === 0 ? 1 : 0;
+  if (absGap <= 0) return 1;
+  return Math.exp(-absGap / tau);
 }
 
 export function circularMinutesDelta(a: number, b: number): number {
@@ -203,14 +219,14 @@ function stageMixSimilarity(a: SleepCompatibilityHabits, b: SleepCompatibilityHa
   consider(a.corePct, b.corePct);
   if (pairs.length === 0) return null;
   const l1 = pairs.reduce((sum, [left, right]) => sum + Math.abs(left - right), 0);
-  return linearSimilarity(l1, STAGE_L1_SCALE);
+  return gapSimilarity(l1, STAGE_L1_TAU);
 }
 
 function clockSimilarity(a: string | null, b: string | null): number | null {
   const aa = parseClockToMinutes(a);
   const bb = parseClockToMinutes(b);
   if (aa == null || bb == null) return null;
-  return linearSimilarity(circularMinutesDelta(aa, bb), CLOCK_SCALE_MINUTES);
+  return gapSimilarity(circularMinutesDelta(aa, bb), CLOCK_TAU_MINUTES);
 }
 
 /** Bedtime and wake, averaged. Length of the night is the duration factor. */
@@ -225,12 +241,17 @@ function scheduleSimilarity(a: SleepCompatibilityHabits, b: SleepCompatibilityHa
 
 function durationSimilarity(a: SleepCompatibilityHabits, b: SleepCompatibilityHabits): number | null {
   if (a.asleep == null || b.asleep == null) return null;
-  return linearSimilarity(Math.abs(a.asleep - b.asleep), DURATION_SCALE_MINUTES);
+  return gapSimilarity(Math.abs(a.asleep - b.asleep), DURATION_TAU_MINUTES);
 }
 
 function wakesSimilarity(a: SleepCompatibilityHabits, b: SleepCompatibilityHabits): number | null {
   if (a.awakeEvents == null || b.awakeEvents == null) return null;
-  return linearSimilarity(Math.abs(a.awakeEvents - b.awakeEvents), WAKES_SCALE);
+  return gapSimilarity(Math.abs(a.awakeEvents - b.awakeEvents), WAKES_TAU);
+}
+
+function dreamSimilarity(a: SleepCompatibilityHabits, b: SleepCompatibilityHabits): number | null {
+  if (a.dreamRate == null || b.dreamRate == null) return null;
+  return gapSimilarity(Math.abs(a.dreamRate - b.dreamRate), DREAM_RATE_TAU);
 }
 
 function bedtimeDelta(a: SleepCompatibilityHabits, b: SleepCompatibilityHabits): number | null {
@@ -272,6 +293,11 @@ function formatWakesValue(h: SleepCompatibilityHabits): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
 }
 
+function formatDreamValue(h: SleepCompatibilityHabits): string {
+  if (h.dreamRate == null) return '—';
+  return formatPct(h.dreamRate);
+}
+
 export function formatSleepCompatFactorValue(
   key: SleepCompatibilityDimensionKey,
   habits: SleepCompatibilityHabits,
@@ -285,6 +311,8 @@ export function formatSleepCompatFactorValue(
       return formatStageMixValue(habits);
     case 'wakes':
       return formatWakesValue(habits);
+    case 'dreams':
+      return formatDreamValue(habits);
     default:
       return '—';
   }
@@ -311,7 +339,7 @@ function buildReasons(
   if (bed != null && bed <= 30) {
     candidates.push({
       label: 'Similar bedtime',
-      contribution: contrib('schedule') + linearSimilarity(bed, CLOCK_SCALE_MINUTES),
+      contribution: contrib('schedule') + gapSimilarity(bed, CLOCK_TAU_MINUTES),
     });
   }
 
@@ -319,7 +347,7 @@ function buildReasons(
   if (wake != null && wake <= 30) {
     candidates.push({
       label: 'Similar wake-up',
-      contribution: contrib('schedule') + linearSimilarity(wake, CLOCK_SCALE_MINUTES),
+      contribution: contrib('schedule') + gapSimilarity(wake, CLOCK_TAU_MINUTES),
     });
   }
 
@@ -337,12 +365,21 @@ function buildReasons(
     candidates.push({ label: 'Similar wake-ups', contribution: contrib('wakes') });
   }
 
+  if (
+    a.dreamRate != null
+    && b.dreamRate != null
+    && Math.abs(a.dreamRate - b.dreamRate) <= 15
+  ) {
+    candidates.push({ label: 'Similar dream rate', contribution: contrib('dreams') });
+  }
+
   if (candidates.length === 0) {
     const fallback: Record<SleepCompatibilityDimensionKey, string> = {
       schedule: 'Some schedule overlap',
       duration: 'Similar sleep length',
       stageMix: 'Similar stage mix',
       wakes: 'Similar wake-ups',
+      dreams: 'Similar dream rate',
     };
     const best = [...parts].sort((x, y) => y.weight * y.unitScore - x.weight * x.unitScore)[0];
     if (best) candidates.push({ label: fallback[best.key], contribution: 1 });
@@ -422,6 +459,7 @@ export function scoreSleepCompatibility(
     { key: 'duration', weight: WEIGHTS.duration, unitScore: durationSimilarity(self, friend) },
     { key: 'stageMix', weight: WEIGHTS.stageMix, unitScore: stageMixSimilarity(self, friend) },
     { key: 'wakes', weight: WEIGHTS.wakes, unitScore: wakesSimilarity(self, friend) },
+    { key: 'dreams', weight: WEIGHTS.dreams, unitScore: dreamSimilarity(self, friend) },
   ];
 
   const omitted = raw.filter((d) => d.unitScore == null).map((d) => d.key);

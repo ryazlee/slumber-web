@@ -9,6 +9,8 @@ export type GlobalLeaderboardEntry = {
   value: number;
   /** prevRank − currentRank; positive = moved up. Null = not ranked on the board 7 days ago. */
   rankDelta: number | null;
+  /** From RPC (SECURITY DEFINER). streaks are select-own client-side. */
+  currentStreak: number;
 };
 
 export type GlobalLeaderboardMetric =
@@ -71,6 +73,9 @@ function mapEntry(raw: unknown): GlobalLeaderboardEntry | null {
     const n = typeof rawDelta === 'number' ? rawDelta : Number(rawDelta);
     if (Number.isFinite(n)) rankDelta = n;
   }
+  const rawStreak = r.currentStreak;
+  const streakN =
+    typeof rawStreak === 'number' ? rawStreak : rawStreak != null ? Number(rawStreak) : 0;
   return {
     userId,
     username,
@@ -79,6 +84,7 @@ function mapEntry(raw: unknown): GlobalLeaderboardEntry | null {
     nights,
     value,
     rankDelta,
+    currentStreak: Number.isFinite(streakN) ? Math.max(0, Math.trunc(streakN)) : 0,
   };
 }
 

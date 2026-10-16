@@ -1,9 +1,10 @@
 const AVATAR_COLORS = ['#8B5CF6', '#0891B2', '#EC4899', '#34C759', '#7b3fa0', '#F59E0B', '#6366F1'];
 
-export function avatarColorFromName(id: string): string {
+/** Deterministic initials color — pass **username** (same seed as the app). */
+export function avatarColorFromName(username: string): string {
   let hash = 0;
-  for (let i = 0; i < id.length; i++) {
-    hash = (hash << 5) - hash + id.charCodeAt(i);
+  for (let i = 0; i < username.length; i++) {
+    hash = (hash << 5) - hash + username.charCodeAt(i);
     hash |= 0;
   }
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];

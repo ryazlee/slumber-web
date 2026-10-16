@@ -57,6 +57,7 @@ function windowLabel(row: AdminSlumberChallengeRow): string {
 
 type Draft = {
   title: string;
+  description: string;
   goalHours: string;
   noExpiration: boolean;
   expirationDays: string;
@@ -68,6 +69,7 @@ type Draft = {
 function draftFromRow(row: AdminSlumberChallengeRow): Draft {
   return {
     title: row.title ?? '',
+    description: row.description ?? '',
     goalHours: goalHoursLabel(row.goal_minutes),
     noExpiration: row.no_expiration,
     expirationDays: String(row.expiration_days || 10),
@@ -79,6 +81,7 @@ function draftFromRow(row: AdminSlumberChallengeRow): Draft {
 
 const EMPTY_DRAFT: Draft = {
   title: '',
+  description: '',
   goalHours: '40',
   noExpiration: false,
   expirationDays: '10',
@@ -114,6 +117,11 @@ function RaceForm({
       setFormError('Title must be 1–80 characters.');
       return;
     }
+    const description = draft.description.trim();
+    if (description.length > 280) {
+      setFormError('Description must be 280 characters or fewer.');
+      return;
+    }
     if (!locked) {
       if (!Number.isFinite(goalHours) || goalHours < 10 || goalHours > 100) {
         setFormError('Goal must be between 10 and 100 hours.');
@@ -138,6 +146,7 @@ function RaceForm({
       if (!row) {
         await createMutation.mutateAsync({
           title,
+          description: description || null,
           goalMinutes,
           noExpiration: draft.noExpiration,
           expiresInDays: draft.noExpiration ? 10 : days,
@@ -148,6 +157,7 @@ function RaceForm({
           challengeId: row.id,
           draft: {
             title,
+            description: description || null,
             goalMinutes,
             noExpiration: draft.noExpiration,
             expirationDays: Number.isInteger(days) ? days : row.expiration_days,
@@ -189,6 +199,19 @@ function RaceForm({
             value={draft.title}
             onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
           />
+        </div>
+        <div className="admin-field">
+          <label className="admin-label" htmlFor="slumber-race-description">Description (optional)</label>
+          <textarea
+            id="slumber-race-description"
+            className="admin-input"
+            maxLength={280}
+            rows={3}
+            value={draft.description}
+            onChange={(e) => setDraft((prev) => ({ ...prev, description: e.target.value }))}
+            placeholder="Shown on race details and join"
+          />
+          <p className="admin-panel-desc" style={{ marginTop: 4 }}>{draft.description.length}/280</p>
         </div>
         <AdminFilterBar nested>
           <AdminFilterField label="Goal (hours)" htmlFor="slumber-race-goal">

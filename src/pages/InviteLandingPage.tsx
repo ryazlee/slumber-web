@@ -12,6 +12,7 @@ type FriendPreview = {
 type ChallengePreview = {
   challengeId?: string;
   title?: string | null;
+  description?: string | null;
   goalMinutes?: number;
   hostUsername?: string;
   hostedBy?: string;
@@ -162,7 +163,11 @@ export default function InviteLandingPage() {
       <DeepLinkLanding
         intent="challenge-join"
         title={loading ? 'Join challenge' : title}
-        subtitle={loading ? undefined : `Hosted by ${host}`}
+        subtitle={loading ? undefined : (
+          challengePreview?.description?.trim()
+            ? `${challengePreview.description.trim()} · Hosted by ${host}`
+            : `Hosted by ${host}`
+        )}
         meta={loading
           ? undefined
           : `${formatGoal(challengePreview?.goalMinutes)} · ${racers} racer${racers === 1 ? '' : 's'}`}

@@ -110,7 +110,7 @@ function LeaderboardRow({
           userRoles={entry.userRoles}
           showAvatar
           avatarSize="sm"
-          showStreak={false}
+          streak={entry.currentStreak}
           className="challenge-progress-name"
         />
         <span className="challenge-progress-stats global-lb-stats">
