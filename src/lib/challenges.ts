@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { filterWearableSleepRows } from './sleepPostCustom';
 import { sortPastChallenges } from './challengeGrace';
+import { parseClockToMinutes } from './napDay';
 import type {
   Challenge,
   ChallengeContributionPost,
@@ -21,20 +22,55 @@ function withOneDayStartGrace(isoTimestamp: string): string {
   return d.toISOString().slice(0, 10);
 }
 
+function utcDateFromTimestamp(iso: string): string {
+  const d = new Date(iso);
+  return [
+    d.getUTCFullYear(),
+    String(d.getUTCMonth() + 1).padStart(2, '0'),
+    String(d.getUTCDate()).padStart(2, '0'),
+  ].join('-');
+}
+
 function challengeContributionEndDate(challenge: Challenge): string {
+  if (challenge.goalReachedAt) return utcDateFromTimestamp(challenge.goalReachedAt);
   const terminal = challenge.status === 'pending_completion' || challenge.status === 'completed';
   if (terminal) {
-    if (challenge.goalReachedAt) return challenge.goalReachedAt.slice(0, 10);
-    if (challenge.expiresAt) return challenge.expiresAt.slice(0, 10);
-    return (challenge.startedAt ?? challenge.createdAt).slice(0, 10);
+    if (challenge.expiresAt) return utcDateFromTimestamp(challenge.expiresAt);
+    return utcDateFromTimestamp(challenge.startedAt ?? challenge.createdAt);
   }
-  if (challenge.expiresAt) return challenge.expiresAt.slice(0, 10);
-  const d = new Date();
-  return [
-    d.getFullYear(),
-    String(d.getMonth() + 1).padStart(2, '0'),
-    String(d.getDate()).padStart(2, '0'),
+  if (challenge.expiresAt) return utcDateFromTimestamp(challenge.expiresAt);
+  return utcDateFromTimestamp(new Date().toISOString());
+}
+
+function challengeFreezeDate(challenge: Challenge): string | null {
+  const terminal = challenge.status === 'pending_completion' || challenge.status === 'completed';
+  if (!terminal) return null;
+  if (challenge.goalReachedAt) return utcDateFromTimestamp(challenge.goalReachedAt);
+  if (challenge.expiresAt) return utcDateFromTimestamp(challenge.expiresAt);
+  return utcDateFromTimestamp(challenge.startedAt ?? challenge.createdAt);
+}
+
+/** Matches SQL challenge_session_starts_before_freeze. */
+function sessionStartsBeforeFreeze(
+  sleepDate: string,
+  bedtime: string | null | undefined,
+  wakeTime: string | null | undefined,
+  freezeDate: string,
+): boolean {
+  if (!bedtime?.trim()) return true;
+  const bedMins = parseClockToMinutes(bedtime) ?? 22 * 60;
+  const wakeMins = parseClockToMinutes(wakeTime) ?? 7 * 60;
+  const spansMidnight = bedMins >= 12 * 60 && wakeMins < 12 * 60;
+  if (!spansMidnight) return sleepDate < freezeDate;
+  const [y, m, d] = sleepDate.split('-').map(Number);
+  const bed = new Date(Date.UTC(y, m - 1, d));
+  bed.setUTCDate(bed.getUTCDate() - 1);
+  const bedDate = [
+    bed.getUTCFullYear(),
+    String(bed.getUTCMonth() + 1).padStart(2, '0'),
+    String(bed.getUTCDate()).padStart(2, '0'),
   ].join('-');
+  return bedDate < freezeDate;
 }
 
 const PARTICIPANT_SELECT = `
@@ -152,23 +188,30 @@ export async function fetchChallengeContributions(challengeId: string): Promise<
 
   if (error) throw error;
 
-  return filterWearableSleepRows(data ?? []).map((row): ChallengeContributionPost => {
-    const participant = participantMap.get(row.user_id);
-    return {
-      postId: row.id,
-      userId: row.user_id,
-      username: participant?.username ?? 'unknown',
-      avatarUrl: participant?.avatarUrl,
-      sleepDate: row.sleep_date,
-      asleepMinutes: Number(row.asleep_minutes ?? 0),
-      title: row.title ?? 'Sleep log',
-      bedtime: row.bedtime ?? null,
-      wakeTime: row.wake_time ?? null,
-      createdAt: row.created_at,
-      isPrivate: row.is_private === true,
-      sessionKind: row.session_kind ?? undefined,
-    };
-  });
+  const freezeDate = challengeFreezeDate(challenge);
+
+  return filterWearableSleepRows(data ?? [])
+    .filter((row) => {
+      if (!freezeDate) return true;
+      return sessionStartsBeforeFreeze(row.sleep_date, row.bedtime, row.wake_time, freezeDate);
+    })
+    .map((row): ChallengeContributionPost => {
+      const participant = participantMap.get(row.user_id);
+      return {
+        postId: row.id,
+        userId: row.user_id,
+        username: participant?.username ?? 'unknown',
+        avatarUrl: participant?.avatarUrl,
+        sleepDate: row.sleep_date,
+        asleepMinutes: Number(row.asleep_minutes ?? 0),
+        title: row.title ?? 'Sleep log',
+        bedtime: row.bedtime ?? null,
+        wakeTime: row.wake_time ?? null,
+        createdAt: row.created_at,
+        isPrivate: row.is_private === true,
+        sessionKind: row.session_kind ?? undefined,
+      };
+    });
 }
 
 export async function fetchChallenges(statuses?: ChallengeStatus[]): Promise<Challenge[]> {

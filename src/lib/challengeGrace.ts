@@ -1,6 +1,6 @@
 import type { Challenge } from './types';
 
-export const CHALLENGE_GRACE_MS = 24 * 60 * 60 * 1000;
+export const CHALLENGE_GRACE_MS = 12 * 60 * 60 * 1000;
 
 type GraceChallenge = Pick<Challenge, 'graceEndsAt' | 'goalReachedAt' | 'expiresAt'>;
 
