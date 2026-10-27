@@ -120,11 +120,13 @@ export default function AdminUserDetailPanel({
   };
 
   const deleteAccount = async () => {
+    const email = detailQuery.data?.email ?? user.email ?? null;
+    const who = email ? `@${user.username} (${email})` : `@${user.username}`;
     const confirmed = window.confirm(
-      `Permanently delete @${user.username}? This removes their login, sleep logs, and social connections. Comments they left on others' posts stay as a deleted account. This cannot be undone.`,
+      `Permanently delete ${who}? This removes that login, their sleep logs, and their social connections. Comments they left on others' posts stay as a deleted account. This cannot be undone.`,
     );
     if (!confirmed) return;
-    const typed = window.prompt(`Type @${user.username} to confirm deletion:`);
+    const typed = window.prompt(`Type @${user.username} to delete ${who}:`);
     if (typed !== `@${user.username}` && typed !== user.username) {
       if (typed != null) setActionMessage('Delete cancelled — username did not match.');
       return;

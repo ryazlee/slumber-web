@@ -110,6 +110,7 @@ function attachParticipants(challenges: Record<string, unknown>[], participantRo
     );
     return {
       id: c.id as string,
+      creatorId: c.creator_id as string,
       title: (c.title as string | null) ?? null,
       description: (c.description as string | null) ?? null,
       isGroup: (c.is_group as boolean) ?? false,

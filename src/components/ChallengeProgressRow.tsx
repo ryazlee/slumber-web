@@ -1,7 +1,7 @@
 import UserLink from './UserLink';
 import ChallengePlaceBadge from './ChallengePlaceBadge';
 import type { ProgressBarSegment } from '../lib/challengeProgressBar';
-import { formatMins, goalHours } from '../lib/format';
+import { formatMins, formatPct } from '../lib/format';
 
 const BAR_COLOR_ME = 'var(--accent)';
 const BAR_COLOR_OTHER = 'var(--core)';
@@ -12,8 +12,6 @@ type Props = {
   avatarUrl?: string;
   userRoles?: string[] | null;
   displayMinutes: number;
-  displayNights: number;
-  goalMinutes: number;
   totalPct: number;
   segments: ProgressBarSegment[];
   isMe: boolean;
@@ -28,8 +26,6 @@ export default function ChallengeProgressRow({
   avatarUrl,
   userRoles,
   displayMinutes,
-  displayNights,
-  goalMinutes,
   totalPct,
   segments,
   isMe,
@@ -60,7 +56,7 @@ export default function ChallengeProgressRow({
           className="challenge-progress-name"
         />
         <span className="challenge-progress-stats" style={{ color: barColor }}>
-          {formatMins(displayMinutes)} · {displayNights} night{displayNights === 1 ? '' : 's'}
+          {formatMins(displayMinutes)}
         </span>
       </div>
       <div className="challenge-progress-bar">
@@ -82,9 +78,7 @@ export default function ChallengeProgressRow({
           })}
         </div>
       </div>
-      <span className="challenge-progress-pct">
-        {totalPct}% of {goalHours(goalMinutes)}
-      </span>
+      <span className="challenge-progress-pct">{formatPct(totalPct)}</span>
     </div>
   );
 }

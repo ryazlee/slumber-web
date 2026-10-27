@@ -103,6 +103,19 @@ export const timeAgo = (isoString: string): string => {
   return `${diffDays}d ago`;
 };
 
+/** "Not started yet" / "Starts Oct 21" / "Began Oct 21". */
+export function challengeStartLabel(
+  startedAt: string | null,
+  officiallyStarted?: boolean,
+): string {
+  if (!startedAt) return 'Not started yet';
+  const startMs = new Date(startedAt).getTime();
+  if (Number.isNaN(startMs)) return 'Not started yet';
+  const when = new Date(startedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const started = officiallyStarted ?? startMs <= Date.now();
+  return started ? `Began ${when}` : `Starts ${when}`;
+}
+
 export function formatChallengeStartDate(
   startedAt: string | null,
   fallback?: string | null,

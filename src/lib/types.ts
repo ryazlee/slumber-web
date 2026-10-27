@@ -166,6 +166,7 @@ export type KudosUser = {
 
 export type Challenge = {
   id: string;
+  creatorId: string;
   title: string | null;
   description?: string | null;
   isGroup: boolean;

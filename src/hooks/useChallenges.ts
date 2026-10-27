@@ -1,5 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { fetchChallenge, fetchChallengeContributions, fetchChallengeProgress, fetchChallenges } from '../lib/challenges';
+import type { ChallengeProgress } from '../lib/types';
 import { queryKeys } from './queryKeys';
 
 const ACTIVE_STATUSES = ['active', 'pending', 'pending_completion'] as const;
@@ -17,6 +18,23 @@ export function useCompletedChallenges() {
     queryKey: queryKeys.challenges(COMPLETED_STATUSES.join(',')),
     queryFn: () => fetchChallenges([...COMPLETED_STATUSES]),
   });
+}
+
+/** Progress for the race cards on the list. Missing ids stay undefined while they load. */
+export function useChallengeProgressMap(ids: string[]) {
+  const results = useQueries({
+    queries: ids.map((id) => ({
+      queryKey: queryKeys.challengeProgress(id),
+      queryFn: () => fetchChallengeProgress(id),
+      staleTime: 30_000,
+    })),
+  });
+
+  const map: Record<string, ChallengeProgress[] | undefined> = {};
+  ids.forEach((id, index) => {
+    map[id] = results[index]?.data;
+  });
+  return map;
 }
 
 export function useChallenge(challengeId: string | undefined) {

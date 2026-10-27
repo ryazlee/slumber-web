@@ -125,27 +125,27 @@ export default function ChallengeDetail() {
   const canUseChallengeBoard = !!currentUserId
     && accepted.some((p) => p.userId === currentUserId);
 
+  const showBoard = canUseChallengeBoard && !!currentUserId;
+
   return (
-    <div className="app-page">
+    <div className="app-page app-page--challenge-detail">
       <Link to="/challenges" className="app-back-link">← Challenges</Link>
 
       <header className="challenge-detail-header">
-        <div className="challenge-card-top">
+        <div className="challenge-detail-title-row">
           <h1>{title}</h1>
-          {challenge.description?.trim() ? (
-            <p className="challenge-detail-description">{challenge.description.trim()}</p>
-          ) : null}
           <span className={`challenge-status challenge-status--${challenge.status}`}>
             {formatChallengeStatus(challenge.status)}
           </span>
         </div>
-        {challenge.hostedBy === 'slumber' ? (
-          <p className="challenge-meta">Hosted by Slumber</p>
+        {challenge.description?.trim() ? (
+          <p className="challenge-detail-description">{challenge.description.trim()}</p>
         ) : null}
         <p className="challenge-meta">
+          {challenge.hostedBy === 'slumber' ? 'Hosted by Slumber · ' : ''}
           {formatChallengeRaceType(challenge)}
           {challenge.startedAt && (
-            <> · started {formatChallengeStartDate(challenge.startedAt)}</>
+            <> · {formatChallengeStartDate(challenge.startedAt)}</>
           )}
           {lockAtMs != null ? (
             <> · locks {formatChallengeLockAt(lockAtMs)}</>
@@ -179,95 +179,107 @@ export default function ChallengeDetail() {
         )}
       </header>
 
-      <section className="app-section">
-        <h2>Participants</h2>
-        <div className="challenge-participants">
-          {accepted.map((p) => (
-            <UserLink
-              key={p.userId}
-              userId={p.userId}
-              username={p.username}
-              avatarUrl={p.avatarUrl}
-              userRoles={p.userRoles}
-              showAvatar
-              avatarSize="sm"
-              className={`challenge-participant${p.role === 'creator' ? ' challenge-participant--creator' : ''}`}
-            />
-          ))}
-          {pending.map((p) => (
-            <UserLink
-              key={p.userId}
-              userId={p.userId}
-              username={p.username}
-              avatarUrl={p.avatarUrl}
-              userRoles={p.userRoles}
-              showAvatar
-              avatarSize="sm"
-              className="challenge-participant challenge-participant--pending"
-            />
-          ))}
+      <div className={showBoard ? 'challenge-detail-grid' : 'challenge-detail-main'}>
+        <div className="challenge-detail-main">
+          {rankedProgress.length > 0 && (
+            <section className="app-section">
+              <h2>Progress</h2>
+              <div className="challenge-progress-list">
+                {rankedProgress.map((row) => {
+                  const split = splitBarByUser.find((s) => s.userId === row.userId);
+                  const isMe = row.userId === currentUserId;
+                  return (
+                    <ChallengeProgressRow
+                      key={row.userId}
+                      userId={row.userId}
+                      username={row.username}
+                      avatarUrl={row.avatarUrl}
+                      userRoles={userRolesById.get(row.userId)}
+                      displayMinutes={split?.accruedMinutes ?? row.accruedMinutes}
+                      totalPct={split?.totalPct ?? (
+                        row.goalMinutes > 0
+                          ? Math.round((Math.min(row.accruedMinutes, row.goalMinutes) / row.goalMinutes) * 100)
+                          : 0
+                      )}
+                      segments={split?.segments ?? []}
+                      isMe={isMe}
+                      place={challenge.isGroup ? row.place : null}
+                      placeTied={challenge.isGroup ? row.tied : false}
+                      showPlace={challenge.isGroup}
+                    />
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {pending.length > 0 && (
+            <section className="app-section">
+              <h2>Waiting to join</h2>
+              <div className="challenge-participants">
+                {pending.map((p) => (
+                  <UserLink
+                    key={p.userId}
+                    userId={p.userId}
+                    username={p.username}
+                    avatarUrl={p.avatarUrl}
+                    userRoles={p.userRoles}
+                    showAvatar
+                    avatarSize="sm"
+                    className="challenge-participant challenge-participant--pending"
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {rankedProgress.length === 0 && pending.length === 0 && challenge.status === 'pending' && (
+            <p className="app-muted">Waiting for people to accept.</p>
+          )}
+
+          {accepted.length > 0 && rankedProgress.length === 0 && (
+            <section className="app-section">
+              <h2>In the race</h2>
+              <div className="challenge-participants">
+                {accepted.map((p) => (
+                  <UserLink
+                    key={p.userId}
+                    userId={p.userId}
+                    username={p.username}
+                    avatarUrl={p.avatarUrl}
+                    userRoles={p.userRoles}
+                    showAvatar
+                    avatarSize="sm"
+                    className="challenge-participant"
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {contributions.length > 0 && (
+            <section className="app-section">
+              <ChallengeContributionsByDay
+                contributions={contributions}
+                currentUserId={currentUserId}
+                userRolesById={userRolesById}
+              />
+            </section>
+          )}
         </div>
-      </section>
 
-      {rankedProgress.length > 0 && (
-        <section className="app-section">
-          <h2>Progress</h2>
-          <div className="challenge-progress-list">
-            {rankedProgress.map((row) => {
-              const split = splitBarByUser.find((s) => s.userId === row.userId);
-              const isMe = row.userId === currentUserId;
-              return (
-                <ChallengeProgressRow
-                  key={row.userId}
-                  userId={row.userId}
-                  username={row.username}
-                  avatarUrl={row.avatarUrl}
-                  userRoles={userRolesById.get(row.userId)}
-                  displayMinutes={split?.accruedMinutes ?? row.accruedMinutes}
-                  displayNights={split?.nightsLogged ?? row.nightsLogged}
-                  goalMinutes={row.goalMinutes}
-                  totalPct={split?.totalPct ?? (
-                    row.goalMinutes > 0
-                      ? Math.round((Math.min(row.accruedMinutes, row.goalMinutes) / row.goalMinutes) * 100)
-                      : 0
-                  )}
-                  segments={split?.segments ?? []}
-                  isMe={isMe}
-                  place={challenge.isGroup ? row.place : null}
-                  placeTied={challenge.isGroup ? row.tied : false}
-                  showPlace={challenge.isGroup}
-                />
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {contributions.length > 0 && (
-        <section className="app-section">
-          <ChallengeContributionsByDay
-            contributions={contributions}
-            currentUserId={currentUserId}
-            userRolesById={userRolesById}
-          />
-        </section>
-      )}
-
-      {rankedProgress.length === 0 && contributions.length === 0 && challenge.status === 'pending' && (
-        <p className="app-muted">Waiting for participants to accept.</p>
-      )}
-
-      {canUseChallengeBoard && currentUserId && (
-        <section className="app-section">
-          <EntityMessageBoard
-            entityType="challenge"
-            entityId={challenge.id}
-            currentUserId={currentUserId}
-            mentionUsers={boardMentionUsers}
-            canCompose={canUseChallengeBoard}
-          />
-        </section>
-      )}
+        {showBoard && currentUserId ? (
+          <aside className="challenge-detail-side">
+            <EntityMessageBoard
+              entityType="challenge"
+              entityId={challenge.id}
+              currentUserId={currentUserId}
+              mentionUsers={boardMentionUsers}
+              canCompose={canUseChallengeBoard}
+            />
+          </aside>
+        ) : null}
+      </div>
     </div>
   );
 }
