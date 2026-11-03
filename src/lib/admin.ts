@@ -1399,3 +1399,38 @@ export async function deleteAdminCampaign(id: string): Promise<void> {
   const { error } = await supabase.rpc('admin_delete_app_campaign', { p_id: id });
   if (error) throw error;
 }
+
+export type AppUpdatePlatform = 'ios' | 'android';
+
+export type AppUpdatePolicyRow = {
+  platform: AppUpdatePlatform;
+  min_version: string | null;
+  is_blocking: boolean;
+  message: string | null;
+  enabled: boolean;
+  updated_at: string;
+};
+
+export async function fetchAppUpdatePolicies(): Promise<AppUpdatePolicyRow[]> {
+  const { data, error } = await supabase.rpc('admin_get_app_update_policy');
+  if (error) throw error;
+  const rows = (data as AppUpdatePolicyRow[] | null) ?? [];
+  return rows.filter((row) => row.platform === 'ios' || row.platform === 'android');
+}
+
+export async function upsertAppUpdatePolicy(input: {
+  platform: AppUpdatePlatform;
+  minVersion: string | null;
+  isBlocking: boolean;
+  message: string | null;
+  enabled: boolean;
+}): Promise<void> {
+  const { error } = await supabase.rpc('admin_upsert_app_update_policy', {
+    p_platform: input.platform,
+    p_min_version: input.minVersion,
+    p_is_blocking: input.isBlocking,
+    p_message: input.message,
+    p_enabled: input.enabled,
+  });
+  if (error) throw error;
+}

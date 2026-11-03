@@ -8,6 +8,7 @@ import {
   fetchAdminTagSuggestions,
   fetchAdminTags,
   fetchAnalyticsMetrics,
+  fetchAppUpdatePolicies,
   fetchAppVersions,
   fetchCommentReports,
   fetchCommentReportsQueue,
@@ -37,6 +38,7 @@ import {
   broadcastAdminNotification,
   fetchAdminCampaigns,
   upsertAdminCampaign,
+  upsertAppUpdatePolicy,
   setAdminCampaignEnabled,
   deleteAdminCampaign,
   endAdminSlumberChallenge,
@@ -754,6 +756,24 @@ export function useDeleteAdminCampaign() {
     mutationFn: (id: string) => deleteAdminCampaign(id),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.admin.campaigns });
+    },
+  });
+}
+
+export function useAppUpdatePolicies() {
+  return useQuery({
+    queryKey: queryKeys.admin.appUpdatePolicy,
+    queryFn: fetchAppUpdatePolicies,
+    ...catalogQueryOptions,
+  });
+}
+
+export function useUpsertAppUpdatePolicy() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: upsertAppUpdatePolicy,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.admin.appUpdatePolicy });
     },
   });
 }
