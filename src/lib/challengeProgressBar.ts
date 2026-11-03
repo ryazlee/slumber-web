@@ -15,6 +15,28 @@ export type SplitBarUser = {
   totalPct: number;
 };
 
+function segmentsForMinutes(
+  entries: { key: string; mins: number }[],
+  goalMinutes: number,
+): ProgressBarSegment[] {
+  if (goalMinutes <= 0) return [];
+  let cumulative = 0;
+  return entries
+    .filter((entry) => entry.mins > 0)
+    .map((entry) => {
+      const widthPct = (entry.mins / goalMinutes) * 100;
+      const startPct = cumulative;
+      cumulative += widthPct;
+      return { date: entry.key, mins: entry.mins, widthPct, startPct };
+    })
+    .filter((seg) => seg.widthPct > 0);
+}
+
+/**
+ * Bars and hours come from `get_challenge_progress` (every accepted racer).
+ * Visible posts only fill segment dividers when the RPC did not send entry minutes.
+ * They never replace another racer's total.
+ */
 export function buildSplitBarsByUser(
   contributions: ChallengeContributionPost[],
   progress: ChallengeProgress[],
@@ -27,27 +49,26 @@ export function buildSplitBarsByUser(
   }
 
   return progress.map((p) => {
-    const byDay = totals.get(p.userId) ?? new Map<string, number>();
-    const dayEntries = Array.from(byDay.entries()).sort(([a], [b]) => (a < b ? -1 : 1));
-
-    const accruedMinutes = dayEntries.reduce((sum, [, mins]) => sum + mins, 0);
-    let cumulative = 0;
-    const segments = dayEntries
-      .map(([date, mins]) => {
-        const widthPct = p.goalMinutes > 0 ? (mins / p.goalMinutes) * 100 : 0;
-        const startPct = cumulative;
-        cumulative += widthPct;
-        return { date, mins, widthPct, startPct };
-      })
-      .filter((seg) => seg.widthPct > 0);
+    const fromEntries = (p.entryMinutes ?? []).filter((mins) => mins > 0);
+    const segments = fromEntries.length > 0
+      ? segmentsForMinutes(
+        fromEntries.map((mins, index) => ({ key: String(index), mins })),
+        p.goalMinutes,
+      )
+      : segmentsForMinutes(
+        Array.from(totals.get(p.userId)?.entries() ?? [])
+          .sort(([a], [b]) => (a < b ? -1 : 1))
+          .map(([date, mins]) => ({ key: date, mins })),
+        p.goalMinutes,
+      );
 
     return {
       userId: p.userId,
       segments,
-      accruedMinutes,
-      nightsLogged: dayEntries.length,
+      accruedMinutes: p.accruedMinutes,
+      nightsLogged: p.nightsLogged,
       totalPct: p.goalMinutes > 0
-        ? Math.round((Math.min(accruedMinutes, p.goalMinutes) / p.goalMinutes) * 100)
+        ? Math.round((Math.min(p.accruedMinutes, p.goalMinutes) / p.goalMinutes) * 100)
         : 0,
     };
   });

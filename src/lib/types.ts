@@ -192,6 +192,8 @@ export type ChallengeProgress = {
   goalMinutes: number;
   nightsLogged: number;
   expiresAt: string | null;
+  /** Per-session minutes from the progress RPC. Hours only — not the post. */
+  entryMinutes?: number[];
 };
 
 export type ChallengeContributionPost = {

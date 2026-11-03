@@ -163,6 +163,9 @@ export async function fetchChallengeProgress(challengeId: string): Promise<Chall
     goalMinutes: row.goal_minutes as number,
     nightsLogged: Number(row.nights_logged),
     expiresAt: (row.expires_at as string | null) ?? null,
+    entryMinutes: Array.isArray(row.entry_minutes)
+      ? row.entry_minutes.map((mins) => Number(mins)).filter((mins) => mins > 0)
+      : undefined,
   }));
 }
 

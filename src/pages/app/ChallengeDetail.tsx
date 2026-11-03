@@ -12,6 +12,7 @@ import {
   useChallengeContributions,
   useChallengeProgress,
 } from '../../hooks/useChallenges';
+import { useFriends } from '../../hooks/useSocial';
 import { buildSplitBarsByUser } from '../../lib/challengeProgressBar';
 import { challengeGraceEndsAtMs, formatChallengeLockAt } from '../../lib/challengeGrace';
 import { rankBySleepProgress } from '../../lib/challengeRank';
@@ -19,6 +20,7 @@ import {
   formatChallengeRaceType,
   formatChallengeStartDate,
   formatChallengeStatus,
+  pluralCount,
   PENDING_COMPLETION_BANNER_PREFIX,
   PENDING_COMPLETION_BANNER_PREFIX_GOAL_HIT,
   PENDING_COMPLETION_BANNER_SUFFIX,
@@ -40,6 +42,11 @@ export default function ChallengeDetail() {
 
   const progress = progressQuery.data ?? [];
   const contributions = contributionsQuery.data ?? [];
+  const friendsQuery = useFriends();
+  const friendIdSet = useMemo(
+    () => new Set((friendsQuery.data ?? []).map((friend) => friend.id)),
+    [friendsQuery.data],
+  );
 
   const loading = challengeQuery.isLoading
     || (showProgress && (progressQuery.isLoading || contributionsQuery.isLoading));
@@ -54,9 +61,24 @@ export default function ChallengeDetail() {
       ? 'Could not load challenge.'
       : null;
 
+  const standings = useMemo(() => {
+    if (progress.length > 0 || !showProgress || !challenge) return progress;
+    return challenge.participants
+      .filter((p) => p.inviteStatus === 'accepted')
+      .map((p) => ({
+        userId: p.userId,
+        username: p.username,
+        avatarUrl: p.avatarUrl,
+        accruedMinutes: 0,
+        goalMinutes: challenge.goalMinutes,
+        nightsLogged: 0,
+        expiresAt: challenge.expiresAt,
+      }));
+  }, [progress, showProgress, challenge]);
+
   const splitBarByUser = useMemo(
-    () => buildSplitBarsByUser(contributions, progress),
-    [contributions, progress],
+    () => buildSplitBarsByUser(contributions, standings),
+    [contributions, standings],
   );
 
   const userRolesById = useMemo(() => {
@@ -68,16 +90,7 @@ export default function ChallengeDetail() {
   }, [challenge?.participants]);
 
   const rankedProgress = useMemo(() => {
-    const rows = rankBySleepProgress(
-      progress.map((p) => {
-        const split = splitBarByUser.find((s) => s.userId === p.userId);
-        return {
-          ...p,
-          accruedMinutes: split?.accruedMinutes ?? p.accruedMinutes,
-          nightsLogged: split?.nightsLogged ?? p.nightsLogged,
-        };
-      }),
-    );
+    const rows = rankBySleepProgress(standings);
 
     if (!challenge?.isGroup && currentUserId) {
       return rows.sort((a, b) => {
@@ -88,7 +101,7 @@ export default function ChallengeDetail() {
     }
 
     return rows;
-  }, [progress, splitBarByUser, challenge?.isGroup, currentUserId]);
+  }, [standings, challenge?.isGroup, currentUserId]);
 
   const boardMentionUsers = useMemo(
     () => (challenge?.participants ?? [])
@@ -117,6 +130,16 @@ export default function ChallengeDetail() {
   const title = challenge.title?.trim() || formatChallengeRaceType(challenge);
   const accepted = challenge.participants.filter((p) => p.inviteStatus === 'accepted');
   const pending = challenge.participants.filter((p) => p.inviteStatus === 'pending');
+  const friendsReady = friendsQuery.isSuccess;
+  const visibleContributions = friendsReady
+    ? contributions.filter((post) => post.userId === currentUserId || friendIdSet.has(post.userId))
+    : contributions;
+  const hiddenContributorCount = friendsReady
+    ? accepted.filter((p) => p.userId !== currentUserId && !friendIdSet.has(p.userId)).length
+    : 0;
+  const hiddenContributorsNote = hiddenContributorCount === 1
+    ? "1 racer isn't a friend — posts hidden, totals still count."
+    : `${pluralCount(hiddenContributorCount, 'racer')} aren't friends — posts hidden, totals still count.`;
   const isFinalizing = challenge.status === 'pending_completion';
   const lockAtMs = isFinalizing ? challengeGraceEndsAtMs(challenge) : null;
   const winner = challenge.winnerId
@@ -257,13 +280,18 @@ export default function ChallengeDetail() {
             </section>
           )}
 
-          {contributions.length > 0 && (
+          {(visibleContributions.length > 0 || hiddenContributorCount > 0) && (
             <section className="app-section">
-              <ChallengeContributionsByDay
-                contributions={contributions}
-                currentUserId={currentUserId}
-                userRolesById={userRolesById}
-              />
+              {hiddenContributorCount > 0 ? (
+                <p className="app-muted challenge-hidden-racers">{hiddenContributorsNote}</p>
+              ) : null}
+              {visibleContributions.length > 0 ? (
+                <ChallengeContributionsByDay
+                  contributions={visibleContributions}
+                  currentUserId={currentUserId}
+                  userRolesById={userRolesById}
+                />
+              ) : null}
             </section>
           )}
         </div>

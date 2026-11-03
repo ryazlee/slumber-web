@@ -2629,6 +2629,10 @@ button.app-back-link {
   pointer-events: none;
 }
 
+.challenge-hidden-racers {
+  margin: 0 0 12px;
+}
+
 .challenge-progress-pct {
   display: block;
   margin-top: 4px;
