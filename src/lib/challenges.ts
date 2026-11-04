@@ -76,7 +76,7 @@ function sessionStartsBeforeFreeze(
 
 const PARTICIPANT_SELECT = `
   challenge_id, user_id, role, invite_status, joined_at,
-  profiles ( username, avatar_url, user_roles )
+  profiles!user_id ( username, avatar_url, user_roles )
 `;
 
 function mapParticipantRow(row: {
