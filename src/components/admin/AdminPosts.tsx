@@ -245,7 +245,7 @@ export default function AdminPosts({
           ) : null}
 
           <AdminDataGrid
-            persistKey="admin-posts-v2"
+            persistKey="admin-posts-v3"
             rows={posts}
             columns={columns}
             mobileSummary={postMobileSummary}
@@ -297,7 +297,8 @@ export default function AdminPosts({
             label="Sleep posts"
             ignoreDiacritics
             localeText={{ noRowsLabel: 'No posts match your filters.' }}
-            getRowHeight={(params) => (expandedRawIds.has(String(params.id)) ? 'auto' : undefined)}
+            getEstimatedRowHeight={() => 52}
+            getRowHeight={(params) => (expandedRawIds.has(String(params.id)) ? 'auto' : 52)}
             serverPagination={{
               rowCount: postsTotal,
               paginationModel,

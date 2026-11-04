@@ -175,7 +175,6 @@ export default function ChallengeDetail() {
         <div className="challenge-detail-title-row">
           <h1>{title}</h1>
           <div className="challenge-detail-title-badges">
-            {challenge.isDrawing ? <ChallengeDrawingBadge /> : null}
             <span className={`challenge-status challenge-status--${challenge.status}`}>
               {formatChallengeStatus(challenge.status)}
             </span>
@@ -186,6 +185,12 @@ export default function ChallengeDetail() {
         ) : null}
         {challenge.isDrawing ? (
           <div className="drawing-prize drawing-prize--hero">
+            <div className="drawing-prize-title-row">
+              <ChallengeDrawingBadge />
+              {challenge.prizeSponsorName ? (
+                <p className="drawing-prize-kicker">Prize by {challenge.prizeSponsorName}</p>
+              ) : null}
+            </div>
             {challenge.prizeLogoUrl ? (
               <img
                 className="drawing-prize-logo drawing-prize-logo--hero"
@@ -193,27 +198,28 @@ export default function ChallengeDetail() {
                 alt={challenge.prizeSponsorName ? `${challenge.prizeSponsorName} logo` : 'Prize sponsor'}
               />
             ) : null}
-            <div>
-              {challenge.prizeSponsorName ? (
-                <p className="drawing-prize-kicker">Prize by {challenge.prizeSponsorName}</p>
-              ) : null}
-              {challenge.prizeName ? <p className="drawing-prize-name">{challenge.prizeName}</p> : null}
-              {challenge.prizeUrl ? (
-                <a href={challenge.prizeUrl} target="_blank" rel="noreferrer">View prize</a>
-              ) : null}
-              <p className="drawing-how">{drawingHowItWorksLine(challenge.goalMinutes)}</p>
-            </div>
+            {challenge.prizeName ? <p className="drawing-prize-name">{challenge.prizeName}</p> : null}
+            {challenge.prizeUrl ? (
+              <a href={challenge.prizeUrl} target="_blank" rel="noreferrer">View prize</a>
+            ) : null}
+            <p className="drawing-how">{drawingHowItWorksLine(challenge.goalMinutes)}</p>
           </div>
         ) : null}
         {drawingCopy ? (
           <div className="drawing-entry">
-            <span className="drawing-entry-label">Your drawing entry</span>
-            <strong>{drawingCopy.entriesLabel}</strong>
-            <p>
-              {formatMins(myProgress?.accruedMinutes ?? 0)} / {goalHours(challenge.goalMinutes)}
-              {' · '}
-              {drawingCopy.detail}
-            </p>
+            <div className="drawing-entry-row">
+              <div>
+                <span className="drawing-entry-label">Your entry</span>
+                <strong>{drawingCopy.entriesLabel}</strong>
+              </div>
+              <div>
+                <span className="drawing-entry-label">Progress</span>
+                <strong>
+                  {formatMins(myProgress?.accruedMinutes ?? 0)} / {goalHours(challenge.goalMinutes)}
+                </strong>
+              </div>
+            </div>
+            <p>{drawingCopy.detail}</p>
           </div>
         ) : null}
         <p className="challenge-meta">
@@ -258,7 +264,7 @@ export default function ChallengeDetail() {
         <div className="challenge-detail-main">
           {rankedProgress.length > 0 && (
             <section className="app-section">
-              <h2>{challenge.isDrawing ? 'Hours' : 'Progress'}</h2>
+              <h2>Progress</h2>
               <div className="challenge-progress-list">
                 {rankedProgress.map((row) => {
                   const split = splitBarByUser.find((s) => s.userId === row.userId);

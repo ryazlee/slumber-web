@@ -28,7 +28,11 @@ function isEdited(row: Pick<BoardMessageRow, 'created_at' | 'updated_at'>): bool
   return new Date(row.updated_at).getTime() > new Date(row.created_at).getTime() + 1000;
 }
 
-function mapRow(row: BoardMessageRow): BoardMessage {
+export const BOARD_MESSAGE_PAGE_SIZE = 20;
+
+type BoardLikeRow = { message_id: string; user_id: string };
+
+function mapRow(row: BoardMessageRow, likeCount = 0, hasLiked = false): BoardMessage {
   const username = row.profiles?.username ?? 'unknown';
   return {
     id: row.id,
@@ -40,8 +44,33 @@ function mapRow(row: BoardMessageRow): BoardMessage {
     userRoles: row.profiles?.user_roles ?? undefined,
     text: row.text,
     createdAt: row.created_at,
+    likeCount,
+    hasLiked,
     isEdited: isEdited(row),
   };
+}
+
+async function fetchBoardMessageLikeMeta(
+  messageIds: string[],
+  currentUserId: string | null,
+): Promise<{ likeCountMap: Record<string, number>; myLikedIds: Set<string> }> {
+  const likeCountMap: Record<string, number> = {};
+  const myLikedIds = new Set<string>();
+  if (messageIds.length === 0) return { likeCountMap, myLikedIds };
+
+  const { data, error } = await supabase
+    .from('board_message_likes')
+    .select('message_id, user_id')
+    .in('message_id', messageIds);
+  if (error) throw error;
+
+  for (const like of (data ?? []) as BoardLikeRow[]) {
+    likeCountMap[like.message_id] = (likeCountMap[like.message_id] ?? 0) + 1;
+    if (currentUserId && like.user_id === currentUserId) {
+      myLikedIds.add(like.message_id);
+    }
+  }
+  return { likeCountMap, myLikedIds };
 }
 
 async function requireUserId(): Promise<string> {
@@ -73,7 +102,7 @@ export async function fetchBoardMessagesPage(
   entityType: BoardEntityType,
   entityId: string,
   before?: BoardMessageCursor | null,
-  limit = 20,
+  limit = BOARD_MESSAGE_PAGE_SIZE,
 ): Promise<BoardMessage[]> {
   const { data, error } = await supabase.rpc('get_board_messages_page', {
     p_entity_type: entityType,
@@ -87,7 +116,26 @@ export async function fetchBoardMessagesPage(
   let rows = (data ?? []) as BoardMessageRow[];
   rows = rows.slice().reverse();
   rows = await attachProfiles(rows);
-  return rows.map(mapRow);
+
+  const { data: { user } } = await supabase.auth.getUser();
+  let likeCountMap: Record<string, number> = {};
+  let myLikedIds = new Set<string>();
+  try {
+    const meta = await fetchBoardMessageLikeMeta(
+      rows.map((row) => row.id),
+      user?.id ?? null,
+    );
+    likeCountMap = meta.likeCountMap;
+    myLikedIds = meta.myLikedIds;
+  } catch {
+    // board_message_likes may be unavailable — still return messages without like state
+  }
+
+  return rows.map((row) => mapRow(
+    row,
+    likeCountMap[row.id] ?? 0,
+    myLikedIds.has(row.id),
+  ));
 }
 
 export async function fetchBoardMessageCount(
@@ -185,4 +233,27 @@ export async function deleteBoardMessage(messageId: string): Promise<void> {
     .eq('id', messageId)
     .eq('user_id', userId);
   if (error) throw error;
+}
+
+export async function toggleBoardMessageLike(
+  messageId: string,
+  currentCount: number,
+  currentlyLiked: boolean,
+): Promise<{ likeCount: number; hasLiked: boolean }> {
+  const userId = await requireUserId();
+  if (currentlyLiked) {
+    const { error } = await supabase
+      .from('board_message_likes')
+      .delete()
+      .eq('message_id', messageId)
+      .eq('user_id', userId);
+    if (error) throw error;
+    return { likeCount: Math.max(0, currentCount - 1), hasLiked: false };
+  }
+
+  const { error } = await supabase
+    .from('board_message_likes')
+    .insert({ message_id: messageId, user_id: userId });
+  if (error) throw error;
+  return { likeCount: currentCount + 1, hasLiked: true };
 }

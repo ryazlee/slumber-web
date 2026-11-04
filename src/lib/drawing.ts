@@ -16,22 +16,25 @@ export function drawingStatusCopy(opts: {
   goalMinutes: number;
   entries: number;
   completed?: boolean;
-}): { entriesLabel: string; detail: string } {
+}): { entriesLabel: string; detail: string; qualified: boolean } {
+  const qualified = opts.entries > 0;
   const entriesLabel = pluralCount(opts.entries, 'entry');
   if (opts.completed) {
     return {
       entriesLabel,
-      detail: opts.entries > 0
+      qualified,
+      detail: qualified
         ? 'Drawing happens outside the app.'
         : `Needed ${goalHours(opts.goalMinutes)} in the window.`,
     };
   }
-  if (opts.entries > 0) {
-    return { entriesLabel, detail: 'You’re in the drawing' };
+  if (qualified) {
+    return { entriesLabel, qualified, detail: 'You’re in the drawing' };
   }
   const remain = Math.max(0, opts.goalMinutes - opts.accruedMinutes);
   return {
     entriesLabel,
+    qualified,
     detail: remain > 0 ? `${formatMins(remain)} to go` : 'Hit the goal to enter',
   };
 }

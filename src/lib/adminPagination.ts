@@ -9,11 +9,26 @@ export const ADMIN_SERVER_GRID_PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
 /** Max rows loaded for moderation queue grouping (not the paginated table view). */
 export const ADMIN_QUEUE_FETCH_LIMIT = 5000;
 
+function parseJsonValue(value: unknown): unknown {
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
+function asRowArray<T>(rows: unknown): T[] {
+  const value = parseJsonValue(rows);
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
 export function parsePaginatedResult<T>(data: unknown): PaginatedResult<T> {
-  const payload = data as { total?: number; rows?: T[] } | null;
+  const payload = parseJsonValue(data) as { total?: number | string; rows?: unknown } | null;
+  const total = typeof payload?.total === 'number' ? payload.total : Number(payload?.total);
   return {
-    total: typeof payload?.total === 'number' ? payload.total : 0,
-    rows: Array.isArray(payload?.rows) ? payload.rows : [],
+    total: Number.isFinite(total) ? total : 0,
+    rows: asRowArray<T>(payload?.rows),
   };
 }
 

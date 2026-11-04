@@ -330,6 +330,9 @@ export async function toggleKudos(
   const { error } = await supabase
     .from('kudos')
     .insert({ post_id: postId, user_id: userId });
+  if (error?.code === '23505') {
+    return { kudosCount: Math.max(currentCount, 1), hasKudoed: true };
+  }
   if (error) throw error;
   return { kudosCount: currentCount + 1, hasKudoed: true };
 }

@@ -22,6 +22,8 @@ type CommentRowProps = {
   editSaving?: boolean;
   likeLoading?: boolean;
   onLike?: () => void;
+  /** Double-click likes (no-op if already liked). Board messages. */
+  onDoubleTapLike?: () => void;
   onOpenLikes?: () => void;
   onReply?: () => void;
   onStartEdit?: () => void;
@@ -41,6 +43,7 @@ export default function CommentRow({
   editSaving = false,
   likeLoading = false,
   onLike,
+  onDoubleTapLike,
   onOpenLikes,
   onReply,
   onStartEdit,
@@ -102,6 +105,7 @@ export default function CommentRow({
         ref={bubbleRef}
         className="comment-bubble"
         {...(showMenu && !isEditing ? bubbleLongPress.longPressProps : {})}
+        onDoubleClick={onDoubleTapLike && !isEditing ? () => onDoubleTapLike() : undefined}
       >
         <div className="comment-header">
           <div className="comment-header-main">

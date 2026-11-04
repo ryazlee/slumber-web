@@ -220,6 +220,8 @@ export async function enrichSleepPostRows(rows: PostRow[]): Promise<SleepPost[]>
     fetchAuthorWearablePostCounts(authorUserIds),
   ]);
 
+  if (kudosRes.error) throw kudosRes.error;
+
   const authorProfileMap = new Map<string, AuthorProfile>();
   for (const p of authorProfilesRes.data ?? []) {
     authorProfileMap.set(p.id, p);

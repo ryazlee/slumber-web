@@ -55,6 +55,8 @@ export default function EntityMessageBoard({
     setEditingText,
     editSaving,
     actionError,
+    messageLikeLoadingId,
+    loadMessages,
     loadEarlier,
     handleSend,
     startEdit,
@@ -62,6 +64,7 @@ export default function EntityMessageBoard({
     startReply,
     handleUpdate,
     handleDelete,
+    handleLike,
   } = useBoardMessages({
     entityType,
     entityId,
@@ -89,7 +92,11 @@ export default function EntityMessageBoard({
     <details
       className="stats-collapse entity-message-board"
       open={open}
-      onToggle={(event) => setOpen(event.currentTarget.open)}
+      onToggle={(event) => {
+        const next = event.currentTarget.open;
+        setOpen(next);
+        if (next) void loadMessages();
+      }}
     >
       <summary className="stats-section-label stats-collapse-summary">
         {title}{countLabel}
@@ -125,13 +132,16 @@ export default function EntityMessageBoard({
                         key={m.id}
                         comment={row}
                         currentUserId={currentUserId}
-                        canInteract={canCompose && !m.pending}
+                        canInteract={!!currentUserId && !m.pending}
                         isEditing={editingId === m.id}
                         editText={editingId === m.id ? editingText : undefined}
                         onEditTextChange={setEditingText}
                         onSaveEdit={() => { void handleUpdate(); }}
                         onCancelEdit={cancelEdit}
                         editSaving={editSaving}
+                        onLike={currentUserId ? () => { void handleLike(m); } : undefined}
+                        onDoubleTapLike={currentUserId ? () => { void handleLike(m, 'like'); } : undefined}
+                        likeLoading={messageLikeLoadingId === m.id}
                         onReply={canCompose ? () => onReply(m) : undefined}
                         onStartEdit={isOwn ? () => startEdit(m) : undefined}
                         onDelete={isOwn ? () => { void handleDelete(m.id); } : undefined}

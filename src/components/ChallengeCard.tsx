@@ -199,17 +199,22 @@ function RaceCard({
     ].filter(Boolean).join(' · ');
 
   return (
-    <Link to={`/challenges/${challenge.id}`} className="challenge-card challenge-card-link">
+    <Link
+      to={`/challenges/${challenge.id}`}
+      className={`challenge-card challenge-card-link${challenge.isDrawing ? ' challenge-card--drawing' : ''}`}
+    >
       <div className="challenge-card-top">
         <div className="challenge-card-heading">
-          {challenge.isDrawing ? <ChallengeDrawingBadge /> : null}
-          {title ? (
-            <h3 className="challenge-title">{title}</h3>
-          ) : (
-            <h3 className="challenge-title">
-              vs {opponent ? `@${opponent.username}` : 'opponent'}
-            </h3>
-          )}
+          <div className="challenge-card-title-row">
+            {challenge.isDrawing ? <ChallengeDrawingBadge /> : null}
+            {title ? (
+              <h3 className="challenge-title">{title}</h3>
+            ) : (
+              <h3 className="challenge-title">
+                vs {opponent ? `@${opponent.username}` : 'opponent'}
+              </h3>
+            )}
+          </div>
           <p className="challenge-meta">{meta}</p>
         </div>
         {ends ? <span className="challenge-ends">{ends}</span> : null}
@@ -227,7 +232,7 @@ function RaceCard({
 
       {started && progress === undefined ? (
         <p className="challenge-meta challenge-card-wait">
-          {challenge.isDrawing ? 'Loading hours…' : 'Loading standings…'}
+          {challenge.isDrawing ? 'Loading progress…' : 'Loading standings…'}
         </p>
       ) : null}
       {started && (me || rival) ? (
@@ -239,7 +244,7 @@ function RaceCard({
 
       {drawingCopy ? (
         <div className="challenge-card-foot">
-          <span className="challenge-gap challenge-gap--ahead">
+          <span className={`challenge-gap challenge-gap--ahead${drawingCopy.qualified ? ' challenge-gap--drawing' : ''}`}>
             {drawingCopy.entriesLabel} · {drawingCopy.detail}
           </span>
         </div>

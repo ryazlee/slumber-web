@@ -82,10 +82,11 @@ export default function PostSocial({
   const syncedCommentCount = useRef<number | null>(null);
 
   useEffect(() => {
+    if (toggleKudosMutation.isPending) return;
     setKudosCount(initialKudosCount);
     setHasKudoed(initialHasKudoed);
     setCommentCount(initialCommentCount);
-  }, [initialKudosCount, initialHasKudoed, initialCommentCount]);
+  }, [initialKudosCount, initialHasKudoed, initialCommentCount, toggleKudosMutation.isPending]);
 
   useEffect(() => {
     setKudosOpen(false);
@@ -110,6 +111,7 @@ export default function PostSocial({
   const handleKudos = async () => {
     if (!user || toggleKudosMutation.isPending) return;
 
+    setSendError(null);
     const nextHasKudoed = !hasKudoed;
     const optimisticCount = hasKudoed ? Math.max(0, kudosCount - 1) : kudosCount + 1;
     const prev = { kudosCount, hasKudoed };
@@ -127,10 +129,11 @@ export default function PostSocial({
       setKudosCount(res.kudosCount);
       setHasKudoed(res.hasKudoed);
       patchParent({ kudosCount: res.kudosCount, hasKudoed: res.hasKudoed });
-    } catch {
+    } catch (err) {
       setKudosCount(prev.kudosCount);
       setHasKudoed(prev.hasKudoed);
       patchParent({ kudosCount: prev.kudosCount, hasKudoed: prev.hasKudoed });
+      setSendError(err instanceof Error ? err.message : 'Could not give kudos. Please try again.');
     }
   };
 

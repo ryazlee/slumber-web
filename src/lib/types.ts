@@ -141,7 +141,7 @@ export type Comment = {
 /** Polymorphic message-board entity (challenge race or sleep club). */
 export type BoardEntityType = 'challenge' | 'club';
 
-/** Flat board message (no likes in v1). Maps into Comment for CommentRow. */
+/** Flat board message. Heart likes match comment likes. */
 export type BoardMessage = {
   id: string;
   entityType: BoardEntityType;
@@ -152,6 +152,8 @@ export type BoardMessage = {
   userRoles?: string[];
   text: string;
   createdAt: string;
+  likeCount?: number;
+  hasLiked?: boolean;
   isEdited?: boolean;
   pending?: boolean;
 };

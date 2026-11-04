@@ -8,13 +8,15 @@ import {
 import { useAuth } from '../context/AuthContext';
 import {
   addBoardMessage,
+  BOARD_MESSAGE_PAGE_SIZE,
   deleteBoardMessage,
   fetchBoardMessageCount,
   fetchBoardMessagesPage,
+  toggleBoardMessageLike,
   updateBoardMessage,
   type BoardMessageCursor,
 } from '../lib/boardMessages';
-import { flattenInfinitePages, INFINITE_PAGE_SIZE } from '../lib/infiniteQuery';
+import { flattenInfinitePages } from '../lib/infiniteQuery';
 import { buildCommentReplyPrefix } from '../lib/mentions';
 import type { BoardEntityType, BoardMessage, Comment } from '../lib/types';
 import { useMarkBoardMessagesRead } from './useBoardUnreadBadges';
@@ -46,8 +48,8 @@ export function boardMessageAsComment(m: BoardMessage): Comment {
     userRoles: m.userRoles,
     text: m.text,
     createdAt: m.createdAt,
-    likeCount: 0,
-    hasLiked: false,
+    likeCount: m.likeCount ?? 0,
+    hasLiked: m.hasLiked ?? false,
     isEdited: !!m.isEdited,
     pending: m.pending,
   };
@@ -70,6 +72,8 @@ function buildOptimistic(
     userRoles: profile?.userRoles,
     text,
     createdAt: new Date().toISOString(),
+    likeCount: 0,
+    hasLiked: false,
     pending: true,
   };
 }
@@ -89,13 +93,17 @@ function flattenBoardPages(
   return flattenInfinitePages({
     ...data,
     pages: [...data.pages].reverse(),
-  });
+  }).map((item) => ({
+    ...item,
+    likeCount: item.likeCount ?? 0,
+    hasLiked: item.hasLiked ?? false,
+  }));
 }
 
 function boardNextPageParam(
   lastPage: BoardMessage[],
 ): BoardMessageCursor | undefined {
-  if (lastPage.length < INFINITE_PAGE_SIZE) return undefined;
+  if (lastPage.length < BOARD_MESSAGE_PAGE_SIZE) return undefined;
   const oldest = lastPage[0];
   if (!oldest) return undefined;
   return { createdAt: oldest.createdAt, id: oldest.id };
@@ -124,6 +132,8 @@ export function useBoardMessages({
   const [editingText, setEditingText] = useState('');
   const [editSaving, setEditSaving] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [messageLikeLoadingId, setMessageLikeLoadingId] = useState<string | null>(null);
+  const likeInFlightRef = useRef(new Set<string>());
   const markedReadForRef = useRef<string | null>(null);
 
   const mentionFriends = useMemo(
@@ -159,7 +169,7 @@ export function useBoardMessages({
         entityType,
         entityId!,
         pageParam ?? null,
-        INFINITE_PAGE_SIZE,
+        BOARD_MESSAGE_PAGE_SIZE,
       ),
     initialPageParam: undefined as BoardMessageCursor | undefined,
     getNextPageParam: boardNextPageParam,
@@ -206,6 +216,18 @@ export function useBoardMessages({
   }, [markReadWhenEnabled, wanted, entityType, entityId, markRead]);
 
   const fetchNextPage = messagesQuery.fetchNextPage;
+  const refetchMessages = messagesQuery.refetch;
+  const refetchCount = countQuery.refetch;
+
+  const loadMessages = useCallback(async () => {
+    if (!entityId) return;
+    try {
+      await refetchMessages();
+      void refetchCount();
+    } catch {
+      setActionError('Could not load messages.');
+    }
+  }, [entityId, refetchMessages, refetchCount]);
 
   const loadEarlier = useCallback(async () => {
     if (!hasEarlier || loadingEarlier) return;
@@ -285,7 +307,11 @@ export function useBoardMessages({
     setCache((prev) => patchInList(prev, editingId, { text: trimmed, isEdited: true }));
     try {
       const updated = await updateBoardMessage(editingId, trimmed);
-      setCache((prev) => prev.map((item) => (item.id === editingId ? updated : item)));
+      setCache((prev) => prev.map((item) => (
+        item.id === editingId
+          ? { ...updated, likeCount: item.likeCount, hasLiked: item.hasLiked }
+          : item
+      )));
       cancelEdit();
       return true;
     } catch {
@@ -319,6 +345,43 @@ export function useBoardMessages({
     }
   }, [messages, editingId, cancelEdit, setCache, entityType, entityId, qc]);
 
+  const handleLike = useCallback(async (
+    message: BoardMessage,
+    mode: 'toggle' | 'like' = 'toggle',
+  ) => {
+    if (!user || message.pending || likeInFlightRef.current.has(message.id)) return;
+
+    const likeCount = message.likeCount ?? 0;
+    const hasLiked = message.hasLiked ?? false;
+    if (mode === 'like' && hasLiked) return;
+    const nextHasLiked = !hasLiked;
+    const optimisticCount = hasLiked ? Math.max(0, likeCount - 1) : likeCount + 1;
+
+    likeInFlightRef.current.add(message.id);
+    setMessageLikeLoadingId(message.id);
+    setCache((prev) => patchInList(prev, message.id, {
+      hasLiked: nextHasLiked,
+      likeCount: optimisticCount,
+    }));
+
+    try {
+      const res = await toggleBoardMessageLike(message.id, likeCount, hasLiked);
+      setCache((prev) => patchInList(prev, message.id, {
+        hasLiked: res.hasLiked,
+        likeCount: res.likeCount,
+      }));
+    } catch {
+      setCache((prev) => patchInList(prev, message.id, {
+        hasLiked,
+        likeCount,
+      }));
+      setActionError('Could not update like. Please try again.');
+    } finally {
+      likeInFlightRef.current.delete(message.id);
+      setMessageLikeLoadingId(null);
+    }
+  }, [user, setCache]);
+
   return {
     messages,
     messageCount,
@@ -334,7 +397,9 @@ export function useBoardMessages({
     setEditingText,
     editSaving,
     actionError,
+    messageLikeLoadingId,
     mentionFriends,
+    loadMessages,
     loadEarlier,
     handleSend,
     startEdit,
@@ -342,5 +407,6 @@ export function useBoardMessages({
     startReply,
     handleUpdate,
     handleDelete,
+    handleLike,
   };
 }
