@@ -16,13 +16,27 @@ export function addDaysToDateISO(dateISO: string, days: number): string {
   return toLocalDateISO(date);
 }
 
-/** Whole local calendar days from dateISO to referenceISO (0 = same day, 1 = yesterday). */
+/**
+ * Whole local calendar days from dateISO to referenceISO (0 = same day, 1 = yesterday).
+ * Round, not floor: spring-forward midnights are 23 hours apart.
+ */
 export function daysAgoForDateISO(dateISO: string, referenceISO = getLocalDateISO()): number {
   const [y, m, d] = dateISO.split('-').map(Number);
   const [ry, rm, rd] = referenceISO.split('-').map(Number);
   const date = new Date(y, m - 1, d);
   const ref = new Date(ry, rm - 1, rd);
-  return Math.floor((ref.getTime() - date.getTime()) / 86_400_000);
+  return Math.round((ref.getTime() - date.getTime()) / 86_400_000);
+}
+
+/** 0 when the last logged morning is older than the day before asOfISO. */
+export function displayedCurrentStreak(
+  currentRun: number | null | undefined,
+  lastSleepDate: string | null | undefined,
+  asOfISO: string,
+): number {
+  const run = Number.isFinite(currentRun) ? Math.max(0, Math.trunc(currentRun ?? 0)) : 0;
+  if (run === 0 || !lastSleepDate) return 0;
+  return daysAgoForDateISO(lastSleepDate, asOfISO) <= 1 ? run : 0;
 }
 
 /** Last completed sleep's wake date: today after 5am, yesterday before. */

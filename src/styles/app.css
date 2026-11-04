@@ -2555,8 +2555,13 @@
 .challenge-compact-copy {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.challenge-compact-copy .challenge-card-title-row .challenge-title {
   flex: 1;
   min-width: 0;
 }

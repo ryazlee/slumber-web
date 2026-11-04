@@ -125,8 +125,10 @@ function CompactCard({
           />
         ) : null}
         <div className="challenge-compact-copy">
-          <ChallengeKindChip challenge={challenge} />
-          <p className="challenge-title">{heading}</p>
+          <div className="challenge-card-title-row">
+            <ChallengeKindChip challenge={challenge} />
+            <p className="challenge-title">{heading}</p>
+          </div>
           <p className="challenge-meta">{subtitle}</p>
         </div>
         {result ? (
