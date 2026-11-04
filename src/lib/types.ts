@@ -182,6 +182,7 @@ export type Challenge = {
   winnerId: string | null;
   hostedBy?: 'user' | 'slumber';
   isDrawing?: boolean;
+  drawingReferrals?: boolean;
   prizeSponsorName?: string | null;
   prizeName?: string | null;
   prizeUrl?: string | null;

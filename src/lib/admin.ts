@@ -1062,6 +1062,7 @@ export type AdminSlumberChallengeRow = {
   join_enabled: boolean;
   created_at: string;
   is_drawing?: boolean;
+  drawing_referrals?: boolean;
   prize_sponsor_name?: string | null;
   prize_name?: string | null;
   prize_url?: string | null;
@@ -1081,6 +1082,7 @@ export type AdminSlumberChallengeDraft = {
   maxParticipants: number | null;
   joinEnabled: boolean;
   isDrawing?: boolean;
+  drawingReferrals?: boolean;
   prizeSponsorName?: string | null;
   prizeName?: string | null;
   prizeUrl?: string | null;
@@ -1139,6 +1141,7 @@ export async function createAdminSlumberChallenge(input: {
   expiresInDays: number;
   maxParticipants: number | null;
   isDrawing?: boolean;
+  drawingReferrals?: boolean;
   prizeSponsorName?: string | null;
   prizeName?: string | null;
   prizeUrl?: string | null;
@@ -1166,6 +1169,7 @@ export async function createAdminSlumberChallenge(input: {
   if (error) throw error;
   const row = (data ?? {}) as { id?: string; title?: string };
   if (!row.id) throw new Error('Could not create the race.');
+  await setAdminDrawingReferrals(row.id, Boolean(input.isDrawing && input.drawingReferrals));
   return { id: row.id, title: row.title ?? input.title };
 }
 
@@ -1198,6 +1202,18 @@ export async function updateAdminSlumberChallenge(
     p_prize_logo_url: draft.prizeLogoUrl?.trim() || null,
     p_official_rules: draft.officialRules ?? '',
     p_official_rules_url: draft.officialRulesUrl?.trim() || null,
+  });
+  if (error) throw error;
+  await setAdminDrawingReferrals(challengeId, Boolean(draft.isDrawing && draft.drawingReferrals));
+}
+
+export async function setAdminDrawingReferrals(
+  challengeId: string,
+  enabled: boolean,
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_set_drawing_referrals', {
+    p_challenge_id: challengeId,
+    p_enabled: enabled,
   });
   if (error) throw error;
 }

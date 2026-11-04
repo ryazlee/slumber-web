@@ -67,6 +67,7 @@ type Draft = {
   maxParticipants: string;
   joinEnabled: boolean;
   isDrawing: boolean;
+  drawingReferrals: boolean;
   prizeSponsorName: string;
   prizeName: string;
   prizeUrl: string;
@@ -87,6 +88,7 @@ function draftFromRow(row: AdminSlumberChallengeRow): Draft {
     maxParticipants: row.max_participants != null ? String(row.max_participants) : '',
     joinEnabled: row.join_enabled,
     isDrawing: Boolean(row.is_drawing),
+    drawingReferrals: Boolean(row.is_drawing && row.drawing_referrals),
     prizeSponsorName: row.prize_sponsor_name ?? '',
     prizeName: row.prize_name ?? '',
     prizeUrl: row.prize_url ?? '',
@@ -107,6 +109,7 @@ const EMPTY_DRAFT: Draft = {
   maxParticipants: '',
   joinEnabled: true,
   isDrawing: false,
+  drawingReferrals: false,
   prizeSponsorName: '',
   prizeName: '',
   prizeUrl: '',
@@ -183,6 +186,7 @@ function RaceForm({
           expiresInDays: draft.noExpiration && !draft.isDrawing ? 10 : days,
           maxParticipants,
           isDrawing: draft.isDrawing,
+          drawingReferrals: draft.isDrawing && draft.drawingReferrals,
           prizeSponsorName: draft.prizeSponsorName,
           prizeName: draft.prizeName,
           prizeUrl: draft.prizeUrl,
@@ -205,6 +209,7 @@ function RaceForm({
             maxParticipants,
             joinEnabled: draft.joinEnabled,
             isDrawing: draft.isDrawing,
+            drawingReferrals: draft.isDrawing && draft.drawingReferrals,
             prizeSponsorName: draft.prizeSponsorName,
             prizeName: draft.prizeName,
             prizeUrl: draft.prizeUrl,
@@ -269,6 +274,7 @@ function RaceForm({
             onChange={(e) => setDraft((prev) => ({
               ...prev,
               isDrawing: e.target.checked,
+              drawingReferrals: e.target.checked ? prev.drawingReferrals : false,
               noExpiration: e.target.checked ? false : prev.noExpiration,
             }))}
           />
@@ -276,6 +282,18 @@ function RaceForm({
         </label>
         {draft.isDrawing ? (
           <>
+            <label className="admin-checkbox-label">
+              <input
+                type="checkbox"
+                checked={draft.drawingReferrals}
+                disabled={locked}
+                onChange={(e) => setDraft((prev) => ({
+                  ...prev,
+                  drawingReferrals: e.target.checked,
+                }))}
+              />
+              <span>Referrals (track personal invite links; no extra entries)</span>
+            </label>
             <div className="admin-field">
               <label className="admin-label" htmlFor="slumber-prize-sponsor">Sponsor name</label>
               <input
@@ -454,21 +472,34 @@ function csvEscape(value: string): string {
   return value;
 }
 
-function downloadDrawingCsv(filename: string, rows: AdminDrawingRosterRow[], qualifiedOnly: boolean) {
+function downloadDrawingCsv(
+  filename: string,
+  rows: AdminDrawingRosterRow[],
+  qualifiedOnly: boolean,
+  includeReferrals: boolean,
+) {
   const list = qualifiedOnly ? rows.filter((row) => row.entries > 0) : rows;
-  const header = ['username', 'user_id', 'email', 'hours', 'entries', 'referred_by', 'referrals_joined', 'referrals_qualified'];
+  const header = includeReferrals
+    ? ['username', 'user_id', 'email', 'hours', 'entries', 'referred_by', 'referrals_joined', 'referrals_qualified']
+    : ['username', 'user_id', 'email', 'hours', 'entries'];
   const lines = [
     header.join(','),
-    ...list.map((row) => [
-      csvEscape(row.username ?? ''),
-      row.user_id,
-      csvEscape(row.email ?? ''),
-      String(Math.round((row.accrued_minutes / 60) * 10) / 10),
-      String(row.entries),
-      csvEscape(row.referred_by_username ?? ''),
-      String(row.referrals_joined),
-      String(row.referrals_qualified),
-    ].join(',')),
+    ...list.map((row) => {
+      const base = [
+        csvEscape(row.username ?? ''),
+        row.user_id,
+        csvEscape(row.email ?? ''),
+        String(Math.round((row.accrued_minutes / 60) * 10) / 10),
+        String(row.entries),
+      ];
+      if (!includeReferrals) return base.join(',');
+      return [
+        ...base,
+        csvEscape(row.referred_by_username ?? ''),
+        String(row.referrals_joined),
+        String(row.referrals_qualified),
+      ].join(',');
+    }),
   ];
   const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
   const href = URL.createObjectURL(blob);
@@ -490,6 +521,7 @@ function DrawingRosterDialog({
   const setParticipant = useSetAdminDrawingParticipant();
   const roster = rosterQuery.data;
   const people = roster?.rows ?? [];
+  const includeReferrals = Boolean(row.drawing_referrals);
 
   return (
     <AdminFormDialog open wide onClose={onClose} title={`Entries · ${row.title?.trim() || 'drawing'}`}>
@@ -499,7 +531,8 @@ function DrawingRosterDialog({
       ) : null}
       {roster ? (
         <p className="admin-muted">
-          {roster.joined} joined · {roster.qualified} entered · {roster.referralJoins} referral joins
+          {roster.joined} joined · {roster.qualified} entered
+          {includeReferrals ? ` · ${roster.referralJoins} referral joins` : ''}
         </p>
       ) : null}
       <div className="admin-form-actions">
@@ -507,7 +540,7 @@ function DrawingRosterDialog({
           className="admin-button"
           type="button"
           disabled={people.length === 0}
-          onClick={() => downloadDrawingCsv(`${row.title || 'drawing'}-entries.csv`, people, true)}
+          onClick={() => downloadDrawingCsv(`${row.title || 'drawing'}-entries.csv`, people, true, includeReferrals)}
         >
           Export entries
         </button>
@@ -515,7 +548,7 @@ function DrawingRosterDialog({
           className="admin-button admin-button-ghost"
           type="button"
           disabled={people.length === 0}
-          onClick={() => downloadDrawingCsv(`${row.title || 'drawing'}-roster.csv`, people, false)}
+          onClick={() => downloadDrawingCsv(`${row.title || 'drawing'}-roster.csv`, people, false, includeReferrals)}
         >
           Export roster
         </button>
@@ -528,8 +561,8 @@ function DrawingRosterDialog({
               <th>Email</th>
               <th>Hours</th>
               <th>Entries</th>
-              <th>Referred by</th>
-              <th>Referrals</th>
+              {includeReferrals ? <th>Referred by</th> : null}
+              {includeReferrals ? <th>Referrals</th> : null}
               <th></th>
             </tr>
           </thead>
@@ -544,8 +577,12 @@ function DrawingRosterDialog({
                 <td>{person.email ?? '—'}</td>
                 <td>{Math.round((person.accrued_minutes / 60) * 10) / 10}</td>
                 <td>{person.entries}{person.drawing_ineligible_at ? ' (out)' : ''}{person.drawing_alternate_entry ? ' AMOE' : ''}</td>
-                <td>{person.referred_by_username ? `@${person.referred_by_username}` : '—'}</td>
-                <td>{person.referrals_joined} joined / {person.referrals_qualified} in</td>
+                {includeReferrals ? (
+                  <td>{person.referred_by_username ? `@${person.referred_by_username}` : '—'}</td>
+                ) : null}
+                {includeReferrals ? (
+                  <td>{person.referrals_joined} joined / {person.referrals_qualified} in</td>
+                ) : null}
                 <td>
                   <AdminGridActions>
                     <AdminGridAction

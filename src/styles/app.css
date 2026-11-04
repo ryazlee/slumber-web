@@ -2257,6 +2257,100 @@
   color: #fbbf24;
 }
 
+.drawing-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.drawing-prize {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+
+.drawing-prize--hero {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 16px;
+}
+
+.drawing-prize-logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+.drawing-prize-logo--hero {
+  width: 160px;
+  height: 160px;
+  border-radius: 16px;
+  align-self: center;
+}
+
+.drawing-prize-kicker {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.drawing-prize-name {
+  margin: 2px 0 6px;
+  font-weight: 700;
+}
+
+.drawing-how {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.drawing-entry {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.drawing-entry-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.drawing-entry strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1.15rem;
+}
+
+.drawing-entry p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
 .challenge-meta {
   margin: 10px 0 0;
   font-size: 14px;
@@ -2337,6 +2431,10 @@
 
 .challenge-card-heading {
   min-width: 0;
+}
+
+.challenge-card-heading .drawing-badge {
+  margin-bottom: 6px;
 }
 
 .challenge-card-heading .challenge-meta {
@@ -2499,6 +2597,14 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+}
+
+.challenge-detail-title-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .challenge-detail-description {

@@ -13,7 +13,7 @@ import type {
 const BASE_CHALLENGE_SELECT = `
   id, creator_id, title, description, is_group, goal_minutes, no_expiration, scoring_mode, status,
   created_at, started_at, expires_at, winner_id, goal_reached_at, goal_reached_by, grace_ends_at,
-  hosted_by, is_drawing, prize_sponsor_name, prize_name, prize_url, prize_logo_url,
+  hosted_by, is_drawing, drawing_referrals, prize_sponsor_name, prize_name, prize_url, prize_logo_url,
   official_rules, official_rules_url
 `;
 
@@ -127,6 +127,7 @@ function attachParticipants(challenges: Record<string, unknown>[], participantRo
       winnerId: (c.winner_id as string | null) ?? null,
       hostedBy: c.hosted_by === 'slumber' ? 'slumber' : 'user',
       isDrawing: c.is_drawing === true,
+      drawingReferrals: c.is_drawing === true && c.drawing_referrals === true,
       prizeSponsorName: (c.prize_sponsor_name as string | null) ?? null,
       prizeName: (c.prize_name as string | null) ?? null,
       prizeUrl: (c.prize_url as string | null) ?? null,

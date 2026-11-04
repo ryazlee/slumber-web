@@ -16,6 +16,8 @@ import {
   pluralCount,
 } from '../lib/format';
 import type { Challenge, ChallengeProgress } from '../lib/types';
+import ChallengeDrawingBadge from './ChallengeDrawingBadge';
+import { DRAWING_KIND_LABEL, drawingEntryCount, drawingStatusCopy } from '../lib/drawing';
 
 type Props = {
   challenge: Challenge;
@@ -92,11 +94,15 @@ function CompactCard({
   const tied = challenge.status === 'completed' && challenge.winnerId == null;
   const won = challenge.status === 'completed' && challenge.winnerId === currentUserId;
   const lost = challenge.status === 'completed' && challenge.winnerId != null && !won;
-  const result = tied ? 'Tie' : won ? 'Win' : lost ? 'Loss' : null;
+  const result = challenge.isDrawing
+    ? null
+    : tied ? 'Tie' : won ? 'Win' : lost ? 'Loss' : null;
   const resultClass = tied ? 'tie' : won ? 'win' : 'loss';
-  const subtitle = waiting
-    ? `Waiting on a reply · ${goalHours(challenge.goalMinutes)} goal`
-    : `${formatChallengeStartDate(challenge.startedAt, challenge.createdAt)} · ${formatChallengeRaceType(challenge)}`;
+  const subtitle = challenge.isDrawing
+    ? `${DRAWING_KIND_LABEL} · ${goalHours(challenge.goalMinutes)} to enter`
+    : waiting
+      ? `Waiting on a reply · ${goalHours(challenge.goalMinutes)} goal`
+      : `${formatChallengeStartDate(challenge.startedAt, challenge.createdAt)} · ${formatChallengeRaceType(challenge)}`;
   const heading = challenge.isGroup
     ? (challenge.hostedBy === 'slumber'
       ? (challenge.title?.trim() || 'Slumber challenge')
@@ -171,17 +177,32 @@ function RaceCard({
         ? `+${formatMins(gap)}`
         : `-${formatMins(Math.abs(gap))}`;
 
-  const meta = [
-    challenge.hostedBy === 'slumber' ? 'Hosted by Slumber' : null,
-    challenge.isGroup ? pluralCount(accepted.length, 'racer') : null,
-    challengeStartLabel(challenge.startedAt, started),
-    `${goalHours(challenge.goalMinutes)} goal`,
-  ].filter(Boolean).join(' · ');
+  const drawingCopy = challenge.isDrawing
+    ? drawingStatusCopy({
+      accruedMinutes: me?.accruedMinutes ?? 0,
+      goalMinutes: challenge.goalMinutes,
+      entries: drawingEntryCount(me?.accruedMinutes ?? 0, challenge.goalMinutes),
+      completed: challenge.status === 'completed' || challenge.status === 'cancelled',
+    })
+    : null;
+  const meta = challenge.isDrawing
+    ? [
+      challenge.hostedBy === 'slumber' ? 'Hosted by Slumber' : null,
+      `${goalHours(challenge.goalMinutes)} to enter`,
+      challengeStartLabel(challenge.startedAt, started),
+    ].filter(Boolean).join(' · ')
+    : [
+      challenge.hostedBy === 'slumber' ? 'Hosted by Slumber' : null,
+      challenge.isGroup ? pluralCount(accepted.length, 'racer') : null,
+      challengeStartLabel(challenge.startedAt, started),
+      `${goalHours(challenge.goalMinutes)} goal`,
+    ].filter(Boolean).join(' · ');
 
   return (
     <Link to={`/challenges/${challenge.id}`} className="challenge-card challenge-card-link">
       <div className="challenge-card-top">
         <div className="challenge-card-heading">
+          {challenge.isDrawing ? <ChallengeDrawingBadge /> : null}
           {title ? (
             <h3 className="challenge-title">{title}</h3>
           ) : (
@@ -205,7 +226,9 @@ function RaceCard({
       ) : null}
 
       {started && progress === undefined ? (
-        <p className="challenge-meta challenge-card-wait">Loading standings…</p>
+        <p className="challenge-meta challenge-card-wait">
+          {challenge.isDrawing ? 'Loading hours…' : 'Loading standings…'}
+        </p>
       ) : null}
       {started && (me || rival) ? (
         <div className="challenge-mini-list">
@@ -214,7 +237,13 @@ function RaceCard({
         </div>
       ) : null}
 
-      {(gapLabel || (challenge.isGroup && myPlace)) ? (
+      {drawingCopy ? (
+        <div className="challenge-card-foot">
+          <span className="challenge-gap challenge-gap--ahead">
+            {drawingCopy.entriesLabel} · {drawingCopy.detail}
+          </span>
+        </div>
+      ) : (gapLabel || (challenge.isGroup && myPlace)) ? (
         <div className="challenge-card-foot">
           {gapLabel ? (
             <span className={gap != null && gap > 0 ? 'challenge-gap challenge-gap--ahead' : 'challenge-gap'}>
