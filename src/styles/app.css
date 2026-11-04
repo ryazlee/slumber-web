@@ -2404,15 +2404,10 @@
   font-size: 1.15rem;
 }
 
-.drawing-kind-line {
-  margin: 8px 0 0;
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-.drawing-entry p {
-  margin: 4px 0 0;
+.drawing-entry-meta {
+  margin: 10px 0 0;
   font-size: 14px;
+  line-height: 1.4;
   color: var(--text-muted);
 }
 

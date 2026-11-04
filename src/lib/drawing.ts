@@ -263,6 +263,20 @@ export function drawingReferralStatusLine(signups: number, qualified: number): s
   return `Referrals ${drawingReferralCountsLine(signups, qualified)}`;
 }
 
+/** Hours plus each entry kind, one line. */
+export function drawingEntriesFactsLine(
+  accruedMinutes: number,
+  goalMinutes: number,
+  slices: DrawingEntrySlice[],
+): string {
+  const progress = `${formatMins(accruedMinutes)} / ${goalHours(goalMinutes)}`;
+  const kinds = slices
+    .filter((slice) => slice.max > 0)
+    .map((slice) => `${slice.label} ${slice.earned}/${slice.max}`)
+    .join(' · ');
+  return kinds ? `${progress} · ${kinds}` : progress;
+}
+
 export function drawingPeopleFromRoster(
   participants: Array<{ userId: string; referredBy?: string | null; inviteStatus?: string }>,
   progress: Array<{ userId: string; accruedMinutes: number }>,

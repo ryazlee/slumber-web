@@ -18,7 +18,6 @@ import { rankBySleepProgress } from '../../lib/challengeRank';
 import { challengeScheduleChip } from '../../lib/challengeSections';
 import {
   formatChallengeStatus,
-  formatMins,
   goalHours,
   pluralCount,
   PENDING_COMPLETION_BANNER_PREFIX,
@@ -28,10 +27,11 @@ import {
 import ChallengeKindChip from '../../components/ChallengeKindChip';
 import CollapsibleSection from '../../components/CollapsibleSection';
 import {
+  drawingEntriesFactsLine,
   drawingPrizeImageUrls,
   drawingHowItWorksLine,
   drawingPeopleFromRoster,
-  drawingReferralStatusLine,
+  drawingReferralCountsLine,
   drawingReferralsEnabled,
   drawingSponsorLogoUrl,
   summarizeDrawingStatus,
@@ -270,23 +270,21 @@ export default function ChallengeDetail() {
                 <strong>{pluralCount(drawingPool, 'entry')}</strong>
               </div>
             </div>
-            {drawingBreakdown.slices.map((slice) => (
-              <p key={slice.kind} className="drawing-kind-line">
-                {slice.label} {slice.earned} / {slice.max}
-              </p>
-            ))}
-            <div className="drawing-entry-row">
-              <div>
-                <span className="drawing-entry-label">Progress</span>
-                <strong>
-                  {formatMins(myProgress?.accruedMinutes ?? 0)} / {goalHours(challenge.goalMinutes)}
-                </strong>
-              </div>
-            </div>
-            <p>{drawingCopy.detail}</p>
+            <p className="drawing-entry-meta">
+              {drawingEntriesFactsLine(
+                myProgress?.accruedMinutes ?? 0,
+                challenge.goalMinutes,
+                drawingBreakdown.slices,
+              )}
+            </p>
             {drawingReferralsEnabled(challenge) && drawingStatus ? (
-              <p>{drawingReferralStatusLine(drawingStatus.referralJoinedCount, drawingStatus.referralQualifiedCount)}</p>
+              <p className="drawing-entry-meta">
+                {drawingReferralCountsLine(drawingStatus.referralJoinedCount, drawingStatus.referralQualifiedCount)}
+              </p>
             ) : null}
+            {drawingCopy.detail === `${pluralCount(drawingPool, 'entry')} in the drawing` ? null : (
+              <p className="drawing-entry-meta">{drawingCopy.detail}</p>
+            )}
           </div>
         ) : null}
         <div className="challenge-overview">
