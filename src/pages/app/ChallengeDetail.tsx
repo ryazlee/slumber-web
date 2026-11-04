@@ -152,7 +152,9 @@ export default function ChallengeDetail() {
     accruedMinutes: rankedProgress.find((row) => row.userId === p.userId)?.accruedMinutes ?? 0,
     referredBy: p.referredBy ?? null,
   }));
-  const referralQualifiedCount = challenge.drawingReferralCounts?.[currentUserId]?.qualified ?? 0;
+  const referralQualifiedCount = currentUserId
+    ? challenge.drawingReferralCounts?.[currentUserId]?.qualified ?? 0
+    : 0;
   const drawingBreakdown = challenge.isDrawing
     ? drawingEntryBreakdown({
       config: challenge.drawingEntryConfig,
