@@ -164,9 +164,21 @@ export default function ChallengeDetail() {
         {challenge.description?.trim() ? (
           <p className="challenge-detail-description">{challenge.description.trim()}</p>
         ) : null}
+        {challenge.isDrawing && (challenge.prizeSponsorName || challenge.prizeName) ? (
+          <p className="challenge-detail-description">
+            {challenge.prizeSponsorName ? `Prize by ${challenge.prizeSponsorName}` : 'Prize'}
+            {challenge.prizeName ? ` · ${challenge.prizeName}` : ''}
+            {challenge.prizeUrl ? (
+              <>
+                {' · '}
+                <a href={challenge.prizeUrl} target="_blank" rel="noreferrer">View prize</a>
+              </>
+            ) : null}
+          </p>
+        ) : null}
         <p className="challenge-meta">
           {challenge.hostedBy === 'slumber' ? 'Hosted by Slumber · ' : ''}
-          {formatChallengeRaceType(challenge)}
+          {challenge.isDrawing ? `${challenge.goalMinutes / 60}h to enter` : formatChallengeRaceType(challenge)}
           {challenge.startedAt && (
             <> · {formatChallengeStartDate(challenge.startedAt)}</>
           )}
@@ -176,7 +188,7 @@ export default function ChallengeDetail() {
             <> · ends {new Date(challenge.expiresAt).toLocaleDateString()}</>
           ) : null}
         </p>
-        {winner && (
+        {winner && !challenge.isDrawing && (
           <p className="challenge-winner">
             Winner:{' '}
             <UserLink

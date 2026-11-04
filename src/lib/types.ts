@@ -181,6 +181,13 @@ export type Challenge = {
   graceEndsAt: string | null;
   winnerId: string | null;
   hostedBy?: 'user' | 'slumber';
+  isDrawing?: boolean;
+  prizeSponsorName?: string | null;
+  prizeName?: string | null;
+  prizeUrl?: string | null;
+  prizeLogoUrl?: string | null;
+  officialRules?: string | null;
+  officialRulesUrl?: string | null;
   participants: ChallengeParticipant[];
 };
 

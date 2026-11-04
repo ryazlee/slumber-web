@@ -1061,6 +1061,14 @@ export type AdminSlumberChallengeRow = {
   max_participants: number | null;
   join_enabled: boolean;
   created_at: string;
+  is_drawing?: boolean;
+  prize_sponsor_name?: string | null;
+  prize_name?: string | null;
+  prize_url?: string | null;
+  prize_extra_urls?: string[] | null;
+  prize_logo_url?: string | null;
+  official_rules?: string | null;
+  official_rules_url?: string | null;
 };
 
 export type AdminSlumberChallengeDraft = {
@@ -1072,6 +1080,41 @@ export type AdminSlumberChallengeDraft = {
   expiresAt: string | null;
   maxParticipants: number | null;
   joinEnabled: boolean;
+  isDrawing?: boolean;
+  prizeSponsorName?: string | null;
+  prizeName?: string | null;
+  prizeUrl?: string | null;
+  prizeExtraUrls?: string[] | null;
+  prizeLogoUrl?: string | null;
+  officialRules?: string | null;
+  officialRulesUrl?: string | null;
+};
+
+export type AdminDrawingRosterRow = {
+  user_id: string;
+  username: string;
+  email: string | null;
+  accrued_minutes: number;
+  referred_by: string | null;
+  referred_by_username: string | null;
+  drawing_attested_at: string | null;
+  drawing_ineligible_at: string | null;
+  drawing_alternate_entry: boolean;
+  joined_at: string | null;
+  entries: number;
+  referrals_joined: number;
+  referrals_qualified: number;
+};
+
+export type AdminDrawingRoster = {
+  challengeId: string;
+  isDrawing: boolean;
+  goalMinutes: number;
+  joined: number;
+  qualified: number;
+  totalEntries: number;
+  referralJoins: number;
+  rows: AdminDrawingRosterRow[];
 };
 
 export async function fetchAdminSlumberChallenges(
@@ -1095,6 +1138,14 @@ export async function createAdminSlumberChallenge(input: {
   noExpiration: boolean;
   expiresInDays: number;
   maxParticipants: number | null;
+  isDrawing?: boolean;
+  prizeSponsorName?: string | null;
+  prizeName?: string | null;
+  prizeUrl?: string | null;
+  prizeExtraUrls?: string[] | null;
+  prizeLogoUrl?: string | null;
+  officialRules?: string | null;
+  officialRulesUrl?: string | null;
 }): Promise<{ id: string; title: string }> {
   const { data, error } = await supabase.rpc('admin_create_slumber_challenge', {
     p_title: input.title,
@@ -1103,6 +1154,14 @@ export async function createAdminSlumberChallenge(input: {
     p_expires_in_days: input.expiresInDays,
     p_max_participants: input.maxParticipants,
     p_description: input.description?.trim() || null,
+    p_is_drawing: Boolean(input.isDrawing),
+    p_prize_sponsor_name: input.prizeSponsorName?.trim() || null,
+    p_prize_name: input.prizeName?.trim() || null,
+    p_prize_url: input.prizeUrl?.trim() || null,
+    p_prize_extra_urls: input.prizeExtraUrls?.length ? input.prizeExtraUrls : null,
+    p_prize_logo_url: input.prizeLogoUrl?.trim() || null,
+    p_official_rules: input.officialRules?.trim() || null,
+    p_official_rules_url: input.officialRulesUrl?.trim() || null,
   });
   if (error) throw error;
   const row = (data ?? {}) as { id?: string; title?: string };
@@ -1131,6 +1190,14 @@ export async function updateAdminSlumberChallenge(
     p_max_participants: draft.maxParticipants,
     p_join_enabled: draft.joinEnabled,
     p_description: draft.description?.trim() ?? '',
+    p_is_drawing: draft.isDrawing ?? false,
+    p_prize_sponsor_name: draft.prizeSponsorName?.trim() || null,
+    p_prize_name: draft.prizeName?.trim() || null,
+    p_prize_url: draft.prizeUrl?.trim() || null,
+    p_prize_extra_urls: draft.prizeExtraUrls ?? [],
+    p_prize_logo_url: draft.prizeLogoUrl?.trim() || null,
+    p_official_rules: draft.officialRules ?? '',
+    p_official_rules_url: draft.officialRulesUrl?.trim() || null,
   });
   if (error) throw error;
 }
@@ -1159,7 +1226,48 @@ export function slumberChallengeErrorMessage(err: unknown, fallback: string): st
   if (message.includes('challenge_not_pending')) return 'That race has already started.';
   if (message.includes('challenge_not_endable')) return 'That race has already finished.';
   if (message.includes('not_authorized')) return 'You need an admin role to edit races.';
+  if (message.includes('invalid_prize_sponsor')) return 'Sponsor name is required (max 80 characters).';
+  if (message.includes('invalid_prize_name')) return 'Prize name is required (max 120 characters).';
+  if (message.includes('invalid_official_rules')) return 'Official rules are required for a drawing.';
+  if (message.includes('invalid_prize_url') || message.includes('invalid_prize_logo') || message.includes('invalid_official_rules_url') || message.includes('invalid_prize_extra_urls')) {
+    return 'Prize and rules links must be https:// URLs.';
+  }
+  if (message.includes('drawing_locked')) return 'Drawing vs race can only be changed before Start.';
+  if (message.includes('attestation_required')) return 'That person still needs to agree to the official rules.';
+  if (message.includes('not_drawing')) return 'That race is not a drawing.';
   return message;
+}
+
+export async function fetchAdminDrawingRoster(challengeId: string): Promise<AdminDrawingRoster> {
+  const { data, error } = await supabase.rpc('admin_list_drawing_roster', {
+    p_challenge_id: challengeId,
+  });
+  if (error) throw error;
+  const row = (data ?? {}) as AdminDrawingRoster;
+  return {
+    challengeId: row.challengeId ?? challengeId,
+    isDrawing: Boolean(row.isDrawing),
+    goalMinutes: Number(row.goalMinutes ?? 0),
+    joined: Number(row.joined ?? 0),
+    qualified: Number(row.qualified ?? 0),
+    totalEntries: Number(row.totalEntries ?? 0),
+    referralJoins: Number(row.referralJoins ?? 0),
+    rows: Array.isArray(row.rows) ? row.rows : [],
+  };
+}
+
+export async function setAdminDrawingParticipant(
+  challengeId: string,
+  userId: string,
+  patch: { ineligible?: boolean; alternateEntry?: boolean },
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_set_drawing_participant', {
+    p_challenge_id: challengeId,
+    p_user_id: userId,
+    p_ineligible: patch.ineligible ?? null,
+    p_alternate_entry: patch.alternateEntry ?? null,
+  });
+  if (error) throw error;
 }
 
 export async function adminCancelChallenge(challengeId: string): Promise<void> {

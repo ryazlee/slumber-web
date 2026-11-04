@@ -2,12 +2,14 @@ import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import type { GridColDef } from '@mui/x-data-grid';
-import type { AdminSlumberChallengeRow } from '../../lib/admin';
-import { slumberChallengeErrorMessage } from '../../lib/admin';
+import type { AdminDrawingRosterRow, AdminSlumberChallengeRow } from '../../lib/admin';
+import { slumberChallengeErrorMessage, uploadAdminCampaignImage } from '../../lib/admin';
 import {
+  useAdminDrawingRoster,
   useAdminSlumberChallenges,
   useCreateAdminSlumberChallenge,
   useEndAdminSlumberChallenge,
+  useSetAdminDrawingParticipant,
   useStartAdminSlumberChallenge,
   useUpdateAdminSlumberChallenge,
 } from '../../hooks/useAdmin';
@@ -64,6 +66,14 @@ type Draft = {
   endsOn: string;
   maxParticipants: string;
   joinEnabled: boolean;
+  isDrawing: boolean;
+  prizeSponsorName: string;
+  prizeName: string;
+  prizeUrl: string;
+  prizeExtraUrls: string;
+  prizeLogoUrl: string;
+  officialRules: string;
+  officialRulesUrl: string;
 };
 
 function draftFromRow(row: AdminSlumberChallengeRow): Draft {
@@ -76,6 +86,14 @@ function draftFromRow(row: AdminSlumberChallengeRow): Draft {
     endsOn: isoToLocalDateInput(row.expires_at),
     maxParticipants: row.max_participants != null ? String(row.max_participants) : '',
     joinEnabled: row.join_enabled,
+    isDrawing: Boolean(row.is_drawing),
+    prizeSponsorName: row.prize_sponsor_name ?? '',
+    prizeName: row.prize_name ?? '',
+    prizeUrl: row.prize_url ?? '',
+    prizeExtraUrls: (row.prize_extra_urls ?? []).join('\n'),
+    prizeLogoUrl: row.prize_logo_url ?? '',
+    officialRules: row.official_rules ?? '',
+    officialRulesUrl: row.official_rules_url ?? '',
   };
 }
 
@@ -88,7 +106,19 @@ const EMPTY_DRAFT: Draft = {
   endsOn: '',
   maxParticipants: '',
   joinEnabled: true,
+  isDrawing: false,
+  prizeSponsorName: '',
+  prizeName: '',
+  prizeUrl: '',
+  prizeExtraUrls: '',
+  prizeLogoUrl: '',
+  officialRules: '',
+  officialRulesUrl: '',
 };
+
+function parseExtraUrls(raw: string): string[] {
+  return raw.split(/\s+/).map((u) => u.trim()).filter(Boolean);
+}
 
 function RaceForm({
   row,
@@ -144,26 +174,44 @@ function RaceForm({
     const goalMinutes = Math.round(goalHours * 60);
     try {
       if (!row) {
+        const extraUrls = parseExtraUrls(draft.prizeExtraUrls);
         await createMutation.mutateAsync({
           title,
           description: description || null,
           goalMinutes,
-          noExpiration: draft.noExpiration,
-          expiresInDays: draft.noExpiration ? 10 : days,
+          noExpiration: draft.isDrawing ? false : draft.noExpiration,
+          expiresInDays: draft.noExpiration && !draft.isDrawing ? 10 : days,
           maxParticipants,
+          isDrawing: draft.isDrawing,
+          prizeSponsorName: draft.prizeSponsorName,
+          prizeName: draft.prizeName,
+          prizeUrl: draft.prizeUrl,
+          prizeExtraUrls: extraUrls,
+          prizeLogoUrl: draft.prizeLogoUrl,
+          officialRules: draft.officialRules,
+          officialRulesUrl: draft.officialRulesUrl,
         });
       } else {
+        const extraUrls = parseExtraUrls(draft.prizeExtraUrls);
         await updateMutation.mutateAsync({
           challengeId: row.id,
           draft: {
             title,
             description: description || null,
             goalMinutes,
-            noExpiration: draft.noExpiration,
+            noExpiration: draft.isDrawing ? false : draft.noExpiration,
             expirationDays: Number.isInteger(days) ? days : row.expiration_days,
             expiresAt: draft.noExpiration || !started ? null : localDateInputToIso(draft.endsOn, 'end'),
             maxParticipants,
             joinEnabled: draft.joinEnabled,
+            isDrawing: draft.isDrawing,
+            prizeSponsorName: draft.prizeSponsorName,
+            prizeName: draft.prizeName,
+            prizeUrl: draft.prizeUrl,
+            prizeExtraUrls: extraUrls,
+            prizeLogoUrl: draft.prizeLogoUrl,
+            officialRules: draft.officialRules,
+            officialRulesUrl: draft.officialRulesUrl,
           },
         });
       }
@@ -187,7 +235,7 @@ function RaceForm({
             : started
               ? 'The start time stays put. A later end date keeps the race going. An end date that has already passed opens the catch-up window.'
               : 'Start the race from the table when it should go live. Duration is how many days it runs after that.'
-          : 'This creates a pending race hosted by Slumber. Start it from the table when it should go live. Link a campaign separately if you want a promo — you are not added as a racer.'}
+          : 'This creates a pending race hosted by Slumber. Turn on Drawing for a prize challenge (1 entry at the goal; winner is drawn off-app). Start it from the table when it should go live. Link a campaign separately if you want a promo — you are not added as a racer.'}
       </p>
       <form className="admin-role-grant-form" onSubmit={(e) => { void handleSubmit(e); }}>
         <div className="admin-field">
@@ -213,6 +261,109 @@ function RaceForm({
           />
           <p className="admin-panel-desc" style={{ marginTop: 4 }}>{draft.description.length}/280</p>
         </div>
+        <label className="admin-checkbox-label">
+          <input
+            type="checkbox"
+            checked={draft.isDrawing}
+            disabled={locked || started}
+            onChange={(e) => setDraft((prev) => ({
+              ...prev,
+              isDrawing: e.target.checked,
+              noExpiration: e.target.checked ? false : prev.noExpiration,
+            }))}
+          />
+          <span>Drawing (1 entry at goal; no sleep winner)</span>
+        </label>
+        {draft.isDrawing ? (
+          <>
+            <div className="admin-field">
+              <label className="admin-label" htmlFor="slumber-prize-sponsor">Sponsor name</label>
+              <input
+                id="slumber-prize-sponsor"
+                className="admin-input"
+                maxLength={80}
+                value={draft.prizeSponsorName}
+                onChange={(e) => setDraft((prev) => ({ ...prev, prizeSponsorName: e.target.value }))}
+                placeholder="Pillow Cube"
+              />
+            </div>
+            <div className="admin-field">
+              <label className="admin-label" htmlFor="slumber-prize-name">Prize name</label>
+              <input
+                id="slumber-prize-name"
+                className="admin-input"
+                maxLength={120}
+                value={draft.prizeName}
+                onChange={(e) => setDraft((prev) => ({ ...prev, prizeName: e.target.value }))}
+                placeholder="Side Cube Original"
+              />
+            </div>
+            <div className="admin-field">
+              <label className="admin-label" htmlFor="slumber-prize-url">Prize URL</label>
+              <input
+                id="slumber-prize-url"
+                className="admin-input"
+                value={draft.prizeUrl}
+                onChange={(e) => setDraft((prev) => ({ ...prev, prizeUrl: e.target.value }))}
+                placeholder="https://"
+              />
+            </div>
+            <div className="admin-field">
+              <label className="admin-label" htmlFor="slumber-prize-logo">Logo URL</label>
+              <input
+                id="slumber-prize-logo"
+                className="admin-input"
+                value={draft.prizeLogoUrl}
+                onChange={(e) => setDraft((prev) => ({ ...prev, prizeLogoUrl: e.target.value }))}
+                placeholder="https://"
+              />
+              <input
+                className="admin-input"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                style={{ marginTop: 8 }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  void uploadAdminCampaignImage(file)
+                    .then((url) => setDraft((prev) => ({ ...prev, prizeLogoUrl: url })))
+                    .catch((err: unknown) => setFormError(slumberChallengeErrorMessage(err, 'Could not upload the logo.')));
+                }}
+              />
+            </div>
+            <div className="admin-field">
+              <label className="admin-label" htmlFor="slumber-prize-extra">Extra URLs (one per line)</label>
+              <textarea
+                id="slumber-prize-extra"
+                className="admin-input"
+                rows={2}
+                value={draft.prizeExtraUrls}
+                onChange={(e) => setDraft((prev) => ({ ...prev, prizeExtraUrls: e.target.value }))}
+              />
+            </div>
+            <div className="admin-field">
+              <label className="admin-label" htmlFor="slumber-rules">Official rules</label>
+              <textarea
+                id="slumber-rules"
+                className="admin-input"
+                rows={8}
+                value={draft.officialRules}
+                onChange={(e) => setDraft((prev) => ({ ...prev, officialRules: e.target.value }))}
+                placeholder="Eligibility, window, 1 entry at goal, odds, prize, Apple is not a sponsor…"
+              />
+            </div>
+            <div className="admin-field">
+              <label className="admin-label" htmlFor="slumber-rules-url">Official rules URL (optional)</label>
+              <input
+                id="slumber-rules-url"
+                className="admin-input"
+                value={draft.officialRulesUrl}
+                onChange={(e) => setDraft((prev) => ({ ...prev, officialRulesUrl: e.target.value }))}
+                placeholder="https://"
+              />
+            </div>
+          </>
+        ) : null}
         <AdminFilterBar nested>
           <AdminFilterField label="Goal (hours)" htmlFor="slumber-race-goal">
             <input
@@ -244,7 +395,7 @@ function RaceForm({
           <input
             type="checkbox"
             checked={draft.noExpiration}
-            disabled={locked}
+            disabled={locked || draft.isDrawing}
             onChange={(e) => setDraft((prev) => ({ ...prev, noExpiration: e.target.checked }))}
           />
           <span>No end date</span>
@@ -298,9 +449,145 @@ function RaceForm({
   );
 }
 
+function csvEscape(value: string): string {
+  if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
+  return value;
+}
+
+function downloadDrawingCsv(filename: string, rows: AdminDrawingRosterRow[], qualifiedOnly: boolean) {
+  const list = qualifiedOnly ? rows.filter((row) => row.entries > 0) : rows;
+  const header = ['username', 'user_id', 'email', 'hours', 'entries', 'referred_by', 'referrals_joined', 'referrals_qualified'];
+  const lines = [
+    header.join(','),
+    ...list.map((row) => [
+      csvEscape(row.username ?? ''),
+      row.user_id,
+      csvEscape(row.email ?? ''),
+      String(Math.round((row.accrued_minutes / 60) * 10) / 10),
+      String(row.entries),
+      csvEscape(row.referred_by_username ?? ''),
+      String(row.referrals_joined),
+      String(row.referrals_qualified),
+    ].join(',')),
+  ];
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const href = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = href;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(href);
+}
+
+function DrawingRosterDialog({
+  row,
+  onClose,
+}: {
+  row: AdminSlumberChallengeRow;
+  onClose: () => void;
+}) {
+  const rosterQuery = useAdminDrawingRoster(row.id);
+  const setParticipant = useSetAdminDrawingParticipant();
+  const roster = rosterQuery.data;
+  const people = roster?.rows ?? [];
+
+  return (
+    <AdminFormDialog open wide onClose={onClose} title={`Entries · ${row.title?.trim() || 'drawing'}`}>
+      {rosterQuery.isLoading ? <p className="admin-muted">Loading roster…</p> : null}
+      {rosterQuery.error ? (
+        <p className="admin-error">{slumberChallengeErrorMessage(rosterQuery.error, 'Could not load the roster.')}</p>
+      ) : null}
+      {roster ? (
+        <p className="admin-muted">
+          {roster.joined} joined · {roster.qualified} entered · {roster.referralJoins} referral joins
+        </p>
+      ) : null}
+      <div className="admin-form-actions">
+        <button
+          className="admin-button"
+          type="button"
+          disabled={people.length === 0}
+          onClick={() => downloadDrawingCsv(`${row.title || 'drawing'}-entries.csv`, people, true)}
+        >
+          Export entries
+        </button>
+        <button
+          className="admin-button admin-button-ghost"
+          type="button"
+          disabled={people.length === 0}
+          onClick={() => downloadDrawingCsv(`${row.title || 'drawing'}-roster.csv`, people, false)}
+        >
+          Export roster
+        </button>
+      </div>
+      <div className="admin-table-wrap">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Email</th>
+              <th>Hours</th>
+              <th>Entries</th>
+              <th>Referred by</th>
+              <th>Referrals</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {people.map((person) => (
+              <tr key={person.user_id}>
+                <td>
+                  <Link to={`/profile/${person.user_id}`} className="admin-inline-link">
+                    @{person.username}
+                  </Link>
+                </td>
+                <td>{person.email ?? '—'}</td>
+                <td>{Math.round((person.accrued_minutes / 60) * 10) / 10}</td>
+                <td>{person.entries}{person.drawing_ineligible_at ? ' (out)' : ''}{person.drawing_alternate_entry ? ' AMOE' : ''}</td>
+                <td>{person.referred_by_username ? `@${person.referred_by_username}` : '—'}</td>
+                <td>{person.referrals_joined} joined / {person.referrals_qualified} in</td>
+                <td>
+                  <AdminGridActions>
+                    <AdminGridAction
+                      onClick={() => {
+                        void setParticipant.mutateAsync({
+                          challengeId: row.id,
+                          userId: person.user_id,
+                          patch: { ineligible: !person.drawing_ineligible_at },
+                        });
+                      }}
+                    >
+                      {person.drawing_ineligible_at ? 'Restore' : 'Disqualify'}
+                    </AdminGridAction>
+                    <AdminGridAction
+                      onClick={() => {
+                        void setParticipant.mutateAsync({
+                          challengeId: row.id,
+                          userId: person.user_id,
+                          patch: { alternateEntry: !person.drawing_alternate_entry },
+                        });
+                      }}
+                    >
+                      {person.drawing_alternate_entry ? 'Clear AMOE' : 'Grant AMOE'}
+                    </AdminGridAction>
+                  </AdminGridActions>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="admin-form-actions">
+        <button className="admin-button admin-button-ghost" type="button" onClick={onClose}>Close</button>
+      </div>
+    </AdminFormDialog>
+  );
+}
+
 export default function AdminSlumberChallenges() {
   const [statusFilter, setStatusFilter] = useState('');
   const [editing, setEditing] = useState<AdminSlumberChallengeRow | null | undefined>(undefined);
+  const [rosterRow, setRosterRow] = useState<AdminSlumberChallengeRow | null>(null);
   const [actingId, setActingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -376,6 +663,13 @@ export default function AdminSlumberChallenges() {
       flex: 0,
     },
     {
+      field: 'is_drawing',
+      headerName: 'Kind',
+      width: 110,
+      flex: 0,
+      valueGetter: (_value, row) => (row.is_drawing ? 'Drawing' : 'Race'),
+    },
+    {
       field: 'join_enabled',
       headerName: 'Join',
       width: 96,
@@ -386,8 +680,8 @@ export default function AdminSlumberChallenges() {
       field: 'actions',
       headerName: 'Actions',
       ...gridActionsColumn,
-      width: 300,
-      minWidth: 300,
+      width: 360,
+      minWidth: 360,
       renderCell: ({ row }) => (
         <AdminGridActions>
           <AdminGridAction
@@ -409,6 +703,16 @@ export default function AdminSlumberChallenges() {
               }}
             >
               Start
+            </AdminGridAction>
+          ) : null}
+          {row.is_drawing ? (
+            <AdminGridAction
+              onClick={(e) => {
+                e.stopPropagation();
+                setRosterRow(row);
+              }}
+            >
+              Entries
             </AdminGridAction>
           ) : null}
           <AdminGridAction to={`/challenge/${row.id}`} onClick={(e) => e.stopPropagation()}>
@@ -441,7 +745,7 @@ export default function AdminSlumberChallenges() {
     <AdminSection
       className="admin-slumber-races"
       error={error}
-      lead="Official races hosted by Slumber. Create them here, Start when they should score, and link a campaign separately if you want a promo. Campaign dates do not have to match the race window."
+      lead="Official races hosted by Slumber. Create them here, Start when they should score, and link a campaign separately if you want a promo. Campaign dates do not have to match the race window. Drawings: 1 entry at the goal; export the roster for an off-app drawing."
     >
       <AdminListToolbar
         actions={(
@@ -469,6 +773,13 @@ export default function AdminSlumberChallenges() {
           key={editing?.id ?? 'new'}
           row={editing}
           onClose={() => setEditing(undefined)}
+        />
+      ) : null}
+      {rosterRow ? (
+        <DrawingRosterDialog
+          key={rosterRow.id}
+          row={rosterRow}
+          onClose={() => setRosterRow(null)}
         />
       ) : null}
       <AdminDataGrid

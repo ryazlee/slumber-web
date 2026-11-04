@@ -48,6 +48,8 @@ import {
   fetchAdminSlumberChallenges,
   startAdminSlumberChallenge,
   updateAdminSlumberChallenge,
+  fetchAdminDrawingRoster,
+  setAdminDrawingParticipant,
   fetchAdminClubs,
   fetchAdminClubRoster,
   fetchAdminUserDetail,
@@ -783,6 +785,33 @@ export function useEndAdminSlumberChallenge() {
   return useMutation({
     mutationFn: (challengeId: string) => endAdminSlumberChallenge(challengeId),
     onSuccess: () => invalidateSlumberChallenges(qc),
+  });
+}
+
+export function useAdminDrawingRoster(challengeId: string | null) {
+  return useQuery({
+    queryKey: ['admin', 'drawing-roster', challengeId],
+    queryFn: () => fetchAdminDrawingRoster(challengeId!),
+    enabled: Boolean(challengeId),
+    ...adminQueryOptions,
+  });
+}
+
+export function useSetAdminDrawingParticipant() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      challengeId,
+      userId,
+      patch,
+    }: {
+      challengeId: string;
+      userId: string;
+      patch: { ineligible?: boolean; alternateEntry?: boolean };
+    }) => setAdminDrawingParticipant(challengeId, userId, patch),
+    onSuccess: (_data, vars) => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'drawing-roster', vars.challengeId] });
+    },
   });
 }
 
