@@ -81,6 +81,7 @@ type Draft = {
   prizeUrl: string;
   prizeExtraUrls: string;
   prizeLogoUrl: string;
+  prizeImageUrl: string;
   officialRules: string;
   officialRulesUrl: string;
 };
@@ -107,6 +108,7 @@ function draftFromRow(row: AdminSlumberChallengeRow): Draft {
     prizeUrl: row.prize_url ?? '',
     prizeExtraUrls: (row.prize_extra_urls ?? []).join('\n'),
     prizeLogoUrl: row.prize_logo_url ?? '',
+    prizeImageUrl: row.prize_image_url ?? '',
     officialRules: row.official_rules ?? '',
     officialRulesUrl: row.official_rules_url ?? '',
   };
@@ -129,6 +131,7 @@ const EMPTY_DRAFT: Draft = {
   prizeUrl: '',
   prizeExtraUrls: '',
   prizeLogoUrl: '',
+  prizeImageUrl: '',
   officialRules: '',
   officialRulesUrl: '',
 };
@@ -207,6 +210,7 @@ function RaceForm({
           prizeUrl: draft.prizeUrl,
           prizeExtraUrls: extraUrls,
           prizeLogoUrl: draft.prizeLogoUrl,
+          prizeImageUrl: draft.prizeImageUrl,
           officialRules: draft.officialRules,
           officialRulesUrl: draft.officialRulesUrl,
         });
@@ -231,6 +235,7 @@ function RaceForm({
             prizeUrl: draft.prizeUrl,
             prizeExtraUrls: extraUrls,
             prizeLogoUrl: draft.prizeLogoUrl,
+            prizeImageUrl: draft.prizeImageUrl,
             officialRules: draft.officialRules,
             officialRulesUrl: draft.officialRulesUrl,
           },
@@ -379,7 +384,7 @@ function RaceForm({
               })}
             </fieldset>
             <div className="admin-field">
-              <label className="admin-label" htmlFor="slumber-prize-sponsor">Sponsor name</label>
+              <label className="admin-label" htmlFor="slumber-prize-sponsor">Sponsor name (optional)</label>
               <input
                 id="slumber-prize-sponsor"
                 className="admin-input"
@@ -390,7 +395,7 @@ function RaceForm({
               />
             </div>
             <div className="admin-field">
-              <label className="admin-label" htmlFor="slumber-prize-name">Prize name</label>
+              <label className="admin-label" htmlFor="slumber-prize-name">Prize name (optional)</label>
               <input
                 id="slumber-prize-name"
                 className="admin-input"
@@ -401,7 +406,7 @@ function RaceForm({
               />
             </div>
             <div className="admin-field">
-              <label className="admin-label" htmlFor="slumber-prize-url">Prize URL</label>
+              <label className="admin-label" htmlFor="slumber-prize-url">Product URL (optional)</label>
               <input
                 id="slumber-prize-url"
                 className="admin-input"
@@ -411,7 +416,7 @@ function RaceForm({
               />
             </div>
             <div className="admin-field">
-              <label className="admin-label" htmlFor="slumber-prize-logo">Sponsor logo</label>
+              <label className="admin-label" htmlFor="slumber-prize-logo">Logo URL (optional)</label>
               <input
                 id="slumber-prize-logo"
                 className="admin-input"
@@ -434,7 +439,30 @@ function RaceForm({
               />
             </div>
             <div className="admin-field">
-              <label className="admin-label" htmlFor="slumber-prize-extra">Prize photos (first is the card image; one URL per line)</label>
+              <label className="admin-label" htmlFor="slumber-prize-image">Prize image URL (optional)</label>
+              <input
+                id="slumber-prize-image"
+                className="admin-input"
+                value={draft.prizeImageUrl}
+                onChange={(e) => setDraft((prev) => ({ ...prev, prizeImageUrl: e.target.value }))}
+                placeholder="https://"
+              />
+              <input
+                className="admin-input"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                style={{ marginTop: 8 }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  void uploadAdminCampaignImage(file)
+                    .then((url) => setDraft((prev) => ({ ...prev, prizeImageUrl: url })))
+                    .catch((err: unknown) => setFormError(slumberChallengeErrorMessage(err, 'Could not upload the prize image.')));
+                }}
+              />
+            </div>
+            <div className="admin-field">
+              <label className="admin-label" htmlFor="slumber-prize-extra">More prize photos (optional, one URL per line)</label>
               <textarea
                 id="slumber-prize-extra"
                 className="admin-input"
@@ -444,7 +472,7 @@ function RaceForm({
               />
             </div>
             <div className="admin-field">
-              <label className="admin-label" htmlFor="slumber-rules">Official rules</label>
+              <label className="admin-label" htmlFor="slumber-rules">Official rules (optional)</label>
               <textarea
                 id="slumber-rules"
                 className="admin-input"

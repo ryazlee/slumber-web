@@ -196,6 +196,7 @@ export type Challenge = {
   prizeName?: string | null;
   prizeUrl?: string | null;
   prizeLogoUrl?: string | null;
+  prizeImageUrl?: string | null;
   prizeExtraUrls?: string[] | null;
   officialRules?: string | null;
   officialRulesUrl?: string | null;

@@ -1,3 +1,4 @@
+import { displayedCurrentStreak, getLocalDateISO } from './dates';
 import { supabase } from './supabase';
 
 type Pending = {
@@ -8,6 +9,7 @@ type Pending = {
 type StreakRow = {
   user_id?: string | null;
   current_streak?: number | string | null;
+  last_sleep_date?: string | null;
 };
 
 const queue = new Map<string, Pending[]>();
@@ -36,15 +38,20 @@ function parseUserId(value: unknown): string | null {
 async function fetchCurrentStreakMapViaSelect(userIds: string[]): Promise<Map<string, number>> {
   const out = new Map<string, number>();
   for (const id of userIds) out.set(id, 0);
-  const { data, error } = await supabase
+  const full = await supabase
     .from('streaks')
-    .select('user_id, current_streak')
+    .select('user_id, current_streak, last_sleep_date')
     .in('user_id', userIds);
+  const { data, error } = full.error
+    ? await supabase.from('streaks').select('user_id, current_streak').in('user_id', userIds)
+    : full;
   if (error) throw error;
+  const today = getLocalDateISO();
   for (const row of (data ?? []) as StreakRow[]) {
     const id = parseUserId(row.user_id);
     if (!id) continue;
-    out.set(id, parseStreakCount(row.current_streak));
+    const raw = parseStreakCount(row.current_streak);
+    out.set(id, full.error ? raw : displayedCurrentStreak(raw, row.last_sleep_date, today));
   }
   return out;
 }
@@ -93,9 +100,15 @@ export async function fetchCurrentStreakMap(userIds: string[]): Promise<Map<stri
 
   for (let i = 0; i < unique.length; i += 100) {
     const chunk = unique.slice(i, i + 100);
-    const { data, error } = await supabase.rpc('get_current_streaks', {
+    let { data, error } = await supabase.rpc('get_current_streaks', {
       p_user_ids: chunk,
+      p_as_of: getLocalDateISO(),
     });
+    if (error && isUndefinedFunctionError(error)) {
+      ({ data, error } = await supabase.rpc('get_current_streaks', {
+        p_user_ids: chunk,
+      }));
+    }
     if (error) {
       if (isUndefinedFunctionError(error)) {
         const fallback = await fetchCurrentStreakMapViaSelect(chunk);

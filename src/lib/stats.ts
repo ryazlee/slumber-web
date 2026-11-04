@@ -1,4 +1,4 @@
-import { addDaysToDateISO, getLocalDateISO } from './dates';
+import { addDaysToDateISO, displayedCurrentStreak, getLocalDateISO } from './dates';
 import { enrichSleepPostRows } from './feed';
 import {
   filterWearableSleepRows,
@@ -88,11 +88,32 @@ function findPR(prs: PRRow[], type: string) {
   return r ? { value: r.value, date: r.achieved_at, postId: r.post_id } : null;
 }
 
+async function fetchOwnStreakRow(userId: string): Promise<{
+  data: {
+    current_streak?: number | null;
+    longest_streak?: number | null;
+    last_sleep_date?: string | null;
+  } | null;
+}> {
+  const full = await supabase
+    .from('streaks')
+    .select('current_streak, longest_streak, last_sleep_date')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (!full.error) return { data: full.data };
+  const basic = await supabase
+    .from('streaks')
+    .select('current_streak, longest_streak')
+    .eq('user_id', userId)
+    .maybeSingle();
+  return { data: basic.data };
+}
+
 export async function fetchUserStats(userId: string): Promise<UserStats> {
   const sevenDaysAgo = addDaysToDateISO(getLocalDateISO(), -7);
 
   const [streakRes, prsRes, recentRes] = await Promise.all([
-    supabase.from('streaks').select('current_streak, longest_streak').eq('user_id', userId).maybeSingle(),
+    fetchOwnStreakRow(userId),
     supabase.from('personal_records').select('record_type, value, achieved_at, post_id, scope').eq('user_id', userId),
     supabase.from('sleep_posts').select('*')
       .eq('user_id', userId)
@@ -106,7 +127,11 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
   const prs = (prsRes.data ?? []) as PRRow[];
 
   return {
-    currentStreak: streakRes.data?.current_streak ?? 0,
+    currentStreak: displayedCurrentStreak(
+      streakRes.data?.current_streak,
+      streakRes.data?.last_sleep_date,
+      getLocalDateISO(),
+    ),
     longestStreak: streakRes.data?.longest_streak ?? 0,
     weeklyPosts,
     avgAsleepMinutes: averageAsleepMinutesByNight(weeklyPosts),

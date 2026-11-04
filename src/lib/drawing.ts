@@ -7,6 +7,7 @@ export type DrawingPrize = {
   prizeName?: string | null;
   prizeUrl?: string | null;
   prizeLogoUrl?: string | null;
+  prizeImageUrl?: string | null;
   prizeExtraUrls?: string[] | null;
   officialRules?: string | null;
   officialRulesUrl?: string | null;
@@ -16,13 +17,21 @@ function trimmedUrls(urls: (string | null | undefined)[] | null | undefined): st
   return (urls ?? []).map((item) => item?.trim() ?? '').filter(Boolean);
 }
 
+/** Prize photos for the details page. Logo stays a small mark, not a banner. */
+export function drawingPrizeImageUrls(prize: DrawingPrize): string[] {
+  const primary = prize.prizeImageUrl?.trim();
+  const extras = trimmedUrls(prize.prizeExtraUrls);
+  return [...new Set([...(primary ? [primary] : []), ...extras])];
+}
+
+/** Card banner: prize photo first, then the sponsor logo if that’s all we have. */
 export function drawingHeroImageUrl(prize: DrawingPrize): string | null {
-  return trimmedUrls(prize.prizeExtraUrls)[0] ?? prize.prizeLogoUrl?.trim() ?? null;
+  return drawingPrizeImageUrls(prize)[0] ?? prize.prizeLogoUrl?.trim() ?? null;
 }
 
 export function drawingHeroImageUrls(prize: DrawingPrize): string[] {
-  const extras = trimmedUrls(prize.prizeExtraUrls);
-  if (extras.length) return extras;
+  const images = drawingPrizeImageUrls(prize);
+  if (images.length) return images;
   const logo = prize.prizeLogoUrl?.trim();
   return logo ? [logo] : [];
 }

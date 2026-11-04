@@ -28,7 +28,7 @@ import {
 import ChallengeKindChip from '../../components/ChallengeKindChip';
 import CollapsibleSection from '../../components/CollapsibleSection';
 import {
-  drawingHeroImageUrls,
+  drawingPrizeImageUrls,
   drawingHowItWorksLine,
   drawingPeopleFromRoster,
   drawingReferralStatusLine,
@@ -226,7 +226,7 @@ export default function ChallengeDetail() {
                 ) : null}
               </div>
             ) : null}
-            {drawingHeroImageUrls(challenge).map((src) => (
+            {drawingPrizeImageUrls(challenge).map((src) => (
               <img
                 key={src}
                 className="drawing-prize-logo drawing-prize-logo--hero"

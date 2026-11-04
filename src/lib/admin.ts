@@ -1074,6 +1074,7 @@ export type AdminSlumberChallengeRow = {
   prize_url?: string | null;
   prize_extra_urls?: string[] | null;
   prize_logo_url?: string | null;
+  prize_image_url?: string | null;
   official_rules?: string | null;
   official_rules_url?: string | null;
 };
@@ -1100,6 +1101,7 @@ export type AdminSlumberChallengeDraft = {
   prizeUrl?: string | null;
   prizeExtraUrls?: string[] | null;
   prizeLogoUrl?: string | null;
+  prizeImageUrl?: string | null;
   officialRules?: string | null;
   officialRulesUrl?: string | null;
 };
@@ -1165,6 +1167,7 @@ export async function createAdminSlumberChallenge(input: {
   prizeUrl?: string | null;
   prizeExtraUrls?: string[] | null;
   prizeLogoUrl?: string | null;
+  prizeImageUrl?: string | null;
   officialRules?: string | null;
   officialRulesUrl?: string | null;
 }): Promise<{ id: string; title: string }> {
@@ -1181,6 +1184,7 @@ export async function createAdminSlumberChallenge(input: {
     p_prize_url: input.prizeUrl?.trim() || null,
     p_prize_extra_urls: input.prizeExtraUrls?.length ? input.prizeExtraUrls : null,
     p_prize_logo_url: input.prizeLogoUrl?.trim() || null,
+    p_prize_image_url: input.prizeImageUrl?.trim() || null,
     p_official_rules: input.officialRules?.trim() || null,
     p_official_rules_url: input.officialRulesUrl?.trim() || null,
   });
@@ -1221,6 +1225,7 @@ export async function updateAdminSlumberChallenge(
     p_prize_url: draft.prizeUrl?.trim() || null,
     p_prize_extra_urls: draft.prizeExtraUrls ?? [],
     p_prize_logo_url: draft.prizeLogoUrl?.trim() || null,
+    p_prize_image_url: draft.prizeImageUrl?.trim() || null,
     p_official_rules: draft.officialRules ?? '',
     p_official_rules_url: draft.officialRulesUrl?.trim() || null,
   });
@@ -1277,10 +1282,10 @@ export function slumberChallengeErrorMessage(err: unknown, fallback: string): st
   if (message.includes('challenge_not_pending')) return 'That challenge has already started.';
   if (message.includes('challenge_not_endable')) return 'That challenge has already finished.';
   if (message.includes('not_authorized')) return 'You need an admin role to edit challenges.';
-  if (message.includes('invalid_prize_sponsor')) return 'Sponsor name is required (max 80 characters).';
-  if (message.includes('invalid_prize_name')) return 'Prize name is required (max 120 characters).';
-  if (message.includes('invalid_official_rules')) return 'Official rules are required for a drawing.';
-  if (message.includes('invalid_prize_url') || message.includes('invalid_prize_logo') || message.includes('invalid_official_rules_url') || message.includes('invalid_prize_extra_urls')) {
+  if (message.includes('invalid_prize_sponsor')) return 'Sponsor name must be 80 characters or fewer.';
+  if (message.includes('invalid_prize_name')) return 'Prize name must be 120 characters or fewer.';
+  if (message.includes('invalid_official_rules')) return 'Official rules must be 20,000 characters or fewer.';
+  if (message.includes('invalid_prize_url') || message.includes('invalid_prize_logo') || message.includes('invalid_prize_image') || message.includes('invalid_official_rules_url') || message.includes('invalid_prize_extra_urls')) {
     return 'Prize and rules links must be https:// URLs.';
   }
   if (message.includes('drawing_locked')) return 'Drawing vs race can only be changed before Start.';

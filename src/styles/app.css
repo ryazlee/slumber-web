@@ -2296,8 +2296,7 @@
   background: color-mix(in srgb, var(--accent) 10%, var(--surface));
 }
 
-.drawing-prize-logo,
-.drawing-prize-logo--hero {
+.drawing-prize-logo {
   display: block;
   width: 100%;
   height: auto;
@@ -2306,6 +2305,29 @@
   background: var(--surface);
   border-radius: 0;
   align-self: stretch;
+}
+
+.app-page--challenge-detail {
+  overflow-x: visible;
+}
+
+.drawing-prize--hero {
+  overflow: visible;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.drawing-prize-logo--hero {
+  display: block;
+  width: calc(100% + 2 * var(--content-padding-x));
+  max-width: none;
+  height: auto;
+  margin-left: calc(-1 * var(--content-padding-x));
+  aspect-ratio: auto;
+  object-fit: contain;
+  background: var(--surface);
+  border-radius: 0;
 }
 
 .drawing-prize-sponsor {

@@ -28,14 +28,18 @@ export function daysAgoForDateISO(dateISO: string, referenceISO = getLocalDateIS
   return Math.round((ref.getTime() - date.getTime()) / 86_400_000);
 }
 
-/** 0 when the last logged morning is older than the day before asOfISO. */
+/**
+ * 0 when the last logged morning is older than the day before asOfISO.
+ * `undefined` means the date was not loaded (older database); keep the stored run.
+ */
 export function displayedCurrentStreak(
   currentRun: number | null | undefined,
   lastSleepDate: string | null | undefined,
   asOfISO: string,
 ): number {
   const run = Number.isFinite(currentRun) ? Math.max(0, Math.trunc(currentRun ?? 0)) : 0;
-  if (run === 0 || !lastSleepDate) return 0;
+  if (run === 0 || lastSleepDate === undefined) return run;
+  if (!lastSleepDate) return 0;
   return daysAgoForDateISO(lastSleepDate, asOfISO) <= 1 ? run : 0;
 }
 
