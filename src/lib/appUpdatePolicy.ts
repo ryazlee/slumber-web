@@ -32,6 +32,13 @@ export function countUsersBelowVersion(
   }, 0);
 }
 
+/** HTTPS promo image, or null when empty or not a usable URL. */
+export function appUpdateImageUrl(value: string | null | undefined): string | null {
+  const trimmed = value?.trim() ?? '';
+  if (!trimmed || trimmed.length > 2000 || !/^https:\/\//i.test(trimmed)) return null;
+  return trimmed;
+}
+
 function parseVersion(value: string): [number, number, number] | null {
   const trimmed = value.trim();
   if (!VERSION_RE.test(trimmed)) return null;

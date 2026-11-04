@@ -1407,6 +1407,7 @@ export type AppUpdatePolicyRow = {
   min_version: string | null;
   is_blocking: boolean;
   message: string | null;
+  image_url: string | null;
   enabled: boolean;
   updated_at: string;
 };
@@ -1423,6 +1424,7 @@ export async function upsertAppUpdatePolicy(input: {
   minVersion: string | null;
   isBlocking: boolean;
   message: string | null;
+  imageUrl: string | null;
   enabled: boolean;
 }): Promise<void> {
   const { error } = await supabase.rpc('admin_upsert_app_update_policy', {
@@ -1430,6 +1432,7 @@ export async function upsertAppUpdatePolicy(input: {
     p_min_version: input.minVersion,
     p_is_blocking: input.isBlocking,
     p_message: input.message,
+    p_image_url: input.imageUrl,
     p_enabled: input.enabled,
   });
   if (error) throw error;

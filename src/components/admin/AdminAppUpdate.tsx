@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import type { AppUpdatePlatform, AppUpdatePolicyRow, AppVersionRow } from '../../lib/admin';
-import { adminErrorMessage } from '../../lib/admin';
+import { adminErrorMessage, uploadAdminCampaignImage } from '../../lib/admin';
 import {
   APP_UPDATE_MESSAGE_MAX,
+  appUpdateImageUrl,
   countUsersBelowVersion,
   isAppUpdateVersion,
 } from '../../lib/appUpdatePolicy';
@@ -20,6 +21,7 @@ type Draft = {
   splitVersions: boolean;
   isBlocking: boolean;
   message: string;
+  imageUrl: string;
   enabled: boolean;
 };
 
@@ -30,6 +32,7 @@ const EMPTY_DRAFT: Draft = {
   splitVersions: false,
   isBlocking: false,
   message: '',
+  imageUrl: '',
   enabled: false,
 };
 
@@ -40,6 +43,7 @@ function draftFromRows(rows: AppUpdatePolicyRow[]): Draft {
     ios && android
     && ios.is_blocking === android.is_blocking
     && (ios.message ?? '') === (android.message ?? '')
+    && (ios.image_url ?? '') === (android.image_url ?? '')
     && ios.enabled === android.enabled,
   );
 
@@ -52,6 +56,7 @@ function draftFromRows(rows: AppUpdatePolicyRow[]): Draft {
       splitVersions: !sameVersion,
       isBlocking: ios.is_blocking,
       message: ios.message ?? '',
+      imageUrl: ios.image_url ?? '',
       enabled: ios.enabled,
     };
   }
@@ -69,6 +74,7 @@ function draftFromRows(rows: AppUpdatePolicyRow[]): Draft {
     splitVersions: false,
     isBlocking: primary?.is_blocking ?? false,
     message: primary?.message ?? '',
+    imageUrl: primary?.image_url ?? '',
     enabled: primary?.enabled ?? false,
   };
 }
@@ -84,6 +90,14 @@ function typedVersion(draft: Draft, platform: AppUpdatePlatform): string {
   return draft.minVersion.trim();
 }
 
+function imageError(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.length > 2000) return 'Image URL must be 2000 characters or fewer.';
+  if (!appUpdateImageUrl(trimmed)) return 'Image URL must start with https://.';
+  return null;
+}
+
 function versionError(version: string, required: boolean): string | null {
   if (!version) return required ? 'Enter a minimum version.' : null;
   if (!isAppUpdateVersion(version)) return 'Use major.minor.patch, like 4.6.0.';
@@ -97,6 +111,7 @@ export default function AdminAppUpdate() {
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [hydrated, setHydrated] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const rows = policyQuery.data ?? [];
 
@@ -118,6 +133,8 @@ export default function AdminAppUpdate() {
   if (messageTooLong) {
     fieldErrors.push(`Message must be ${APP_UPDATE_MESSAGE_MAX} characters or fewer.`);
   }
+  const imageProblem = imageError(draft.imageUrl);
+  if (imageProblem) fieldErrors.push(imageProblem);
 
   const affected = useMemo(
     () => targets.map((platform) => {
@@ -151,6 +168,8 @@ export default function AdminAppUpdate() {
     if (message.length > APP_UPDATE_MESSAGE_MAX) {
       errors.push(`Message must be ${APP_UPDATE_MESSAGE_MAX} characters or fewer.`);
     }
+    const imageProblem = imageError(draft.imageUrl);
+    if (imageProblem) errors.push(imageProblem);
     if (errors.length > 0) {
       setFormError(errors.join(' '));
       return;
@@ -166,6 +185,7 @@ export default function AdminAppUpdate() {
           minVersion: minVersion || null,
           isBlocking: draft.isBlocking,
           message: message || null,
+          imageUrl: draft.imageUrl.trim() || null,
           enabled,
         });
       }));
@@ -193,6 +213,7 @@ export default function AdminAppUpdate() {
                 <th>Platform</th>
                 <th>Minimum</th>
                 <th>Prompt</th>
+                <th>Image</th>
                 <th>Enabled</th>
                 <th>Updated</th>
               </tr>
@@ -203,6 +224,11 @@ export default function AdminAppUpdate() {
                   <td>{row.platform === 'ios' ? 'iOS' : 'Android'}</td>
                   <td>{row.min_version ? `v${row.min_version}` : '—'}</td>
                   <td>{row.is_blocking ? 'Blocking modal' : 'Banner'}</td>
+                  <td>
+                    {row.image_url ? (
+                      <img src={row.image_url} alt="" className="admin-campaign-thumb" />
+                    ) : '—'}
+                  </td>
                   <td>{row.enabled ? 'On' : 'Off'}</td>
                   <td>{row.updated_at ? formatWhen(row.updated_at) : '—'}</td>
                 </tr>
@@ -299,6 +325,62 @@ export default function AdminAppUpdate() {
           </p>
         </label>
 
+        <label className="admin-field">
+          <span className="admin-label">Image</span>
+          <input
+            className="admin-input"
+            value={draft.imageUrl}
+            onChange={(event) => setDraft((prev) => ({ ...prev, imageUrl: event.target.value }))}
+            placeholder="https://… or upload below"
+          />
+          <p className="admin-field-hint">Optional. Shown on the banner and the blocking popup.</p>
+        </label>
+        <div className="admin-form-actions">
+          <label className="admin-button admin-button-ghost">
+            {uploadingImage ? 'Uploading…' : 'Upload image'}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              hidden
+              disabled={uploadingImage}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = '';
+                if (!file) return;
+                setUploadingImage(true);
+                setFormError(null);
+                void uploadAdminCampaignImage(file)
+                  .then((url) => setDraft((prev) => ({ ...prev, imageUrl: url })))
+                  .catch((err: unknown) => {
+                    const uploadMessage = adminErrorMessage(err, 'Could not upload image.');
+                    setFormError(
+                      uploadMessage.includes('image_too_large')
+                        ? 'Image must be 5 MB or smaller.'
+                        : uploadMessage,
+                    );
+                  })
+                  .finally(() => setUploadingImage(false));
+              }}
+            />
+          </label>
+          {draft.imageUrl ? (
+            <button
+              type="button"
+              className="admin-button admin-button-ghost"
+              onClick={() => setDraft((prev) => ({ ...prev, imageUrl: '' }))}
+            >
+              Remove image
+            </button>
+          ) : null}
+        </div>
+        {draft.imageUrl ? (
+          <img
+            src={draft.imageUrl}
+            alt=""
+            style={{ maxWidth: 280, maxHeight: 160, objectFit: 'cover', borderRadius: 8 }}
+          />
+        ) : null}
+
         <label className="admin-checkbox-label">
           <input
             type="checkbox"
@@ -323,7 +405,7 @@ export default function AdminAppUpdate() {
           </div>
         ) : null}
 
-        {fieldErrors.length > 0 && draft.enabled ? (
+        {fieldErrors.length > 0 ? (
           <p className="admin-error">{fieldErrors.join(' ')}</p>
         ) : null}
         {formError ? <p className="admin-error">{formError}</p> : null}
@@ -332,14 +414,14 @@ export default function AdminAppUpdate() {
           <button
             className="admin-button"
             type="submit"
-            disabled={upsert.isPending || (policyQuery.isLoading && !hydrated)}
+            disabled={upsert.isPending || uploadingImage || (policyQuery.isLoading && !hydrated)}
           >
             {upsert.isPending ? 'Saving…' : 'Save'}
           </button>
           <button
             type="button"
             className="admin-button admin-button-ghost"
-            disabled={upsert.isPending || (policyQuery.isLoading && !hydrated)}
+            disabled={upsert.isPending || uploadingImage || (policyQuery.isLoading && !hydrated)}
             onClick={() => { void save(false); }}
           >
             Turn off
