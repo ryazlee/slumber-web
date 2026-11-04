@@ -5,6 +5,12 @@ import type { GridColDef } from '@mui/x-data-grid';
 import type { AdminDrawingRosterRow, AdminSlumberChallengeRow } from '../../lib/admin';
 import { slumberChallengeErrorMessage, uploadAdminCampaignImage } from '../../lib/admin';
 import {
+  DRAWING_ENTRY_KIND_CATALOG,
+  defaultDrawingEntryConfig,
+  parseDrawingEntryConfig,
+  type DrawingEntryRule,
+} from '../../lib/drawing';
+import {
   useAdminDrawingRoster,
   useAdminSlumberChallenges,
   useCreateAdminSlumberChallenge,
@@ -68,6 +74,7 @@ type Draft = {
   joinEnabled: boolean;
   isDrawing: boolean;
   drawingReferrals: boolean;
+  entryRules: DrawingEntryRule[];
   prizeSponsorName: string;
   prizeName: string;
   prizeUrl: string;
@@ -89,6 +96,11 @@ function draftFromRow(row: AdminSlumberChallengeRow): Draft {
     joinEnabled: row.join_enabled,
     isDrawing: Boolean(row.is_drawing),
     drawingReferrals: Boolean(row.is_drawing && row.drawing_referrals),
+    entryRules: parseDrawingEntryConfig(
+      row.drawing_entry_config,
+      Boolean(row.is_drawing),
+      Boolean(row.drawing_referrals),
+    ),
     prizeSponsorName: row.prize_sponsor_name ?? '',
     prizeName: row.prize_name ?? '',
     prizeUrl: row.prize_url ?? '',
@@ -110,6 +122,7 @@ const EMPTY_DRAFT: Draft = {
   joinEnabled: true,
   isDrawing: false,
   drawingReferrals: false,
+  entryRules: defaultDrawingEntryConfig(),
   prizeSponsorName: '',
   prizeName: '',
   prizeUrl: '',
@@ -161,7 +174,7 @@ function RaceForm({
         return;
       }
       if (maxParticipants != null && (!Number.isInteger(maxParticipants) || maxParticipants < 2 || maxParticipants > 10000)) {
-        setFormError('Max racers must be between 2 and 10,000, or left blank.');
+        setFormError('Max participants must be between 2 and 10,000, or left blank.');
         return;
       }
       if (!draft.noExpiration && !started && (!Number.isInteger(days) || days < 1 || days > 100)) {
@@ -169,7 +182,7 @@ function RaceForm({
         return;
       }
       if (!draft.noExpiration && started && !draft.endsOn) {
-        setFormError('Pick an end date, or leave the race without an end.');
+        setFormError('Pick an end date, or leave the challenge without an end.');
         return;
       }
     }
@@ -186,7 +199,8 @@ function RaceForm({
           expiresInDays: draft.noExpiration && !draft.isDrawing ? 10 : days,
           maxParticipants,
           isDrawing: draft.isDrawing,
-          drawingReferrals: draft.isDrawing && draft.drawingReferrals,
+          drawingReferrals: draft.isDrawing && Boolean(draft.entryRules.find((r) => r.kind === 'referral')?.enabled),
+          drawingEntryConfig: draft.isDrawing ? draft.entryRules : [],
           prizeSponsorName: draft.prizeSponsorName,
           prizeName: draft.prizeName,
           prizeUrl: draft.prizeUrl,
@@ -209,7 +223,8 @@ function RaceForm({
             maxParticipants,
             joinEnabled: draft.joinEnabled,
             isDrawing: draft.isDrawing,
-            drawingReferrals: draft.isDrawing && draft.drawingReferrals,
+            drawingReferrals: draft.isDrawing && Boolean(draft.entryRules.find((r) => r.kind === 'referral')?.enabled),
+            drawingEntryConfig: draft.isDrawing ? draft.entryRules : [],
             prizeSponsorName: draft.prizeSponsorName,
             prizeName: draft.prizeName,
             prizeUrl: draft.prizeUrl,
@@ -222,7 +237,7 @@ function RaceForm({
       }
       onClose();
     } catch (err: unknown) {
-      setFormError(slumberChallengeErrorMessage(err, 'Could not save the race.'));
+      setFormError(slumberChallengeErrorMessage(err, 'Could not save the challenge.'));
     }
   };
 
@@ -231,16 +246,16 @@ function RaceForm({
       open
       wide
       onClose={onClose}
-      title={row ? `Edit ${row.title?.trim() || 'race'}` : 'New Slumber race'}
+      title={row ? `Edit ${row.title?.trim() || 'challenge'}` : 'New Slumber challenge'}
     >
       <p className="admin-panel-desc">
         {row
           ? locked
-            ? 'This race has finished. The name can still be changed.'
+            ? 'This challenge has finished. The name can still be changed.'
             : started
-              ? 'The start time stays put. A later end date keeps the race going. An end date that has already passed opens the catch-up window.'
-              : 'Start the race from the table when it should go live. Duration is how many days it runs after that.'
-          : 'This creates a pending race hosted by Slumber. Turn on Drawing for a prize challenge (1 entry at the goal; winner is drawn off-app). Start it from the table when it should go live. Link a campaign separately if you want a promo — you are not added as a racer.'}
+              ? 'The start time stays put. A later end date keeps the challenge going. An end date that has already passed opens the catch-up window.'
+              : 'Start the challenge from the table when it should go live. Duration is how many days it runs after that.'
+          : 'This creates a pending challenge hosted by Slumber. Type is a field: leave Drawing off for a race, or turn it on for a prize challenge (entries at the goal; winner is drawn off-app). Start it from the table when it should go live. Link a campaign separately if you want a promo — you are not added as a participant.'}
       </p>
       <form className="admin-role-grant-form" onSubmit={(e) => { void handleSubmit(e); }}>
         <div className="admin-field">
@@ -262,7 +277,7 @@ function RaceForm({
             rows={3}
             value={draft.description}
             onChange={(e) => setDraft((prev) => ({ ...prev, description: e.target.value }))}
-            placeholder="Shown on race details and join"
+            placeholder="Shown on challenge details and join"
           />
           <p className="admin-panel-desc" style={{ marginTop: 4 }}>{draft.description.length}/280</p>
         </div>
@@ -275,25 +290,93 @@ function RaceForm({
               ...prev,
               isDrawing: e.target.checked,
               drawingReferrals: e.target.checked ? prev.drawingReferrals : false,
+              entryRules: e.target.checked ? prev.entryRules : defaultDrawingEntryConfig(),
               noExpiration: e.target.checked ? false : prev.noExpiration,
             }))}
           />
-          <span>Drawing (1 entry at goal; no sleep winner)</span>
+          <span>Drawing (no sleep winner; entries from the types below)</span>
         </label>
         {draft.isDrawing ? (
           <>
-            <label className="admin-checkbox-label">
-              <input
-                type="checkbox"
-                checked={draft.drawingReferrals}
-                disabled={locked}
-                onChange={(e) => setDraft((prev) => ({
-                  ...prev,
-                  drawingReferrals: e.target.checked,
-                }))}
-              />
-              <span>Referrals (track personal invite links; no extra entries)</span>
-            </label>
+            <fieldset className="admin-field" disabled={locked}>
+              <legend className="admin-label">Entry types</legend>
+              <p className="admin-panel-desc">Each kind can award a different number of entries. Add more kinds in code later.</p>
+              {DRAWING_ENTRY_KIND_CATALOG.map((kind) => {
+                const rule = draft.entryRules.find((row) => row.kind === kind.kind)
+                  ?? defaultDrawingEntryConfig().find((row) => row.kind === kind.kind)!;
+                const lockedOn = kind.kind === 'goal';
+                return (
+                  <div key={kind.kind} className="admin-entry-kind">
+                    <label className="admin-checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={lockedOn || rule.enabled}
+                        disabled={locked || lockedOn}
+                        onChange={(e) => setDraft((prev) => ({
+                          ...prev,
+                          entryRules: prev.entryRules.map((row) => (
+                            row.kind === kind.kind ? { ...row, enabled: e.target.checked } : row
+                          )),
+                        }))}
+                      />
+                      <span>{kind.label}</span>
+                    </label>
+                    <p className="admin-panel-desc">{kind.adminHint}</p>
+                    <div className="admin-entry-kind-fields">
+                      <label className="admin-label" htmlFor={`entry-${kind.kind}-n`}>
+                        {kind.perEvent ? 'Entries each' : 'Entries'}
+                      </label>
+                      <input
+                        id={`entry-${kind.kind}-n`}
+                        className="admin-input"
+                        type="number"
+                        min={kind.kind === 'goal' ? 1 : 0}
+                        max={20}
+                        disabled={locked || (!lockedOn && !rule.enabled)}
+                        value={rule.entries}
+                        onChange={(e) => {
+                          const entries = Number(e.target.value);
+                          setDraft((prev) => ({
+                            ...prev,
+                            entryRules: prev.entryRules.map((row) => (
+                              row.kind === kind.kind
+                                ? {
+                                  ...row,
+                                  entries,
+                                  max: kind.perEvent ? Math.max(row.max, entries || 0) : entries,
+                                }
+                                : row
+                            )),
+                          }));
+                        }}
+                      />
+                      {kind.perEvent ? (
+                        <>
+                          <label className="admin-label" htmlFor={`entry-${kind.kind}-max`}>Max</label>
+                          <input
+                            id={`entry-${kind.kind}-max`}
+                            className="admin-input"
+                            type="number"
+                            min={0}
+                            max={100}
+                            disabled={locked || !rule.enabled}
+                            value={rule.max}
+                            onChange={(e) => setDraft((prev) => ({
+                              ...prev,
+                              entryRules: prev.entryRules.map((row) => (
+                                row.kind === kind.kind
+                                  ? { ...row, max: Number(e.target.value) }
+                                  : row
+                              )),
+                            }))}
+                          />
+                        </>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </fieldset>
             <div className="admin-field">
               <label className="admin-label" htmlFor="slumber-prize-sponsor">Sponsor name</label>
               <input
@@ -377,7 +460,7 @@ function RaceForm({
                 className="admin-input"
                 value={draft.officialRulesUrl}
                 onChange={(e) => setDraft((prev) => ({ ...prev, officialRulesUrl: e.target.value }))}
-                placeholder="https://"
+                placeholder="https://useslumber.com/prize-drawing-rules"
               />
             </div>
           </>
@@ -396,7 +479,7 @@ function RaceForm({
               onChange={(e) => setDraft((prev) => ({ ...prev, goalHours: e.target.value }))}
             />
           </AdminFilterField>
-          <AdminFilterField label="Max racers" htmlFor="slumber-race-max">
+          <AdminFilterField label="Max participants" htmlFor="slumber-race-max">
             <input
               id="slumber-race-max"
               className="admin-input"
@@ -456,7 +539,7 @@ function RaceForm({
         {formError ? <p className="admin-error">{formError}</p> : null}
         <div className="admin-form-actions">
           <button className="admin-button" type="submit" disabled={saving}>
-            {saving ? 'Saving…' : row ? 'Save changes' : 'Create race'}
+            {saving ? 'Saving…' : row ? 'Save challenge' : 'Create challenge'}
           </button>
           <button className="admin-button admin-button-ghost" type="button" onClick={onClose} disabled={saving}>
             Cancel
@@ -532,7 +615,7 @@ function DrawingRosterDialog({
       {roster ? (
         <p className="admin-muted">
           {roster.joined} joined · {roster.qualified} entered
-          {includeReferrals ? ` · ${roster.referralJoins} referral joins` : ''}
+          {includeReferrals ? ` · ${roster.referralJoins} referral signups` : ''}
         </p>
       ) : null}
       <div className="admin-form-actions">
@@ -581,7 +664,7 @@ function DrawingRosterDialog({
                   <td>{person.referred_by_username ? `@${person.referred_by_username}` : '—'}</td>
                 ) : null}
                 {includeReferrals ? (
-                  <td>{person.referrals_joined} joined / {person.referrals_qualified} in</td>
+                  <td>{person.referrals_joined} signed up / {person.referrals_qualified} posted</td>
                 ) : null}
                 <td>
                   <AdminGridActions>
@@ -637,7 +720,7 @@ export default function AdminSlumberChallenges() {
   const races = racesQuery.data?.rows ?? [];
   const total = racesQuery.data?.total ?? 0;
   const error = racesQuery.error
-    ? slumberChallengeErrorMessage(racesQuery.error, 'Could not load Slumber races.')
+    ? slumberChallengeErrorMessage(racesQuery.error, 'Could not load Slumber challenges.')
     : actionError;
 
   const runAction = async (id: string, action: () => Promise<unknown>, fallback: string) => {
@@ -655,7 +738,7 @@ export default function AdminSlumberChallenges() {
   const columns = useMemo<GridColDef<AdminSlumberChallengeRow>[]>(() => [
     {
       field: 'title',
-      headerName: 'Race',
+      headerName: 'Challenge',
       flex: 1.2,
       minWidth: 160,
       valueGetter: (_value, row) => row.title ?? 'Untitled',
@@ -694,7 +777,7 @@ export default function AdminSlumberChallenges() {
     },
     {
       field: 'participant_count',
-      headerName: 'Racers',
+      headerName: 'Joined',
       type: 'number',
       width: 88,
       flex: 0,
@@ -734,9 +817,9 @@ export default function AdminSlumberChallenges() {
               disabled={actingId === row.id}
               onClick={(e) => {
                 e.stopPropagation();
-                const name = row.title?.trim() || 'this race';
-                if (!window.confirm(`Start “${name}” now? The race window opens immediately.`)) return;
-                void runAction(row.id, () => startMutation.mutateAsync(row.id), 'Could not start the race.');
+                const name = row.title?.trim() || 'this challenge';
+                if (!window.confirm(`Start “${name}” now? The challenge window opens immediately.`)) return;
+                void runAction(row.id, () => startMutation.mutateAsync(row.id), 'Could not start the challenge.');
               }}
             >
               Start
@@ -761,13 +844,13 @@ export default function AdminSlumberChallenges() {
               disabled={actingId === row.id}
               onClick={(e) => {
                 e.stopPropagation();
-                const name = row.title?.trim() || 'this race';
+                const name = row.title?.trim() || 'this challenge';
                 const pending = row.status === 'pending';
                 const msg = pending
                   ? `Cancel “${name}”? It will not start, and the join link will close. Linked campaigns stay up until you end them.`
-                  : `End “${name}” now? Racers get a catch-up window, then it finishes. The join link will close. Linked campaigns stay up until you end them.`;
+                  : `End “${name}” now? Participants get a catch-up window, then it finishes. The join link will close. Linked campaigns stay up until you end them.`;
                 if (!window.confirm(msg)) return;
-                void runAction(row.id, () => endMutation.mutateAsync(row.id), 'Could not end the race.');
+                void runAction(row.id, () => endMutation.mutateAsync(row.id), 'Could not end the challenge.');
               }}
             >
               {row.status === 'pending' ? 'Cancel' : 'End'}
@@ -782,18 +865,18 @@ export default function AdminSlumberChallenges() {
     <AdminSection
       className="admin-slumber-races"
       error={error}
-      lead="Official races hosted by Slumber. Create them here, Start when they should score, and link a campaign separately if you want a promo. Campaign dates do not have to match the race window. Drawings: 1 entry at the goal; export the roster for an off-app drawing."
+      lead="Official challenges hosted by Slumber (races and drawings). Create them here, Start when they should score, and link a campaign separately if you want a promo. Campaign dates do not have to match the challenge window. Drawings: entries at the goal; export the roster for an off-app drawing."
     >
       <AdminListToolbar
         actions={(
           <button className="admin-button" type="button" onClick={() => setEditing(null)}>
-            + New race
+            + New challenge
           </button>
         )}
       >
-        <p className="admin-muted">{pluralCount(total, 'race')}</p>
+        <p className="admin-muted">{pluralCount(total, 'challenge')}</p>
       </AdminListToolbar>
-      <div className="admin-quick-chips" role="group" aria-label="Race status">
+      <div className="admin-quick-chips" role="group" aria-label="Challenge status">
         {STATUS_FILTERS.map((status) => (
           <button
             key={status.value || 'all'}
@@ -825,7 +908,7 @@ export default function AdminSlumberChallenges() {
         columns={columns}
         getRowId={(row) => row.id}
         loading={racesQuery.isFetching}
-        label="Slumber races"
+        label="Slumber challenges"
         serverPagination={{
           rowCount: total,
           paginationModel,
@@ -833,7 +916,7 @@ export default function AdminSlumberChallenges() {
         }}
       />
       {!racesQuery.isLoading && total === 0 ? (
-        <p className="admin-muted">No Slumber races yet.</p>
+        <p className="admin-muted">No Slumber challenges yet.</p>
       ) : null}
     </AdminSection>
   );

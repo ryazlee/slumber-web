@@ -1063,6 +1063,12 @@ export type AdminSlumberChallengeRow = {
   created_at: string;
   is_drawing?: boolean;
   drawing_referrals?: boolean;
+  drawing_entry_config?: Array<{
+    kind: 'goal' | 'referral';
+    enabled: boolean;
+    entries: number;
+    max: number;
+  }> | null;
   prize_sponsor_name?: string | null;
   prize_name?: string | null;
   prize_url?: string | null;
@@ -1083,6 +1089,12 @@ export type AdminSlumberChallengeDraft = {
   joinEnabled: boolean;
   isDrawing?: boolean;
   drawingReferrals?: boolean;
+  drawingEntryConfig?: Array<{
+    kind: 'goal' | 'referral';
+    enabled: boolean;
+    entries: number;
+    max: number;
+  }> | null;
   prizeSponsorName?: string | null;
   prizeName?: string | null;
   prizeUrl?: string | null;
@@ -1142,6 +1154,12 @@ export async function createAdminSlumberChallenge(input: {
   maxParticipants: number | null;
   isDrawing?: boolean;
   drawingReferrals?: boolean;
+  drawingEntryConfig?: Array<{
+    kind: 'goal' | 'referral';
+    enabled: boolean;
+    entries: number;
+    max: number;
+  }> | null;
   prizeSponsorName?: string | null;
   prizeName?: string | null;
   prizeUrl?: string | null;
@@ -1170,6 +1188,9 @@ export async function createAdminSlumberChallenge(input: {
   const row = (data ?? {}) as { id?: string; title?: string };
   if (!row.id) throw new Error('Could not create the race.');
   await setAdminDrawingReferrals(row.id, Boolean(input.isDrawing && input.drawingReferrals));
+  if (input.isDrawing) {
+    await setAdminDrawingEntryConfig(row.id, input.drawingEntryConfig ?? null);
+  }
   return { id: row.id, title: row.title ?? input.title };
 }
 
@@ -1205,6 +1226,9 @@ export async function updateAdminSlumberChallenge(
   });
   if (error) throw error;
   await setAdminDrawingReferrals(challengeId, Boolean(draft.isDrawing && draft.drawingReferrals));
+  if (draft.isDrawing) {
+    await setAdminDrawingEntryConfig(challengeId, draft.drawingEntryConfig ?? null);
+  }
 }
 
 export async function setAdminDrawingReferrals(
@@ -1218,6 +1242,17 @@ export async function setAdminDrawingReferrals(
   if (error) throw error;
 }
 
+export async function setAdminDrawingEntryConfig(
+  challengeId: string,
+  config: AdminSlumberChallengeDraft['drawingEntryConfig'],
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_set_drawing_entry_config', {
+    p_challenge_id: challengeId,
+    p_config: config ?? [],
+  });
+  if (error) throw error;
+}
+
 function mentionsAdminRpc(err: unknown, rpcName: string): boolean {
   if (!err || typeof err !== 'object' || !('message' in err)) return false;
   const pg = err as PostgrestError;
@@ -1226,22 +1261,22 @@ function mentionsAdminRpc(err: unknown, rpcName: string): boolean {
 
 export function slumberChallengeErrorMessage(err: unknown, fallback: string): string {
   if (mentionsAdminRpc(err, 'admin_list_slumber_challenges')) {
-    return `Slumber races are not available yet. ${ADMIN_MIGRATION_HINT}`;
+    return `Slumber challenges are not available yet. ${ADMIN_MIGRATION_HINT}`;
   }
   if (mentionsAdminRpc(err, 'admin_update_slumber_challenge')) {
-    return `Editing Slumber races is not available yet. ${ADMIN_MIGRATION_HINT}`;
+    return `Editing Slumber challenges is not available yet. ${ADMIN_MIGRATION_HINT}`;
   }
   const message = adminErrorMessage(err, fallback);
   if (message.includes('invalid_title')) return 'Title must be 1–80 characters.';
   if (message.includes('invalid_description')) return 'Description must be 280 characters or fewer.';
   if (message.includes('invalid_goal')) return 'Goal must be between 10 and 100 hours.';
   if (message.includes('invalid_expiration_days')) return 'Duration must be between 1 and 100 days.';
-  if (message.includes('invalid_window')) return 'The end date has to be after the race started.';
-  if (message.includes('invalid_max_participants')) return 'Max racers must be between 2 and 10,000, or left blank.';
-  if (message.includes('not_slumber_challenge')) return 'That race is not hosted by Slumber.';
-  if (message.includes('challenge_not_pending')) return 'That race has already started.';
-  if (message.includes('challenge_not_endable')) return 'That race has already finished.';
-  if (message.includes('not_authorized')) return 'You need an admin role to edit races.';
+  if (message.includes('invalid_window')) return 'The end date has to be after the challenge started.';
+  if (message.includes('invalid_max_participants')) return 'Max participants must be between 2 and 10,000, or left blank.';
+  if (message.includes('not_slumber_challenge')) return 'That challenge is not hosted by Slumber.';
+  if (message.includes('challenge_not_pending')) return 'That challenge has already started.';
+  if (message.includes('challenge_not_endable')) return 'That challenge has already finished.';
+  if (message.includes('not_authorized')) return 'You need an admin role to edit challenges.';
   if (message.includes('invalid_prize_sponsor')) return 'Sponsor name is required (max 80 characters).';
   if (message.includes('invalid_prize_name')) return 'Prize name is required (max 120 characters).';
   if (message.includes('invalid_official_rules')) return 'Official rules are required for a drawing.';
@@ -1250,7 +1285,7 @@ export function slumberChallengeErrorMessage(err: unknown, fallback: string): st
   }
   if (message.includes('drawing_locked')) return 'Drawing vs race can only be changed before Start.';
   if (message.includes('attestation_required')) return 'That person still needs to agree to the official rules.';
-  if (message.includes('not_drawing')) return 'That race is not a drawing.';
+  if (message.includes('not_drawing')) return 'That challenge is not a drawing.';
   return message;
 }
 

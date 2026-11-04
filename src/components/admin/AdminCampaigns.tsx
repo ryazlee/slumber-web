@@ -181,7 +181,7 @@ export default function AdminCampaigns() {
   };
 
   const handleDelete = async (row: AdminCampaignRow) => {
-    const msg = `Delete “${row.title}”? This removes it from the app. A linked race is left as-is.`;
+    const msg = `Delete “${row.title}”? This removes it from the app. A linked challenge is left as-is.`;
     if (!window.confirm(msg)) return;
     setListError(null);
     try {
@@ -209,7 +209,7 @@ export default function AdminCampaigns() {
       return;
     }
     if (draft.action_kind === 'challenge' && !draft.challenge_id.trim()) {
-      setFormError('Pick a Slumber race or paste an open-link challenge id.');
+      setFormError('Pick a Slumber challenge or paste an open-link challenge id.');
       return;
     }
     if (draft.action_kind === 'url' && !draft.cta_url.trim()) {
@@ -235,7 +235,7 @@ export default function AdminCampaigns() {
     } catch (err: unknown) {
       const message = adminErrorMessage(err, 'Could not save campaign.');
       if (message.includes('challenge_not_open_link')) {
-        setFormError('That challenge needs an active invite link. Create or open one under Slumber races.');
+        setFormError('That challenge needs an active invite link. Create or open one under Slumber challenges.');
       } else if (message.includes('challenge_not_found')) {
         setFormError('Challenge not found.');
       } else if (message.includes('cta_url_required')) {
@@ -273,7 +273,7 @@ export default function AdminCampaigns() {
 
   return (
     <AdminSection
-      lead="Promos for the header moon, feed banner, and inbox. Dates here are only the campaign window — create and start Slumber races under Slumber races. Leave dates blank to keep a campaign up until you turn it off."
+      lead="Promos for the header moon, feed banner, and inbox. Dates here are only the campaign window — create and start hosted challenges under Slumber challenges. Leave dates blank to keep a campaign up until you turn it off."
       error={error}
     >
       <div className="admin-form-actions">
@@ -281,7 +281,7 @@ export default function AdminCampaigns() {
           New campaign
         </button>
         <Link className="admin-button admin-button-ghost" to="/admin/races">
-          Slumber races
+          Slumber challenges
         </Link>
       </div>
 
@@ -302,7 +302,7 @@ export default function AdminCampaigns() {
             value={draft.action_kind}
             onChange={(e) => setActionKind(e.target.value as AdminCampaignActionKind)}
           >
-            <option value="challenge">Challenge — join an open-link race</option>
+            <option value="challenge">Challenge — join an open-link challenge</option>
             <option value="message">Message — announce something</option>
             <option value="url">Link — open a URL</option>
           </select>
@@ -328,7 +328,7 @@ export default function AdminCampaigns() {
             onChange={(e) => setDraft((prev) => ({ ...prev, body: e.target.value }))}
             placeholder={
               draft.action_kind === 'challenge'
-                ? 'Join this week’s race. Free to enter.'
+                ? 'Join this week’s challenge. Free to enter.'
                 : 'A short note for the popup, banner, and inbox row.'
             }
           />
@@ -420,23 +420,23 @@ export default function AdminCampaigns() {
           </AdminFilterBar>
 
           {draft.action_kind === 'challenge' ? (
-            <AdminFieldGroup title="Linked race">
+            <AdminFieldGroup title="Linked challenge">
               <p className="admin-muted">
-                Create the race under{' '}
-                <Link to="/admin/races">Slumber races</Link>
+                Create the challenge under{' '}
+                <Link to="/admin/races">Slumber challenges</Link>
                 , then start it whenever you want. This campaign only needs the challenge id — its
-                schedule is separate from the race window.
+                schedule is separate from the challenge window.
               </p>
               {linkableRaces.length > 0 ? (
                 <>
-                  <label className="admin-label" htmlFor="campaign-race-pick">Slumber race</label>
+                  <label className="admin-label" htmlFor="campaign-race-pick">Slumber challenge</label>
                   <select
                     id="campaign-race-pick"
                     className="admin-input"
                     value={linkableRaces.some((row) => row.id === draft.challenge_id) ? draft.challenge_id : ''}
                     onChange={(e) => setDraft((prev) => ({ ...prev, challenge_id: e.target.value }))}
                   >
-                    <option value="">Pick a pending or active race…</option>
+                    <option value="">Pick a pending or active challenge…</option>
                     {linkableRaces.map((row) => (
                       <option key={row.id} value={row.id}>
                         {row.title?.trim() || 'Untitled'} · {row.status}
@@ -447,7 +447,7 @@ export default function AdminCampaigns() {
                 </>
               ) : (
                 <p className="admin-muted">
-                  No joinable Slumber races yet.{' '}
+                  No joinable Slumber challenges yet.{' '}
                   <Link to="/admin/races">Create one</Link>
                   , then come back.
                 </p>
@@ -458,7 +458,7 @@ export default function AdminCampaigns() {
                 className="admin-input"
                 value={draft.challenge_id}
                 onChange={(e) => setDraft((prev) => ({ ...prev, challenge_id: e.target.value.trim() }))}
-                placeholder="Slumber race id or user open-link challenge id"
+                placeholder="Slumber challenge id or user open-link challenge id"
               />
               {selectedRace ? (
                 <p className="admin-muted">
@@ -499,7 +499,7 @@ export default function AdminCampaigns() {
 
           <AdminFieldGroup title="Campaign schedule">
             <p className="admin-muted">
-              Optional. Controls when this promo shows in the app — not when the race scores.
+              Optional. Controls when this promo shows in the app — not when the challenge scores.
               Leave both blank for an indefinite announcement, or set only a start or only an end.
             </p>
             <div className="admin-campaign-schedule">

@@ -79,7 +79,15 @@ export function parseContentLinkPath(pathname: string): ContentLinkTarget | null
 }
 
 /** Parse invite/join paths (matches app deep-link URL shapes). */
-export function parseInviteLinkPath(pathname: string): InviteLinkTarget | null {
+export function challengeJoinSchemePath(token: string, search?: string): string {
+  const params = new URLSearchParams(search?.startsWith('?') ? search.slice(1) : search ?? '');
+  const ref = params.get('ref');
+  const base = `challenge/join/${token}`;
+  if (ref && isUuid(ref)) return `${base}?ref=${encodeURIComponent(ref)}`;
+  return base;
+}
+
+export function parseInviteLinkPath(pathname: string, search?: string): InviteLinkTarget | null {
   const segments = pathSegments(pathname);
 
   if (segments[0] === 'invite' && segments[1] && TOKEN_RE.test(segments[1])) {
@@ -99,7 +107,7 @@ export function parseInviteLinkPath(pathname: string): InviteLinkTarget | null {
     return {
       kind: 'challenge',
       token: segments[2],
-      schemePath: `challenge/join/${segments[2]}`,
+      schemePath: challengeJoinSchemePath(segments[2], search),
     };
   }
 

@@ -1,5 +1,5 @@
-import { DRAWING_KIND_LABEL } from '../lib/drawing';
+import ChallengeKindChip from './ChallengeKindChip';
 
 export default function ChallengeDrawingBadge() {
-  return <span className="drawing-badge">{DRAWING_KIND_LABEL}</span>;
+  return <ChallengeKindChip kind="drawing" />;
 }

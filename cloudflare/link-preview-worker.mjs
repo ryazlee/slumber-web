@@ -27,6 +27,8 @@ const STATIC_PUBLIC_PATHS = new Set([
   '/privacy/',
   '/terms',
   '/terms/',
+  '/prize-drawing-rules',
+  '/prize-drawing-rules/',
   '/delete-account',
   '/delete-account/',
   '/delete-data',

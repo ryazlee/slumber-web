@@ -81,6 +81,11 @@
     border-radius: 12px;
   }
 
+  .challenge-card-banner {
+    width: calc(100% + 28px);
+    margin: -14px -14px 12px;
+  }
+
   .post-card-header {
     gap: 10px;
     margin-bottom: 10px;
@@ -2257,7 +2262,8 @@
   color: #fbbf24;
 }
 
-.drawing-badge {
+.drawing-badge,
+.challenge-kind-chip {
   display: inline-flex;
   align-items: center;
   font-size: 11px;
@@ -2271,48 +2277,42 @@
   white-space: nowrap;
 }
 
+.challenge-kind-chip--race,
+.challenge-kind-chip--one_on_one {
+  background: color-mix(in srgb, var(--text) 8%, var(--surface));
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
 .drawing-prize {
   display: flex;
-  gap: 14px;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
   margin-top: 12px;
-  padding: 12px 14px;
+  padding: 0;
+  overflow: hidden;
   border-radius: 14px;
   border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
   background: color-mix(in srgb, var(--accent) 10%, var(--surface));
 }
 
-.drawing-prize--hero {
-  flex-direction: column;
-  align-items: stretch;
-  padding: 16px;
-}
-
-.drawing-prize-logo {
-  width: 56px;
-  height: 56px;
-  object-fit: contain;
-  border-radius: 12px;
-  background: var(--surface);
-  flex-shrink: 0;
-}
-
+.drawing-prize-logo,
 .drawing-prize-logo--hero {
-  width: 160px;
-  height: 160px;
-  border-radius: 16px;
-  align-self: center;
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  background: var(--surface);
+  border-radius: 0;
+  align-self: stretch;
 }
 
-.drawing-prize-title-row {
+.drawing-prize-body {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-direction: column;
   gap: 8px;
-}
-
-.drawing-prize--hero .drawing-prize-title-row {
-  justify-content: center;
+  padding: 14px 16px 16px;
 }
 
 .drawing-prize-kicker {
@@ -2323,12 +2323,8 @@
 }
 
 .drawing-prize-name {
-  margin: 2px 0 6px;
+  margin: 0;
   font-weight: 800;
-}
-
-.drawing-prize--hero .drawing-prize-name {
-  text-align: center;
 }
 
 .drawing-how {
@@ -2364,6 +2360,12 @@
   display: block;
   margin-top: 4px;
   font-size: 1.15rem;
+}
+
+.drawing-kind-line {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
 }
 
 .drawing-entry p {
@@ -2446,10 +2448,6 @@
   background: color-mix(in srgb, var(--accent) 8%, var(--surface));
 }
 
-.challenge-card--drawing {
-  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
-}
-
 .challenge-gap--drawing {
   font-weight: 800;
 }
@@ -2469,8 +2467,19 @@
   min-width: 0;
 }
 
-.challenge-card-title-row .drawing-badge {
+.challenge-card-title-row .drawing-badge,
+.challenge-card-title-row .challenge-kind-chip {
   flex-shrink: 0;
+}
+
+.challenge-card-banner {
+  display: block;
+  width: calc(100% + 40px);
+  max-width: none;
+  height: auto;
+  margin: -18px -20px 14px;
+  object-fit: contain;
+  background: color-mix(in srgb, var(--text) 4%, var(--surface));
 }
 
 .challenge-card-title-row .challenge-title {
@@ -2489,6 +2498,10 @@
 }
 
 .challenge-invite-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   min-width: 0;
 }
 
@@ -2511,6 +2524,10 @@
 }
 
 .challenge-compact-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
   flex: 1;
   min-width: 0;
 }
@@ -2683,6 +2700,49 @@ button.app-back-link {
 .challenge-detail-header h1 {
   font-size: 1.5rem;
   margin: 0;
+}
+
+.challenge-hosted-by {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.challenge-overview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.challenge-overview-chip {
+  flex: 1;
+  min-width: 88px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 10px;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.challenge-overview-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.challenge-overview-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
 }
 
 .challenge-winner {

@@ -42,6 +42,7 @@ npm install && npm run dev
 | `*` (unknown) | No | Not-found page (Home / Download CTAs) |
 | `/privacy` | No | Privacy policy (App Store / Play link) |
 | `/terms` | No | Terms of service |
+| `/prize-drawing-rules` | No | Prize drawing official rules (no site nav link yet; paste as Official rules URL) |
 | `/delete-account` | No | Account deletion (Play Console account deletion URL) |
 | `/delete-data` | No | Data deletion request (Play Console Data safety URL) |
 | `/invite/:token` | Partial | Friend invite landing — `@username` preview; opens app to connect |
@@ -50,8 +51,8 @@ npm install && npm run dev
 | `/challenge/join/:token` | Partial | Open challenge join landing |
 | `/club/:clubId/invite/:token` | Partial | Club invite landing |
 | `/admin` | OTP / Google + admin role | Health snapshot, people insights, notify, campaigns, moderation, delete accounts |
-| `/admin/campaigns` | Admin | In-app campaign prompts (challenge, message, or link — image + popup + header + banner + inbox). Challenge campaigns link an existing open-link race; promo dates are independent of the race window |
-| `/admin/races` | Admin | Create / edit / Start / End official Slumber-hosted races (not tied to a campaign) |
+| `/admin/campaigns` | Admin | In-app campaign prompts (challenge, message, or link — image + popup + header + banner + inbox). Challenge campaigns link an existing open-link challenge; promo dates are independent of the challenge window |
+| `/admin/races` | Admin | Create / edit / Start / End official Slumber-hosted challenges (races and drawings; not tied to a campaign) |
 
 **Partial auth:** deep-link landings show preview when logged out; signed-in users get full in-app views where applicable. Friend invite links are generated in the iOS app (**Profile → Share**); URL shape matches `buildFriendInviteUrl()` in the main repo.
 

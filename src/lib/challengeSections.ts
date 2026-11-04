@@ -1,3 +1,4 @@
+import { challengeGraceEndsAtMs, formatChallengeLockAt } from './challengeGrace';
 import type { Challenge } from './types';
 
 const EXPIRING_SOON_MS = 48 * 60 * 60 * 1000;
@@ -18,6 +19,27 @@ export function isChallengeExpiringSoon(challenge: Challenge, nowMs = Date.now()
   if (!challenge.expiresAt || challenge.noExpiration || challenge.status !== 'active') return false;
   const ms = new Date(challenge.expiresAt).getTime() - nowMs;
   return ms > 0 && ms <= EXPIRING_SOON_MS;
+}
+
+function shortMonthDay(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+/** Compact Goal/Status/schedule chips — same labels as the app details sheet. */
+export function challengeScheduleChip(challenge: Challenge): { label: string; value: string } {
+  if (!challengeHasOfficiallyStarted(challenge) && challenge.startedAt) {
+    return { label: 'Starts', value: shortMonthDay(challenge.startedAt) };
+  }
+  if (challenge.status === 'pending_completion') {
+    const lockAtMs = challengeGraceEndsAtMs(challenge);
+    return {
+      label: 'Locks',
+      value: lockAtMs != null ? formatChallengeLockAt(lockAtMs) : '—',
+    };
+  }
+  if (challenge.noExpiration) return { label: 'Ends', value: '∞' };
+  if (challenge.expiresAt) return { label: 'Ends', value: shortMonthDay(challenge.expiresAt) };
+  return { label: 'Ends', value: '—' };
 }
 
 export function challengeEndsLabel(challenge: Challenge, nowMs = Date.now()): string | null {

@@ -14,11 +14,9 @@ import {
 } from '../../hooks/useChallenges';
 import { useFriends } from '../../hooks/useSocial';
 import { buildSplitBarsByUser } from '../../lib/challengeProgressBar';
-import { challengeGraceEndsAtMs, formatChallengeLockAt } from '../../lib/challengeGrace';
 import { rankBySleepProgress } from '../../lib/challengeRank';
+import { challengeScheduleChip } from '../../lib/challengeSections';
 import {
-  formatChallengeRaceType,
-  formatChallengeStartDate,
   formatChallengeStatus,
   formatMins,
   goalHours,
@@ -27,11 +25,14 @@ import {
   PENDING_COMPLETION_BANNER_PREFIX_GOAL_HIT,
   PENDING_COMPLETION_BANNER_SUFFIX,
 } from '../../lib/format';
-import ChallengeDrawingBadge from '../../components/ChallengeDrawingBadge';
+import ChallengeKindChip from '../../components/ChallengeKindChip';
+import CollapsibleSection from '../../components/CollapsibleSection';
 import {
-  drawingEntryCount,
+  drawingEntryBreakdown,
   drawingHowItWorksLine,
+  drawingPoolTotal,
   drawingStatusCopy,
+  referralQualifiedByReferrer,
 } from '../../lib/drawing';
 
 const PROGRESS_STATUSES = new Set(['active', 'pending_completion', 'completed']);
@@ -135,17 +136,53 @@ export default function ChallengeDetail() {
     );
   }
 
-  const title = challenge.title?.trim() || formatChallengeRaceType(challenge);
+  const opponent = challenge.participants.find((p) => p.userId !== currentUserId);
+  const title = challenge.title?.trim()
+    || (challenge.hostedBy === 'slumber'
+      ? 'Slumber challenge'
+      : challenge.isGroup
+        ? 'Group challenge'
+        : opponent
+          ? `vs @${opponent.username}`
+          : 'Challenge');
   const myProgress = rankedProgress.find((row) => row.userId === currentUserId);
-  const drawingCopy = challenge.isDrawing
+  const accepted = challenge.participants.filter((p) => p.inviteStatus === 'accepted');
+  const drawingPeople = accepted.map((p) => ({
+    userId: p.userId,
+    accruedMinutes: rankedProgress.find((row) => row.userId === p.userId)?.accruedMinutes ?? 0,
+    referredBy: p.referredBy ?? null,
+  }));
+  const referralQualifiedCount = challenge.drawingReferralCounts?.[currentUserId]?.qualified ?? 0;
+  const drawingBreakdown = challenge.isDrawing
+    ? drawingEntryBreakdown({
+      config: challenge.drawingEntryConfig,
+      isDrawing: true,
+      drawingReferrals: challenge.drawingReferrals,
+      accruedMinutes: myProgress?.accruedMinutes ?? 0,
+      goalMinutes: challenge.goalMinutes,
+      referralsQualified: referralQualifiedCount,
+    })
+    : null;
+  const drawingPool = challenge.isDrawing
+    ? drawingPoolTotal({
+      config: challenge.drawingEntryConfig,
+      isDrawing: true,
+      drawingReferrals: challenge.drawingReferrals,
+      goalMinutes: challenge.goalMinutes,
+      people: drawingPeople,
+      referralQualifiedByReferrer: referralQualifiedByReferrer(challenge.drawingReferralCounts),
+    })
+    : 0;
+  const drawingCopy = challenge.isDrawing && drawingBreakdown
     ? drawingStatusCopy({
       accruedMinutes: myProgress?.accruedMinutes ?? 0,
       goalMinutes: challenge.goalMinutes,
-      entries: drawingEntryCount(myProgress?.accruedMinutes ?? 0, challenge.goalMinutes),
+      entries: drawingBreakdown.earned,
+      max: drawingBreakdown.max,
+      pool: drawingPool,
       completed: challenge.status === 'completed' || challenge.status === 'cancelled',
     })
     : null;
-  const accepted = challenge.participants.filter((p) => p.inviteStatus === 'accepted');
   const pending = challenge.participants.filter((p) => p.inviteStatus === 'pending');
   const friendsReady = friendsQuery.isSuccess;
   const visibleContributions = friendsReady
@@ -158,7 +195,7 @@ export default function ChallengeDetail() {
     ? "1 racer isn't a friend — posts hidden, totals still count."
     : `${pluralCount(hiddenContributorCount, 'racer')} aren't friends — posts hidden, totals still count.`;
   const isFinalizing = challenge.status === 'pending_completion';
-  const lockAtMs = isFinalizing ? challengeGraceEndsAtMs(challenge) : null;
+  const scheduleChip = challengeScheduleChip(challenge);
   const winner = challenge.winnerId
     ? accepted.find((p) => p.userId === challenge.winnerId)
     : null;
@@ -172,46 +209,59 @@ export default function ChallengeDetail() {
       <Link to="/challenges" className="app-back-link">← Challenges</Link>
 
       <header className="challenge-detail-header">
+        <ChallengeKindChip challenge={challenge} />
         <div className="challenge-detail-title-row">
           <h1>{title}</h1>
-          <div className="challenge-detail-title-badges">
-            <span className={`challenge-status challenge-status--${challenge.status}`}>
-              {formatChallengeStatus(challenge.status)}
-            </span>
-          </div>
         </div>
+        {challenge.hostedBy === 'slumber' ? (
+          <p className="challenge-hosted-by">Hosted by Slumber</p>
+        ) : null}
         {challenge.description?.trim() ? (
           <p className="challenge-detail-description">{challenge.description.trim()}</p>
         ) : null}
         {challenge.isDrawing ? (
           <div className="drawing-prize drawing-prize--hero">
-            <div className="drawing-prize-title-row">
-              <ChallengeDrawingBadge />
+            {(challenge.prizeLogoUrl
+              ? [challenge.prizeLogoUrl, ...(challenge.prizeExtraUrls ?? [])]
+              : (challenge.prizeExtraUrls ?? [])
+            ).map((src) => (
+              <img
+                key={src}
+                className="drawing-prize-logo drawing-prize-logo--hero"
+                src={src}
+                alt=""
+              />
+            ))}
+            <div className="drawing-prize-body">
               {challenge.prizeSponsorName ? (
                 <p className="drawing-prize-kicker">Prize by {challenge.prizeSponsorName}</p>
               ) : null}
+              {challenge.prizeName ? <p className="drawing-prize-name">{challenge.prizeName}</p> : null}
+              {challenge.prizeUrl ? (
+                <a href={challenge.prizeUrl} target="_blank" rel="noreferrer">View prize</a>
+              ) : null}
+              <p className="drawing-how">{drawingHowItWorksLine(challenge.goalMinutes, challenge.drawingEntryConfig)}</p>
             </div>
-            {challenge.prizeLogoUrl ? (
-              <img
-                className="drawing-prize-logo drawing-prize-logo--hero"
-                src={challenge.prizeLogoUrl}
-                alt={challenge.prizeSponsorName ? `${challenge.prizeSponsorName} logo` : 'Prize sponsor'}
-              />
-            ) : null}
-            {challenge.prizeName ? <p className="drawing-prize-name">{challenge.prizeName}</p> : null}
-            {challenge.prizeUrl ? (
-              <a href={challenge.prizeUrl} target="_blank" rel="noreferrer">View prize</a>
-            ) : null}
-            <p className="drawing-how">{drawingHowItWorksLine(challenge.goalMinutes)}</p>
           </div>
         ) : null}
-        {drawingCopy ? (
+        {drawingCopy && drawingBreakdown ? (
           <div className="drawing-entry">
             <div className="drawing-entry-row">
               <div>
-                <span className="drawing-entry-label">Your entry</span>
-                <strong>{drawingCopy.entriesLabel}</strong>
+                <span className="drawing-entry-label">Your entries</span>
+                <strong>{drawingBreakdown.earned} / {drawingBreakdown.max}</strong>
               </div>
+              <div>
+                <span className="drawing-entry-label">In the drawing</span>
+                <strong>{pluralCount(drawingPool, 'entry')}</strong>
+              </div>
+            </div>
+            {drawingBreakdown.slices.map((slice) => (
+              <p key={slice.kind} className="drawing-kind-line">
+                {slice.label} {slice.earned} / {slice.max}
+              </p>
+            ))}
+            <div className="drawing-entry-row">
               <div>
                 <span className="drawing-entry-label">Progress</span>
                 <strong>
@@ -222,18 +272,20 @@ export default function ChallengeDetail() {
             <p>{drawingCopy.detail}</p>
           </div>
         ) : null}
-        <p className="challenge-meta">
-          {challenge.hostedBy === 'slumber' ? 'Hosted by Slumber · ' : ''}
-          {challenge.isDrawing ? `${goalHours(challenge.goalMinutes)} to enter` : formatChallengeRaceType(challenge)}
-          {challenge.startedAt && (
-            <> · {formatChallengeStartDate(challenge.startedAt)}</>
-          )}
-          {lockAtMs != null ? (
-            <> · locks {formatChallengeLockAt(lockAtMs)}</>
-          ) : challenge.expiresAt && !challenge.noExpiration ? (
-            <> · ends {new Date(challenge.expiresAt).toLocaleDateString()}</>
-          ) : null}
-        </p>
+        <div className="challenge-overview">
+          <div className="challenge-overview-chip">
+            <span className="challenge-overview-label">{challenge.isDrawing ? 'To enter' : 'Goal'}</span>
+            <span className="challenge-overview-value">{goalHours(challenge.goalMinutes)}</span>
+          </div>
+          <div className="challenge-overview-chip">
+            <span className="challenge-overview-label">Status</span>
+            <span className="challenge-overview-value">{formatChallengeStatus(challenge.status)}</span>
+          </div>
+          <div className="challenge-overview-chip">
+            <span className="challenge-overview-label">{scheduleChip.label}</span>
+            <span className="challenge-overview-value">{scheduleChip.value}</span>
+          </div>
+        </div>
         {winner && !challenge.isDrawing && (
           <p className="challenge-winner">
             Winner:{' '}
@@ -263,8 +315,11 @@ export default function ChallengeDetail() {
       <div className={showBoard ? 'challenge-detail-grid' : 'challenge-detail-main'}>
         <div className="challenge-detail-main">
           {rankedProgress.length > 0 && (
-            <section className="app-section">
-              <h2>Progress</h2>
+            <CollapsibleSection
+              title={challenge.isDrawing ? 'Joined' : 'Progress'}
+              count={rankedProgress.length}
+              defaultOpen={!challenge.isDrawing}
+            >
               <div className="challenge-progress-list">
                 {rankedProgress.map((row) => {
                   const split = splitBarByUser.find((s) => s.userId === row.userId);
@@ -291,7 +346,7 @@ export default function ChallengeDetail() {
                   );
                 })}
               </div>
-            </section>
+            </CollapsibleSection>
           )}
 
           {pending.length > 0 && (
@@ -320,7 +375,7 @@ export default function ChallengeDetail() {
 
           {accepted.length > 0 && rankedProgress.length === 0 && (
             <section className="app-section">
-              <h2>{challenge.isDrawing ? 'Joined' : 'In the race'}</h2>
+              <h2>{challenge.isDrawing ? 'Joined' : 'Participants'}</h2>
               <div className="challenge-participants">
                 {accepted.map((p) => (
                   <UserLink

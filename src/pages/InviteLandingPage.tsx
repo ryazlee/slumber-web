@@ -37,8 +37,8 @@ function formatGoal(minutes?: number): string {
 }
 
 export default function InviteLandingPage() {
-  const { pathname } = useLocation();
-  const target = useMemo(() => parseInviteLinkPath(pathname), [pathname]);
+  const { pathname, search } = useLocation();
+  const target = useMemo(() => parseInviteLinkPath(pathname, search), [pathname, search]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -170,7 +170,7 @@ export default function InviteLandingPage() {
         )}
         meta={loading
           ? undefined
-          : `${formatGoal(challengePreview?.goalMinutes)} · ${racers} racer${racers === 1 ? '' : 's'}`}
+          : `${formatGoal(challengePreview?.goalMinutes)} · ${racers} joined`}
         schemePath={target.schemePath}
         loading={loading}
         error={error}

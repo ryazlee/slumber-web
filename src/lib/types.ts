@@ -120,6 +120,7 @@ export type ChallengeParticipant = {
   userRoles?: string[];
   inviteStatus: 'pending' | 'accepted' | 'declined' | 'left';
   role: 'creator' | 'participant';
+  referredBy?: string | null;
 };
 
 export type Comment = {
@@ -185,12 +186,20 @@ export type Challenge = {
   hostedBy?: 'user' | 'slumber';
   isDrawing?: boolean;
   drawingReferrals?: boolean;
+  drawingEntryConfig?: Array<{
+    kind: 'goal' | 'referral';
+    enabled: boolean;
+    entries: number;
+    max: number;
+  }> | null;
   prizeSponsorName?: string | null;
   prizeName?: string | null;
   prizeUrl?: string | null;
   prizeLogoUrl?: string | null;
+  prizeExtraUrls?: string[] | null;
   officialRules?: string | null;
   officialRulesUrl?: string | null;
+  drawingReferralCounts?: Record<string, { signups: number; qualified: number }>;
   participants: ChallengeParticipant[];
 };
 

@@ -46,6 +46,7 @@ import RecapLandingPage from './pages/RecapLandingPage';
 import LoginCallback from './pages/LoginCallback';
 import NotFound from './pages/NotFound';
 import Privacy from './pages/Privacy';
+import PrizeDrawingRules from './pages/PrizeDrawingRules';
 import Terms from './pages/Terms';
 
 const GatedPostDetail = withDeepLinkAuthGate(PostDetail);
@@ -133,6 +134,7 @@ export default function App() {
           <Route path="contact" element={<Contact />} />
           <Route path="privacy" element={<Privacy />} />
           <Route path="terms" element={<Terms />} />
+          <Route path="prize-drawing-rules" element={<PrizeDrawingRules />} />
           <Route path="delete-account" element={<DeleteAccount />} />
           <Route path="delete-data" element={<DeleteData />} />
           <Route path="*" element={<NotFound />} />

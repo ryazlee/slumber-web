@@ -25,7 +25,7 @@ export const ADMIN_PAGE_TITLES: Record<string, string> = {
   '/admin/users': 'Users',
   '/admin/community': 'Clubs',
   '/admin/challenges': 'Challenges',
-  '/admin/races': 'Slumber races',
+  '/admin/races': 'Slumber challenges',
   '/admin/premium': 'Premium',
   '/admin/notify': 'Notify',
   '/admin/campaigns': 'Campaigns',
@@ -64,7 +64,7 @@ function buildAdminNavGroups(pendingReports = 0, pendingTags = 0): AdminNavGroup
           label: 'Reports',
           badge: pendingReports > 0 ? pendingReports : undefined,
         },
-        { to: '/admin/races', label: 'Slumber races' },
+          { to: '/admin/races', label: 'Slumber challenges' },
         { to: '/admin/premium', label: 'Premium' },
         {
           to: '/admin/configure/tags',

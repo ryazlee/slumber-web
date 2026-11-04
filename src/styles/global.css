@@ -3094,6 +3094,25 @@ a.admin-metric-card--link:focus-visible {
   cursor: pointer;
 }
 
+.admin-entry-kind {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+
+.admin-entry-kind-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.admin-entry-kind-fields .admin-input {
+  width: 88px;
+}
+
 .admin-metric-grid--dense {
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }

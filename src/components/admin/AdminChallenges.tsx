@@ -151,8 +151,8 @@ export default function AdminChallenges() {
       error={error}
       lead={(
         <>
-          User and club races. Cancel a challenge that should not stay live. Edit official races on{' '}
-          <Link to="/admin/races">Slumber races</Link>.
+          User and club challenges. Cancel a challenge that should not stay live. Edit official ones on{' '}
+          <Link to="/admin/races">Slumber challenges</Link>.
         </>
       )}
     >

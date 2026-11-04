@@ -46,7 +46,7 @@ export default function Challenges() {
       <header className="app-page-header app-page-header--compact">
         <h1>Challenges</h1>
         <p className="app-muted challenges-page-note">
-          Create a race or accept an invite in the app.
+          Create a challenge or accept an invite in the app.
         </p>
       </header>
 

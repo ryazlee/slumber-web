@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { filterWearableSleepRows } from './sleepPostCustom';
 import { sortPastChallenges } from './challengeGrace';
 import { parseClockToMinutes } from './napDay';
+import { parseDrawingReferralCounts } from './drawing';
 import type {
   Challenge,
   ChallengeContributionPost,
@@ -13,8 +14,8 @@ import type {
 const BASE_CHALLENGE_SELECT = `
   id, creator_id, title, description, is_group, goal_minutes, no_expiration, scoring_mode, status,
   created_at, started_at, expires_at, winner_id, goal_reached_at, goal_reached_by, grace_ends_at,
-  hosted_by, is_drawing, drawing_referrals, prize_sponsor_name, prize_name, prize_url, prize_logo_url,
-  official_rules, official_rules_url
+  hosted_by, is_drawing, drawing_referrals, drawing_entry_config, prize_sponsor_name, prize_name, prize_url, prize_logo_url,
+  prize_extra_urls, official_rules, official_rules_url
 `;
 
 function withOneDayStartGrace(isoTimestamp: string): string {
@@ -75,7 +76,7 @@ function sessionStartsBeforeFreeze(
 }
 
 const PARTICIPANT_SELECT = `
-  challenge_id, user_id, role, invite_status, joined_at,
+  challenge_id, user_id, role, invite_status, joined_at, referred_by,
   profiles!user_id ( username, avatar_url, user_roles )
 `;
 
@@ -84,6 +85,7 @@ function mapParticipantRow(row: {
   user_id: string;
   role: 'creator' | 'participant';
   invite_status: ChallengeParticipant['inviteStatus'];
+  referred_by?: string | null;
   profiles?: { username: string; avatar_url: string | null; user_roles?: string[] | null } | null;
 }): ChallengeParticipant {
   return {
@@ -93,6 +95,7 @@ function mapParticipantRow(row: {
     userRoles: row.profiles?.user_roles ?? undefined,
     inviteStatus: row.invite_status,
     role: row.role,
+    referredBy: row.referred_by ?? null,
   };
 }
 
@@ -128,15 +131,35 @@ function attachParticipants(challenges: Record<string, unknown>[], participantRo
       hostedBy: c.hosted_by === 'slumber' ? 'slumber' : 'user',
       isDrawing: c.is_drawing === true,
       drawingReferrals: c.is_drawing === true && c.drawing_referrals === true,
+      drawingEntryConfig: Array.isArray(c.drawing_entry_config) ? c.drawing_entry_config : null,
       prizeSponsorName: (c.prize_sponsor_name as string | null) ?? null,
       prizeName: (c.prize_name as string | null) ?? null,
       prizeUrl: (c.prize_url as string | null) ?? null,
       prizeLogoUrl: (c.prize_logo_url as string | null) ?? null,
+      prizeExtraUrls: Array.isArray(c.prize_extra_urls) ? (c.prize_extra_urls as string[]) : null,
       officialRules: (c.official_rules as string | null) ?? null,
       officialRulesUrl: (c.official_rules_url as string | null) ?? null,
       participants,
     };
   });
+}
+
+async function withDrawingReferralCounts(challenges: Challenge[]): Promise<Challenge[]> {
+  const drawingIds = challenges
+    .filter((challenge) => challenge.isDrawing && challenge.drawingReferrals)
+    .map((challenge) => challenge.id);
+  if (!drawingIds.length) return challenges;
+
+  const { data, error } = await supabase.rpc('get_drawing_referral_counts', {
+    p_challenge_ids: drawingIds,
+  });
+  if (error) return challenges;
+
+  const parsed = parseDrawingReferralCounts(data);
+  return challenges.map((challenge) => ({
+    ...challenge,
+    drawingReferralCounts: parsed[challenge.id],
+  }));
 }
 
 export async function fetchChallenge(challengeId: string): Promise<Challenge> {
@@ -155,7 +178,10 @@ export async function fetchChallenge(challengeId: string): Promise<Challenge> {
 
   if (participantsError) throw participantsError;
 
-  return attachParticipants([data], participants ?? [])[0];
+  const [challenge] = await withDrawingReferralCounts(
+    attachParticipants([data], participants ?? []),
+  );
+  return challenge;
 }
 
 export async function fetchChallengeProgress(challengeId: string): Promise<ChallengeProgress[]> {
@@ -251,7 +277,9 @@ export async function fetchChallenges(statuses?: ChallengeStatus[]): Promise<Cha
 
   if (participantsError) throw participantsError;
 
-  const challenges = attachParticipants(challengeRows, participants ?? []);
+  const challenges = await withDrawingReferralCounts(
+    attachParticipants(challengeRows, participants ?? []),
+  );
 
   if (statuses?.length === 1 && statuses[0] === 'completed') {
     return sortPastChallenges(challenges);

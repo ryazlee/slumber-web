@@ -16,8 +16,13 @@ import {
   pluralCount,
 } from '../lib/format';
 import type { Challenge, ChallengeProgress } from '../lib/types';
-import ChallengeDrawingBadge from './ChallengeDrawingBadge';
-import { DRAWING_KIND_LABEL, drawingEntryCount, drawingStatusCopy } from '../lib/drawing';
+import ChallengeKindChip from './ChallengeKindChip';
+import {
+  drawingEntryBreakdown,
+  drawingPoolTotal,
+  drawingStatusCopy,
+  referralQualifiedByReferrer,
+} from '../lib/drawing';
 
 type Props = {
   challenge: Challenge;
@@ -67,6 +72,7 @@ function InviteCard({ challenge }: { challenge: Challenge }) {
           />
         ) : null}
         <div className="challenge-invite-copy">
+          <ChallengeKindChip challenge={challenge} />
           <p className="challenge-invite-title">
             {inviter ? <span className="challenge-invite-name">@{inviter.username}</span> : 'Someone'}
             {` ${title}`}
@@ -99,7 +105,7 @@ function CompactCard({
     : tied ? 'Tie' : won ? 'Win' : lost ? 'Loss' : null;
   const resultClass = tied ? 'tie' : won ? 'win' : 'loss';
   const subtitle = challenge.isDrawing
-    ? `${DRAWING_KIND_LABEL} · ${goalHours(challenge.goalMinutes)} to enter`
+    ? `${goalHours(challenge.goalMinutes)} to enter`
     : waiting
       ? `Waiting on a reply · ${goalHours(challenge.goalMinutes)} goal`
       : `${formatChallengeStartDate(challenge.startedAt, challenge.createdAt)} · ${formatChallengeRaceType(challenge)}`;
@@ -124,6 +130,7 @@ function CompactCard({
           />
         ) : null}
         <div className="challenge-compact-copy">
+          <ChallengeKindChip challenge={challenge} />
           <p className="challenge-title">{heading}</p>
           <p className="challenge-meta">{subtitle}</p>
         </div>
@@ -177,36 +184,63 @@ function RaceCard({
         ? `+${formatMins(gap)}`
         : `-${formatMins(Math.abs(gap))}`;
 
-  const drawingCopy = challenge.isDrawing
+  const drawingPeople = accepted.map((p) => ({
+    userId: p.userId,
+    accruedMinutes: scored.find((row) => row.userId === p.userId)?.accruedMinutes ?? 0,
+    referredBy: p.referredBy ?? null,
+  }));
+  const drawingBreakdown = challenge.isDrawing
+    ? drawingEntryBreakdown({
+      config: challenge.drawingEntryConfig,
+      isDrawing: true,
+      drawingReferrals: challenge.drawingReferrals,
+      accruedMinutes: me?.accruedMinutes ?? 0,
+      goalMinutes: challenge.goalMinutes,
+      referralsQualified: challenge.drawingReferralCounts?.[currentUserId]?.qualified ?? 0,
+    })
+    : null;
+  const drawingCopy = challenge.isDrawing && drawingBreakdown
     ? drawingStatusCopy({
       accruedMinutes: me?.accruedMinutes ?? 0,
       goalMinutes: challenge.goalMinutes,
-      entries: drawingEntryCount(me?.accruedMinutes ?? 0, challenge.goalMinutes),
+      entries: drawingBreakdown.earned,
+      max: drawingBreakdown.max,
+      pool: drawingPoolTotal({
+        config: challenge.drawingEntryConfig,
+        isDrawing: true,
+        drawingReferrals: challenge.drawingReferrals,
+        goalMinutes: challenge.goalMinutes,
+        people: drawingPeople,
+        referralQualifiedByReferrer: referralQualifiedByReferrer(challenge.drawingReferralCounts),
+      }),
       completed: challenge.status === 'completed' || challenge.status === 'cancelled',
     })
     : null;
-  const meta = challenge.isDrawing
-    ? [
-      challenge.hostedBy === 'slumber' ? 'Hosted by Slumber' : null,
-      `${goalHours(challenge.goalMinutes)} to enter`,
-      challengeStartLabel(challenge.startedAt, started),
-    ].filter(Boolean).join(' · ')
-    : [
-      challenge.hostedBy === 'slumber' ? 'Hosted by Slumber' : null,
-      challenge.isGroup ? pluralCount(accepted.length, 'racer') : null,
-      challengeStartLabel(challenge.startedAt, started),
-      `${goalHours(challenge.goalMinutes)} goal`,
-    ].filter(Boolean).join(' · ');
+  const meta = [
+    challenge.hostedBy === 'slumber' ? 'Hosted by Slumber' : null,
+    challenge.isDrawing
+      ? `${goalHours(challenge.goalMinutes)} to enter`
+      : `${goalHours(challenge.goalMinutes)} goal`,
+    !challenge.isDrawing && challenge.isGroup ? pluralCount(accepted.length, 'racer') : null,
+    challengeStartLabel(challenge.startedAt, started),
+  ].filter(Boolean).join(' · ');
 
   return (
     <Link
       to={`/challenges/${challenge.id}`}
-      className={`challenge-card challenge-card-link${challenge.isDrawing ? ' challenge-card--drawing' : ''}`}
+      className="challenge-card challenge-card-link"
     >
+      {challenge.isDrawing && challenge.prizeLogoUrl ? (
+        <img
+          className="challenge-card-banner"
+          src={challenge.prizeLogoUrl}
+          alt=""
+        />
+      ) : null}
       <div className="challenge-card-top">
         <div className="challenge-card-heading">
           <div className="challenge-card-title-row">
-            {challenge.isDrawing ? <ChallengeDrawingBadge /> : null}
+            <ChallengeKindChip challenge={challenge} />
             {title ? (
               <h3 className="challenge-title">{title}</h3>
             ) : (
