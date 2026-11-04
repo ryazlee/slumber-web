@@ -28,11 +28,13 @@ import {
 import ChallengeKindChip from '../../components/ChallengeKindChip';
 import CollapsibleSection from '../../components/CollapsibleSection';
 import {
-  drawingEntryBreakdown,
+  drawingHeroImageUrls,
   drawingHowItWorksLine,
-  drawingPoolTotal,
-  drawingStatusCopy,
-  referralQualifiedByReferrer,
+  drawingPeopleFromRoster,
+  drawingReferralStatusLine,
+  drawingReferralsEnabled,
+  drawingSponsorLogoUrl,
+  summarizeDrawingStatus,
 } from '../../lib/drawing';
 
 const PROGRESS_STATUSES = new Set(['active', 'pending_completion', 'completed']);
@@ -147,42 +149,14 @@ export default function ChallengeDetail() {
           : 'Challenge');
   const myProgress = rankedProgress.find((row) => row.userId === currentUserId);
   const accepted = challenge.participants.filter((p) => p.inviteStatus === 'accepted');
-  const drawingPeople = accepted.map((p) => ({
-    userId: p.userId,
-    accruedMinutes: rankedProgress.find((row) => row.userId === p.userId)?.accruedMinutes ?? 0,
-    referredBy: p.referredBy ?? null,
-  }));
-  const referralQualifiedCount = challenge.drawingReferralCounts?.[currentUserId]?.qualified ?? 0;
-  const drawingBreakdown = challenge.isDrawing
-    ? drawingEntryBreakdown({
-      config: challenge.drawingEntryConfig,
-      isDrawing: true,
-      drawingReferrals: challenge.drawingReferrals,
-      accruedMinutes: myProgress?.accruedMinutes ?? 0,
-      goalMinutes: challenge.goalMinutes,
-      referralsQualified: referralQualifiedCount,
-    })
-    : null;
-  const drawingPool = challenge.isDrawing
-    ? drawingPoolTotal({
-      config: challenge.drawingEntryConfig,
-      isDrawing: true,
-      drawingReferrals: challenge.drawingReferrals,
-      goalMinutes: challenge.goalMinutes,
-      people: drawingPeople,
-      referralQualifiedByReferrer: referralQualifiedByReferrer(challenge.drawingReferralCounts),
-    })
-    : 0;
-  const drawingCopy = challenge.isDrawing && drawingBreakdown
-    ? drawingStatusCopy({
-      accruedMinutes: myProgress?.accruedMinutes ?? 0,
-      goalMinutes: challenge.goalMinutes,
-      entries: drawingBreakdown.earned,
-      max: drawingBreakdown.max,
-      pool: drawingPool,
-      completed: challenge.status === 'completed' || challenge.status === 'cancelled',
-    })
-    : null;
+  const drawingStatus = summarizeDrawingStatus(challenge, {
+    currentUserId,
+    accruedMinutes: myProgress?.accruedMinutes ?? 0,
+    people: drawingPeopleFromRoster(accepted, rankedProgress),
+  });
+  const drawingBreakdown = drawingStatus?.breakdown ?? null;
+  const drawingCopy = drawingStatus?.copy ?? null;
+  const drawingPool = drawingStatus?.pool ?? 0;
   const pending = challenge.participants.filter((p) => p.inviteStatus === 'pending');
   const friendsReady = friendsQuery.isSuccess;
   const visibleContributions = friendsReady
@@ -221,10 +195,38 @@ export default function ChallengeDetail() {
         ) : null}
         {challenge.isDrawing ? (
           <div className="drawing-prize drawing-prize--hero">
-            {(challenge.prizeLogoUrl
-              ? [challenge.prizeLogoUrl, ...(challenge.prizeExtraUrls ?? [])]
-              : (challenge.prizeExtraUrls ?? [])
-            ).map((src) => (
+            {(challenge.prizeUrl || challenge.officialRulesUrl || challenge.officialRules) ? (
+              <div className="challenge-overview">
+                {challenge.prizeUrl ? (
+                  <a
+                    className="challenge-overview-chip challenge-overview-chip--action"
+                    href={challenge.prizeUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <span className="challenge-overview-value">View prize</span>
+                  </a>
+                ) : null}
+                {challenge.officialRulesUrl ? (
+                  <a
+                    className="challenge-overview-chip challenge-overview-chip--action"
+                    href={challenge.officialRulesUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <span className="challenge-overview-value">Official rules</span>
+                  </a>
+                ) : challenge.officialRules ? (
+                  <a
+                    className="challenge-overview-chip challenge-overview-chip--action"
+                    href="#official-rules"
+                  >
+                    <span className="challenge-overview-value">Official rules</span>
+                  </a>
+                ) : null}
+              </div>
+            ) : null}
+            {drawingHeroImageUrls(challenge).map((src) => (
               <img
                 key={src}
                 className="drawing-prize-logo drawing-prize-logo--hero"
@@ -233,14 +235,26 @@ export default function ChallengeDetail() {
               />
             ))}
             <div className="drawing-prize-body">
-              {challenge.prizeSponsorName ? (
-                <p className="drawing-prize-kicker">Prize by {challenge.prizeSponsorName}</p>
+              {challenge.prizeSponsorName || drawingSponsorLogoUrl(challenge) ? (
+                <p className="drawing-prize-kicker drawing-prize-sponsor">
+                  {drawingSponsorLogoUrl(challenge) ? (
+                    <img
+                      className="drawing-prize-sponsor-logo"
+                      src={drawingSponsorLogoUrl(challenge) ?? ''}
+                      alt=""
+                    />
+                  ) : null}
+                  {challenge.prizeSponsorName ? `Prize by ${challenge.prizeSponsorName}` : null}
+                </p>
               ) : null}
               {challenge.prizeName ? <p className="drawing-prize-name">{challenge.prizeName}</p> : null}
-              {challenge.prizeUrl ? (
-                <a href={challenge.prizeUrl} target="_blank" rel="noreferrer">View prize</a>
-              ) : null}
               <p className="drawing-how">{drawingHowItWorksLine(challenge.goalMinutes, challenge.drawingEntryConfig)}</p>
+              {challenge.officialRules && !challenge.officialRulesUrl ? (
+                <div id="official-rules" className="drawing-rules-block">
+                  <p className="drawing-prize-name">Official rules</p>
+                  <p className="drawing-how">{challenge.officialRules}</p>
+                </div>
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -270,6 +284,9 @@ export default function ChallengeDetail() {
               </div>
             </div>
             <p>{drawingCopy.detail}</p>
+            {drawingReferralsEnabled(challenge) && drawingStatus ? (
+              <p>{drawingReferralStatusLine(drawingStatus.referralJoinedCount, drawingStatus.referralQualifiedCount)}</p>
+            ) : null}
           </div>
         ) : null}
         <div className="challenge-overview">

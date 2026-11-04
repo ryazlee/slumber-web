@@ -17,12 +17,7 @@ import {
 } from '../lib/format';
 import type { Challenge, ChallengeProgress } from '../lib/types';
 import ChallengeKindChip from './ChallengeKindChip';
-import {
-  drawingEntryBreakdown,
-  drawingPoolTotal,
-  drawingStatusCopy,
-  referralQualifiedByReferrer,
-} from '../lib/drawing';
+import { drawingHeroImageUrl, drawingPeopleFromRoster, summarizeDrawingStatus } from '../lib/drawing';
 
 type Props = {
   challenge: Challenge;
@@ -184,38 +179,12 @@ function RaceCard({
         ? `+${formatMins(gap)}`
         : `-${formatMins(Math.abs(gap))}`;
 
-  const drawingPeople = accepted.map((p) => ({
-    userId: p.userId,
-    accruedMinutes: scored.find((row) => row.userId === p.userId)?.accruedMinutes ?? 0,
-    referredBy: p.referredBy ?? null,
-  }));
-  const drawingBreakdown = challenge.isDrawing
-    ? drawingEntryBreakdown({
-      config: challenge.drawingEntryConfig,
-      isDrawing: true,
-      drawingReferrals: challenge.drawingReferrals,
-      accruedMinutes: me?.accruedMinutes ?? 0,
-      goalMinutes: challenge.goalMinutes,
-      referralsQualified: challenge.drawingReferralCounts?.[currentUserId]?.qualified ?? 0,
-    })
-    : null;
-  const drawingCopy = challenge.isDrawing && drawingBreakdown
-    ? drawingStatusCopy({
-      accruedMinutes: me?.accruedMinutes ?? 0,
-      goalMinutes: challenge.goalMinutes,
-      entries: drawingBreakdown.earned,
-      max: drawingBreakdown.max,
-      pool: drawingPoolTotal({
-        config: challenge.drawingEntryConfig,
-        isDrawing: true,
-        drawingReferrals: challenge.drawingReferrals,
-        goalMinutes: challenge.goalMinutes,
-        people: drawingPeople,
-        referralQualifiedByReferrer: referralQualifiedByReferrer(challenge.drawingReferralCounts),
-      }),
-      completed: challenge.status === 'completed' || challenge.status === 'cancelled',
-    })
-    : null;
+  const heroImageUrl = challenge.isDrawing ? drawingHeroImageUrl(challenge) : null;
+  const drawingCopy = summarizeDrawingStatus(challenge, {
+    currentUserId,
+    accruedMinutes: me?.accruedMinutes ?? 0,
+    people: drawingPeopleFromRoster(accepted, scored),
+  })?.copy ?? null;
   const meta = [
     challenge.hostedBy === 'slumber' ? 'Hosted by Slumber' : null,
     challenge.isDrawing
@@ -228,15 +197,16 @@ function RaceCard({
   return (
     <Link
       to={`/challenges/${challenge.id}`}
-      className="challenge-card challenge-card-link"
+      className={`challenge-card challenge-card-link${heroImageUrl ? ' challenge-card--banner' : ''}`}
     >
-      {challenge.isDrawing && challenge.prizeLogoUrl ? (
+      {heroImageUrl ? (
         <img
           className="challenge-card-banner"
-          src={challenge.prizeLogoUrl}
+          src={heroImageUrl}
           alt=""
         />
       ) : null}
+      <div className={heroImageUrl ? 'challenge-card-body' : undefined}>
       <div className="challenge-card-top">
         <div className="challenge-card-heading">
           <div className="challenge-card-title-row">
@@ -296,6 +266,7 @@ function RaceCard({
           ) : null}
         </div>
       ) : null}
+      </div>
     </Link>
   );
 }

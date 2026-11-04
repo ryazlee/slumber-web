@@ -2,6 +2,35 @@ import { formatMins, goalHours, pluralCount } from './format';
 
 export const DRAWING_KIND_LABEL = 'Prize drawing';
 
+export type DrawingPrize = {
+  prizeSponsorName?: string | null;
+  prizeName?: string | null;
+  prizeUrl?: string | null;
+  prizeLogoUrl?: string | null;
+  prizeExtraUrls?: string[] | null;
+  officialRules?: string | null;
+  officialRulesUrl?: string | null;
+};
+
+function trimmedUrls(urls: (string | null | undefined)[] | null | undefined): string[] {
+  return (urls ?? []).map((item) => item?.trim() ?? '').filter(Boolean);
+}
+
+export function drawingHeroImageUrl(prize: DrawingPrize): string | null {
+  return trimmedUrls(prize.prizeExtraUrls)[0] ?? prize.prizeLogoUrl?.trim() ?? null;
+}
+
+export function drawingHeroImageUrls(prize: DrawingPrize): string[] {
+  const extras = trimmedUrls(prize.prizeExtraUrls);
+  if (extras.length) return extras;
+  const logo = prize.prizeLogoUrl?.trim();
+  return logo ? [logo] : [];
+}
+
+export function drawingSponsorLogoUrl(prize: DrawingPrize): string | null {
+  return prize.prizeLogoUrl?.trim() || null;
+}
+
 export type DrawingEntryKindId = 'goal' | 'referral';
 
 export type DrawingEntryKindDef = {
@@ -89,6 +118,25 @@ export function parseDrawingEntryConfig(
       : Math.max(entries, clampInt(found.max, 0, 100, fallback.max));
     return { kind: fallback.kind, enabled, entries, max };
   });
+}
+
+export function isDrawingChallenge<T extends { isDrawing?: boolean }>(
+  challenge: T | null | undefined,
+): challenge is T {
+  return challenge?.isDrawing === true;
+}
+
+export function drawingReferralsEnabled(challenge: {
+  isDrawing?: boolean;
+  drawingReferrals?: boolean;
+  drawingEntryConfig?: unknown;
+} | null | undefined): boolean {
+  if (!isDrawingChallenge(challenge)) return false;
+  return parseDrawingEntryConfig(
+    challenge.drawingEntryConfig,
+    true,
+    challenge.drawingReferrals === true,
+  ).some((rule) => rule.kind === 'referral' && rule.enabled);
 }
 
 function goalQualified(opts: {
@@ -189,19 +237,43 @@ export function referralQualifiedByReferrer(
   return out;
 }
 
+export type DrawingPoolPerson = {
+  userId: string;
+  accruedMinutes: number;
+  referredBy?: string | null;
+  ineligible?: boolean;
+  alternate?: boolean;
+  hasPostedSleep?: boolean;
+};
+
+export function drawingReferralCountsLine(signups: number, qualified: number): string {
+  return `${pluralCount(signups, 'signed up', 'signed up')} · ${pluralCount(qualified, 'sleep post')}`;
+}
+
+export function drawingReferralStatusLine(signups: number, qualified: number): string {
+  return `Referrals ${drawingReferralCountsLine(signups, qualified)}`;
+}
+
+export function drawingPeopleFromRoster(
+  participants: Array<{ userId: string; referredBy?: string | null; inviteStatus?: string }>,
+  progress: Array<{ userId: string; accruedMinutes: number }>,
+): DrawingPoolPerson[] {
+  const minutes = new Map(progress.map((row) => [row.userId, row.accruedMinutes]));
+  return participants
+    .filter((person) => !person.inviteStatus || person.inviteStatus === 'accepted')
+    .map((person) => ({
+      userId: person.userId,
+      accruedMinutes: minutes.get(person.userId) ?? 0,
+      referredBy: person.referredBy ?? null,
+    }));
+}
+
 export function drawingPoolTotal(opts: {
   config?: unknown;
   isDrawing?: boolean;
   drawingReferrals?: boolean;
   goalMinutes: number;
-  people: Array<{
-    userId: string;
-    accruedMinutes: number;
-    referredBy?: string | null;
-    ineligible?: boolean;
-    alternate?: boolean;
-    hasPostedSleep?: boolean;
-  }>;
+  people: DrawingPoolPerson[];
   referralQualifiedByReferrer?: Record<string, number>;
 }): number {
   return opts.people.reduce((sum, person) => {
@@ -272,5 +344,66 @@ export function drawingStatusCopy(opts: {
     entriesLabel,
     qualified,
     detail: remain > 0 ? `${formatMins(remain)} to go` : 'Hit the goal to enter',
+  };
+}
+
+export type DrawingStatusSummary = {
+  breakdown: DrawingEntryBreakdown;
+  pool: number;
+  copy: ReturnType<typeof drawingStatusCopy>;
+  referralJoinedCount: number;
+  referralQualifiedCount: number;
+};
+
+export function summarizeDrawingStatus(
+  challenge: {
+    isDrawing?: boolean;
+    drawingEntryConfig?: unknown;
+    drawingReferrals?: boolean;
+    drawingReferralCounts?: DrawingReferralCounts | null;
+    goalMinutes: number;
+    status?: string;
+  } | null | undefined,
+  opts: {
+    currentUserId?: string | null;
+    accruedMinutes: number;
+    people: DrawingPoolPerson[];
+  },
+): DrawingStatusSummary | null {
+  if (!challenge || !isDrawingChallenge(challenge)) return null;
+  const referral = opts.currentUserId
+    ? challenge.drawingReferralCounts?.[opts.currentUserId]
+    : undefined;
+  const referralJoinedCount = referral?.signups ?? 0;
+  const referralQualifiedCount = referral?.qualified ?? 0;
+  const breakdown = drawingEntryBreakdown({
+    config: challenge.drawingEntryConfig,
+    isDrawing: true,
+    drawingReferrals: challenge.drawingReferrals,
+    accruedMinutes: opts.accruedMinutes,
+    goalMinutes: challenge.goalMinutes,
+    referralsQualified: referralQualifiedCount,
+  });
+  const pool = drawingPoolTotal({
+    config: challenge.drawingEntryConfig,
+    isDrawing: true,
+    drawingReferrals: challenge.drawingReferrals,
+    goalMinutes: challenge.goalMinutes,
+    people: opts.people,
+    referralQualifiedByReferrer: referralQualifiedByReferrer(challenge.drawingReferralCounts),
+  });
+  return {
+    breakdown,
+    pool,
+    copy: drawingStatusCopy({
+      accruedMinutes: opts.accruedMinutes,
+      goalMinutes: challenge.goalMinutes,
+      entries: breakdown.earned,
+      max: breakdown.max,
+      pool,
+      completed: challenge.status === 'completed' || challenge.status === 'cancelled',
+    }),
+    referralJoinedCount,
+    referralQualifiedCount,
   };
 }

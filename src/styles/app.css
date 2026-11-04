@@ -81,9 +81,8 @@
     border-radius: 12px;
   }
 
-  .challenge-card-banner {
-    width: calc(100% + 28px);
-    margin: -14px -14px 12px;
+  .challenge-card-body {
+    padding: 14px;
   }
 
   .post-card-header {
@@ -2302,10 +2301,31 @@
   display: block;
   width: 100%;
   height: auto;
-  object-fit: contain;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
   background: var(--surface);
   border-radius: 0;
   align-self: stretch;
+}
+
+.drawing-prize-sponsor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.drawing-prize-sponsor-logo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.challenge-overview-chip--action {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
 }
 
 .drawing-prize-body {
@@ -2472,13 +2492,22 @@
   flex-shrink: 0;
 }
 
+.challenge-card--banner {
+  padding: 0;
+}
+
+.challenge-card-body {
+  padding: 18px 20px;
+}
+
 .challenge-card-banner {
   display: block;
-  width: calc(100% + 40px);
+  width: 100%;
   max-width: none;
   height: auto;
-  margin: -18px -20px 14px;
-  object-fit: contain;
+  margin: 0;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
   background: color-mix(in srgb, var(--text) 4%, var(--surface));
 }
 

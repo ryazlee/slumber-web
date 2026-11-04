@@ -7,6 +7,7 @@ import { slumberChallengeErrorMessage, uploadAdminCampaignImage } from '../../li
 import {
   DRAWING_ENTRY_KIND_CATALOG,
   defaultDrawingEntryConfig,
+  drawingReferralCountsLine,
   parseDrawingEntryConfig,
   type DrawingEntryRule,
 } from '../../lib/drawing';
@@ -385,7 +386,7 @@ function RaceForm({
                 maxLength={80}
                 value={draft.prizeSponsorName}
                 onChange={(e) => setDraft((prev) => ({ ...prev, prizeSponsorName: e.target.value }))}
-                placeholder="Pillow Cube"
+                placeholder="Sponsor"
               />
             </div>
             <div className="admin-field">
@@ -396,7 +397,7 @@ function RaceForm({
                 maxLength={120}
                 value={draft.prizeName}
                 onChange={(e) => setDraft((prev) => ({ ...prev, prizeName: e.target.value }))}
-                placeholder="Side Cube Original"
+                placeholder="Prize"
               />
             </div>
             <div className="admin-field">
@@ -410,7 +411,7 @@ function RaceForm({
               />
             </div>
             <div className="admin-field">
-              <label className="admin-label" htmlFor="slumber-prize-logo">Logo URL</label>
+              <label className="admin-label" htmlFor="slumber-prize-logo">Sponsor logo</label>
               <input
                 id="slumber-prize-logo"
                 className="admin-input"
@@ -433,7 +434,7 @@ function RaceForm({
               />
             </div>
             <div className="admin-field">
-              <label className="admin-label" htmlFor="slumber-prize-extra">Extra URLs (one per line)</label>
+              <label className="admin-label" htmlFor="slumber-prize-extra">Prize photos (first is the card image; one URL per line)</label>
               <textarea
                 id="slumber-prize-extra"
                 className="admin-input"
@@ -664,7 +665,7 @@ function DrawingRosterDialog({
                   <td>{person.referred_by_username ? `@${person.referred_by_username}` : '—'}</td>
                 ) : null}
                 {includeReferrals ? (
-                  <td>{person.referrals_joined} signed up / {person.referrals_qualified} posted</td>
+                  <td>{drawingReferralCountsLine(person.referrals_joined, person.referrals_qualified)}</td>
                 ) : null}
                 <td>
                   <AdminGridActions>
