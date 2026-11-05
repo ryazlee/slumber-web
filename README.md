@@ -46,9 +46,10 @@ npm install && npm run dev
 | `/delete-account` | No | Account deletion (Play Console account deletion URL) |
 | `/delete-data` | No | Data deletion request (Play Console Data safety URL) |
 | `/invite/:token` | Partial | Friend invite landing — `@username` preview; opens app to connect |
+| `/open/?challenge=` / `?invite=` / `?club=&token=` | Partial | **Share entry for iMessage/Messenger** — static shell returns HTTP 200 + `og-image.png` on GitHub Pages; app builds these via `buildChallengeJoinUrl` / friend / club helpers |
 | `/post/:id` | Partial | Post landing + app handoff |
 | `/profile/:userId` | Partial | Profile landing + app handoff |
-| `/challenge/join/:token` | Partial | Open challenge join landing |
+| `/challenge/join/:token` | Partial | Open challenge join landing (legacy path; still works, but GHP serves HTTP 404 so previews need the Cloudflare worker or `/open/`) |
 | `/club/:clubId/invite/:token` | Partial | Club invite landing |
 | `/admin` | OTP / Google + admin role | Health snapshot, people insights, notify, campaigns, moderation, delete accounts |
 | `/admin/campaigns` | Admin | In-app campaign prompts (challenge, message, or link — image + popup + header + banner + inbox). Challenge campaigns link an existing open-link challenge; promo dates are independent of the challenge window |
@@ -85,13 +86,18 @@ Defaults derive from `EXPO_PUBLIC_WEB_BASE_URL` when omitted (`lib/legal.ts`).
 
 ## Link previews (iMessage, Messenger, etc.)
 
-Crawlers do not run React. Open Graph tags are injected at build time into `index.html` and `404.html` via `lib/spaShellScripts.ts` (`og-image.png`, `apple-touch-icon.png`, etc. in `public/`).
+Crawlers do not run React. Open Graph tags are injected at build time into `index.html` and `404.html` via `lib/spaShellScripts.ts` (`og-image.png` 1200×630, `apple-touch-icon.png`, etc. in `public/`).
 
-**GitHub Pages quirk:** unknown SPA paths are served from `404.html` with **HTTP 404**. Google Play rejects privacy/deletion URLs that return 404. iMessage often skips rich previews on non-200 responses even when meta tags are present.
+**Why challenge / invite links show no card today:** GitHub Pages serves those SPA paths from `404.html` with **HTTP 404**. The OG tags are in the body, but iMessage and Messenger often **skip rich previews on non-200 responses**. Example:
+
+`https://useslumber.com/challenge/join/TOKEN` → `404` + `og:image` (ignored)  
+`https://useslumber.com/og-image.png` → `200` (image is fine)  
+`https://useslumber.com/privacy/` → `200` (static shell)
 
 **Mitigations in this repo:**
 
 1. **Build-time static shells** — `vite` copies `index.html` into `privacy/`, `terms/`, `delete-account/`, `delete-data/`, `home/`, `download/`, and `contact/` so those URLs return **HTTP 200** on GitHub Pages (required for Play Console).
-2. **Cloudflare Pages** (optional) — deploy `dist/` with `public/_redirects` (`/* /index.html 200`). Previews use `index.html` meta + logo.
-3. **Cloudflare Worker** (optional, keep GitHub Pages) — deploy `cloudflare/link-preview-worker.mjs` on `useslumber.com/*` to re-serve `404.html` with status **200** for deep-link + legal paths. See `cloudflare/README.md`.
-4. **Verify after deploy** — `curl -sI https://useslumber.com/privacy` and `curl -sI https://useslumber.com/invite/TOKEN` should be `200`; `og-image.png` must return `200`.
+2. **`/open/` share entry (works on GitHub Pages today)** — build also emits `open/index.html` with deeplink OG tags. New app share links look like `https://useslumber.com/open/?challenge=TOKEN` and return **HTTP 200** + `og-image.png` without Cloudflare. Legacy `/challenge/join/TOKEN` paths still land in the app/web UI.
+3. **Cloudflare Worker (for legacy path URLs)** — put Cloudflare in front of Pages and deploy `cloudflare/link-preview-worker.mjs` on `useslumber.com/*` so old `/challenge/join/*` links also unfurl. Step-by-step: [`cloudflare/README.md`](cloudflare/README.md).
+4. **Cloudflare Pages** (alternative) — deploy `dist/` with `public/_redirects` (`/* /index.html 200`) instead of GitHub Pages.
+5. **Verify** — `curl -sI https://useslumber.com/open/?challenge=TOKEN` → `200`; `og-image.png` → `200`. After the Worker is live, `/challenge/join/TOKEN` should also be `200`.

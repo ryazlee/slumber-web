@@ -87,8 +87,51 @@ export function challengeJoinSchemePath(token: string, search?: string): string 
   return base;
 }
 
+/**
+ * Preview-friendly share entry (`/open/?challenge=…`) — static shell returns HTTP 200
+ * on GitHub Pages so iMessage / Messenger can show og:image.
+ */
+function parseOpenShareQuery(search?: string): InviteLinkTarget | null {
+  const params = new URLSearchParams(search?.startsWith('?') ? search.slice(1) : search ?? '');
+
+  const challenge = params.get('challenge');
+  if (challenge && TOKEN_RE.test(challenge)) {
+    return {
+      kind: 'challenge',
+      token: challenge,
+      schemePath: challengeJoinSchemePath(challenge, search),
+    };
+  }
+
+  const invite = params.get('invite');
+  if (invite && TOKEN_RE.test(invite)) {
+    return {
+      kind: 'friend',
+      token: invite,
+      schemePath: `invite/${invite}`,
+    };
+  }
+
+  const clubId = params.get('club');
+  const clubToken = params.get('token');
+  if (clubId && isUuid(clubId) && clubToken && TOKEN_RE.test(clubToken)) {
+    return {
+      kind: 'club',
+      clubId,
+      token: clubToken,
+      schemePath: `club/${clubId}/invite/${clubToken}`,
+    };
+  }
+
+  return null;
+}
+
 export function parseInviteLinkPath(pathname: string, search?: string): InviteLinkTarget | null {
   const segments = pathSegments(pathname);
+
+  if (segments[0] === 'open' && segments.length === 1) {
+    return parseOpenShareQuery(search);
+  }
 
   if (segments[0] === 'invite' && segments[1] && TOKEN_RE.test(segments[1])) {
     return {

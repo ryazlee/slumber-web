@@ -14,7 +14,7 @@ const SITE_DESCRIPTION =
 
 const DEEPLINK_TITLE = 'Join on Slumber';
 const DEEPLINK_DESCRIPTION =
-  "You're invited to try social sleep tracking for iOS and Android. Log sleep with friends, compare stats, and join challenges.";
+  "You're invited on Slumber — social sleep tracking for iOS and Android. Log with friends, compare stats, and join sleep challenges.";
 
 const OG_IMAGE_WIDTH = 1200;
 const OG_IMAGE_HEIGHT = 630;
@@ -37,7 +37,7 @@ export function buildSocialMetaHead(
   const icon512Url = assetUrl(siteUrl, '/icon-512.png');
   const faviconUrl = assetUrl(siteUrl, '/favicon-32.png');
 
-  return `
+  return `<!-- SOCIAL_META_BEGIN -->
     <meta name="description" content="${description}" />
     <title>${title}</title>
 
@@ -70,7 +70,24 @@ export function buildSocialMetaHead(
 
     <link rel="image_src" href="${imageUrl}" />
     <meta itemprop="image" content="${imageUrl}" />
-    <link rel="manifest" href="${assetUrl(siteUrl, '/manifest.webmanifest')}" />`;
+    <link rel="manifest" href="${assetUrl(siteUrl, '/manifest.webmanifest')}" />
+    <!-- SOCIAL_META_END -->`;
+}
+
+/** Swap the build-time social meta block (e.g. site → deeplink for /open/). */
+export function replaceSocialMetaHead(
+  html: string,
+  siteUrl: string,
+  variant: SocialMetaVariant,
+): string {
+  const next = buildSocialMetaHead(siteUrl, variant);
+  if (html.includes('<!-- SOCIAL_META_BEGIN -->') && html.includes('<!-- SOCIAL_META_END -->')) {
+    return html.replace(
+      /<!-- SOCIAL_META_BEGIN -->[\s\S]*?<!-- SOCIAL_META_END -->/,
+      next.trim(),
+    );
+  }
+  return html.replace('<!-- SOCIAL_META -->', next);
 }
 
 function escapeToSystemBrowserSnippet(): string {

@@ -2,7 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
-import { build404Html, buildIndexRestoreScript, buildSocialMetaHead } from './lib/spaShellScripts';
+import {
+  build404Html,
+  buildIndexRestoreScript,
+  buildSocialMetaHead,
+  replaceSocialMetaHead,
+} from './lib/spaShellScripts';
 
 const DEFAULT_SITE_URL = 'https://useslumber.com';
 const IOS_APP_ID = 'L57M37HLYR.com.ryan.slumber';
@@ -21,6 +26,12 @@ const STATIC_SPA_ROUTES = [
   'download',
   'contact',
 ];
+
+/**
+ * Share / invite entry that must return HTTP 200 on GitHub Pages so iMessage and
+ * Messenger show og:image. Tokens travel in the query string (`?challenge=…`).
+ */
+const LINK_PREVIEW_SPA_ROUTES = ['open'];
 
 function appLinkPath(basePath: string, route: string): string {
   const base = basePath.replace(/\/$/, '');
@@ -72,6 +83,14 @@ function spaGithubPagesPlugin(basePath: string, siteUrl: string): Plugin {
         fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(path.join(dir, 'index.html'), html);
       }
+
+      // Deeplink OG card ("Join on Slumber" + og-image) — used by share URL builders.
+      const openHtml = replaceSocialMetaHead(html, siteUrl, 'deeplink');
+      for (const route of LINK_PREVIEW_SPA_ROUTES) {
+        const dir = path.join(outDir, route);
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, 'index.html'), openHtml);
+      }
     },
   };
 }
@@ -85,6 +104,9 @@ function appleAppSiteAssociationPlugin(basePath: string): Plugin {
     appLinkPath(basePath, 'challenge/join/*'),
     appLinkPath(basePath, 'invite/*'),
     appLinkPath(basePath, 'club/*/invite/*'),
+    // Preview-friendly share entry (HTTP 200 on GitHub Pages).
+    appLinkPath(basePath, 'open'),
+    appLinkPath(basePath, 'open/*'),
   ];
 
   const content = JSON.stringify(

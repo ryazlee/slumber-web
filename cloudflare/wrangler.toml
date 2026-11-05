@@ -1,0 +1,17 @@
+# Link-preview worker — sits in front of GitHub Pages on useslumber.com.
+# https://developers.cloudflare.com/workers/wrangler/configuration/
+name = "slumber-link-preview"
+main = "link-preview-worker.mjs"
+compatibility_date = "2024-11-01"
+
+# Attach after the zone is on Cloudflare (orange-cloud DNS):
+#   npx wrangler deploy
+#   npx wrangler secret put SUPABASE_URL
+#   npx wrangler secret put SUPABASE_ANON_KEY
+# Then add route useslumber.com/* in the dashboard (or routes below once zone_id is set).
+
+# routes = [{ pattern = "useslumber.com/*", zone_name = "useslumber.com" }]
+
+[vars]
+# Non-secret defaults (optional). Prefer secrets for Supabase credentials.
+# SUPABASE_URL and SUPABASE_ANON_KEY are read from Worker secrets at runtime.
