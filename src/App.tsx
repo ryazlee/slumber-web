@@ -81,6 +81,9 @@ export default function App() {
         <Route path="recap/:month" element={<RecapLandingPage />} />
         <Route path="challenge/join/:token" element={<InviteLandingPage />} />
         <Route path="club/:clubId/invite/:token" element={<InviteLandingPage />} />
+        {/* HTTP 200 share entry for iMessage/Messenger previews (see cloudflare/ + /open/). */}
+        <Route path="open" element={<InviteLandingPage />} />
+        <Route path="open/" element={<InviteLandingPage />} />
         <Route path="post/:id" element={<GatedPostDetail />} />
         <Route path="profile/:userId" element={<GatedProfile />} />
         <Route path="challenge/:id" element={<GatedChallengeDetail />} />
