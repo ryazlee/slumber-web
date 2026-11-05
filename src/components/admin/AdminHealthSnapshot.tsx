@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react';
+import type { PostgrestError } from '@supabase/supabase-js';
 import { Link } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext';
 import {
   useAdminTagSuggestions,
   useDailyActivity,
   useHealthMetrics,
+  useTopInviters,
 } from '../../hooks/useAdmin';
+import { isMissingAdminRpc } from '../../lib/adminRpc';
 import type { AnalyticsFilters, DailyActivityRow } from '../../lib/admin';
 import {
   ALL_TIME_START,
@@ -237,6 +240,7 @@ export default function AdminHealthSnapshot() {
   const [range, setRange] = useState<DateRange>(() => rangeForPreset('today'));
   const preset = healthPresetForRange(range);
   const healthQuery = useHealthMetrics(range);
+  const invitersQuery = useTopInviters(range);
   const suggestionsQuery = useAdminTagSuggestions();
 
   const health = healthQuery.data ?? null;
@@ -376,6 +380,31 @@ export default function AdminHealthSnapshot() {
     return cards;
   }, [commentedRate, health, kudosRate, postsPerActive, previous, windowLabel]);
 
+  const invitesReady = typeof health?.engagement.invite_signups === 'number';
+  const inviteCards = useMemo<EngageCard[]>(() => {
+    if (!health || !invitesReady) return [];
+    const prevEngagement = previous?.engagement;
+    return [
+      {
+        key: 'invite-signups',
+        label: 'Invited accounts',
+        value: health.engagement.invite_signups ?? 0,
+        sub: `${formatNumber(health.engagement.invite_signups_posted ?? 0)} posted sleep`,
+        ...countPair(health.engagement.invite_signups, prevEngagement?.invite_signups),
+      },
+      {
+        key: 'inviters',
+        label: 'People inviting',
+        value: health.engagement.inviters ?? 0,
+        sub: 'Created an account from their drawing link',
+        ...countPair(health.engagement.inviters, prevEngagement?.inviters),
+      },
+    ];
+  }, [health, invitesReady, previous]);
+  const topInviters = invitersQuery.data ?? [];
+  const invitersMissing = invitersQuery.isError
+    && isMissingAdminRpc(invitersQuery.error as PostgrestError, 'admin_get_top_inviters');
+
   const nowCards = useMemo<EngageCard[]>(() => {
     if (!health) return [];
     const cards: EngageCard[] = [
@@ -477,6 +506,36 @@ export default function AdminHealthSnapshot() {
           <AdminSubsection title="This window" meta={windowLabel} className="admin-engage-section">
             <EngageGrid cards={windowCards} />
           </AdminSubsection>
+          {invitesReady ? (
+            <AdminSubsection
+              title="Invites"
+              meta={windowLabel}
+              className="admin-engage-section"
+              footer="New accounts that opened a drawing invite link. Friend and club links are not included."
+            >
+              <EngageGrid cards={inviteCards} />
+              {invitersMissing ? (
+                <p className="admin-muted">Apply the latest migrations to see who invited the most people.</p>
+              ) : invitersQuery.isError ? (
+                <p className="admin-error">Could not load top inviters.</p>
+              ) : topInviters.length === 0 ? (
+                <p className="admin-muted">No accounts were created from an invite in this window.</p>
+              ) : (
+                <ol className="admin-inviter-list">
+                  {topInviters.map((row) => (
+                    <li key={row.user_id} className="admin-inviter-row">
+                      <Link className="admin-inviter-name" to={`/admin/users?q=${encodeURIComponent(row.username)}`}>
+                        {row.username}
+                      </Link>
+                      <span className="admin-inviter-count">
+                        {formatNumber(row.signups)} invited · {formatNumber(row.posted)} posted
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </AdminSubsection>
+          ) : null}
           <AdminSubsection title="Right now" className="admin-engage-section">
             <EngageGrid cards={nowCards} />
           </AdminSubsection>

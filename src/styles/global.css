@@ -3261,6 +3261,37 @@ a.admin-metric-card--link:focus-visible {
   min-width: 0;
 }
 
+.admin-inviter-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-inviter-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.admin-inviter-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 650;
+  color: inherit;
+}
+
+.admin-inviter-count {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
 .admin-engage-grid {
   display: grid;
   gap: 12px;

@@ -68,6 +68,8 @@ export const queryKeys = {
     premiumUsers: (filters: PremiumUserFilters) => ['admin', 'premium', 'users', filters] as const,
     healthMetrics: (range: { start: string; end: string }) =>
       ['admin', 'health', range.start, range.end] as const,
+    topInviters: (range: { start: string; end: string }) =>
+      ['admin', 'top-inviters', range.start, range.end] as const,
     communityMetrics: ['admin', 'community', 'metrics'] as const,
     challenges: (filters: ChallengeListFilters) => ['admin', 'community', 'challenges', filters] as const,
     slumberChallenges: (filters: ChallengeListFilters) => ['admin', 'slumber-challenges', filters] as const,

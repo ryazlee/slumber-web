@@ -57,6 +57,7 @@ import {
   fetchCommunityMetrics,
   fetchDataIssues,
   fetchHealthMetrics,
+  fetchTopInviters,
   resetUserStreak,
   setUserSuspended,
   deleteAdminUserAccount,
@@ -537,6 +538,19 @@ export function useHealthMetrics(
   return useQuery({
     queryKey: queryKeys.admin.healthMetrics(range),
     queryFn: () => fetchHealthMetrics(range),
+    enabled: enabled && ready,
+    ...adminQueryOptions,
+  });
+}
+
+export function useTopInviters(
+  range: { start: string; end: string },
+  enabled = true,
+) {
+  const ready = Boolean(range.start && range.end && range.start <= range.end);
+  return useQuery({
+    queryKey: queryKeys.admin.topInviters(range),
+    queryFn: () => fetchTopInviters(range),
     enabled: enabled && ready,
     ...adminQueryOptions,
   });

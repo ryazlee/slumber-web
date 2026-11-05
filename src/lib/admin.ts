@@ -175,6 +175,17 @@ export type HealthWindowEngagement = {
   club_joins?: number;
   challenges_created?: number;
   buddy_tags?: number;
+  /** New accounts from a drawing invite. Present after migration 224. */
+  invite_signups?: number;
+  invite_signups_posted?: number;
+  inviters?: number;
+};
+
+export type AdminTopInviter = {
+  user_id: string;
+  username: string;
+  signups: number;
+  posted: number;
 };
 
 export type HealthMetricsRange = {
@@ -995,6 +1006,15 @@ export async function sendAdminNotification(
     notification_id: row.notification_id,
     device_tokens: row.device_tokens ?? 0,
   };
+}
+
+export async function fetchTopInviters(range: HealthMetricsRange): Promise<AdminTopInviter[]> {
+  const { data, error } = await supabase.rpc('admin_get_top_inviters', {
+    p_start: range.start,
+    p_end: range.end,
+  });
+  if (error) throw error;
+  return Array.isArray(data) ? data as AdminTopInviter[] : [];
 }
 
 export async function fetchHealthMetrics(range: HealthMetricsRange): Promise<HealthMetrics> {
