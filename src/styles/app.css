@@ -2385,8 +2385,33 @@
 
 .drawing-entry-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 12px;
+}
+
+.drawing-referrals {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.drawing-referral-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+}
+
+.drawing-referral-status {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.drawing-referral-status--ok {
+  color: var(--success);
 }
 
 .drawing-entry-label {

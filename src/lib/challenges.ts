@@ -2,7 +2,8 @@ import { supabase } from './supabase';
 import { filterWearableSleepRows } from './sleepPostCustom';
 import { sortPastChallenges } from './challengeGrace';
 import { parseClockToMinutes } from './napDay';
-import { parseDrawingReferralCounts } from './drawing';
+import { parseDrawingReferralCounts, parseDrawingReferrals } from './drawing';
+import type { DrawingReferralPerson } from './drawing';
 import type {
   Challenge,
   ChallengeContributionPost,
@@ -287,4 +288,13 @@ export async function fetchChallenges(statuses?: ChallengeStatus[]): Promise<Cha
   }
 
   return challenges;
+}
+
+/** People this account referred on one drawing, with posted-sleep status. */
+export async function fetchMyDrawingReferrals(challengeId: string): Promise<DrawingReferralPerson[]> {
+  const { data, error } = await supabase.rpc('get_my_drawing_referrals', {
+    p_challenge_id: challengeId,
+  });
+  if (error) throw error;
+  return parseDrawingReferrals(data);
 }

@@ -17,7 +17,7 @@ import {
 } from '../lib/format';
 import type { Challenge, ChallengeProgress } from '../lib/types';
 import ChallengeKindChip from './ChallengeKindChip';
-import { drawingHeroImageUrl, drawingPeopleFromRoster, summarizeDrawingStatus } from '../lib/drawing';
+import { drawingHeroImageUrl, drawingJoinedLabel, drawingPeopleFromRoster, summarizeDrawingStatus } from '../lib/drawing';
 
 type Props = {
   challenge: Challenge;
@@ -99,8 +99,9 @@ function CompactCard({
     ? null
     : tied ? 'Tie' : won ? 'Win' : lost ? 'Loss' : null;
   const resultClass = tied ? 'tie' : won ? 'win' : 'loss';
+  const joined = challenge.participants.filter((p) => p.inviteStatus === 'accepted').length;
   const subtitle = challenge.isDrawing
-    ? `${goalHours(challenge.goalMinutes)} to enter`
+    ? `${goalHours(challenge.goalMinutes)} to enter · ${drawingJoinedLabel(joined)}`
     : waiting
       ? `Waiting on a reply · ${goalHours(challenge.goalMinutes)} goal`
       : `${formatChallengeStartDate(challenge.startedAt, challenge.createdAt)} · ${formatChallengeRaceType(challenge)}`;
@@ -190,7 +191,7 @@ function RaceCard({
   const meta = [
     challenge.hostedBy === 'slumber' ? 'Hosted by Slumber' : null,
     challenge.isDrawing
-      ? `${goalHours(challenge.goalMinutes)} to enter`
+      ? `${goalHours(challenge.goalMinutes)} to enter · ${drawingJoinedLabel(accepted.length)}`
       : `${goalHours(challenge.goalMinutes)} goal`,
     !challenge.isDrawing && challenge.isGroup ? pluralCount(accepted.length, 'racer') : null,
     challengeStartLabel(challenge.startedAt, started),

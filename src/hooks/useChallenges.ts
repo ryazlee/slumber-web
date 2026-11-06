@@ -1,5 +1,11 @@
 import { useQueries, useQuery } from '@tanstack/react-query';
-import { fetchChallenge, fetchChallengeContributions, fetchChallengeProgress, fetchChallenges } from '../lib/challenges';
+import {
+  fetchChallenge,
+  fetchChallengeContributions,
+  fetchChallengeProgress,
+  fetchChallenges,
+  fetchMyDrawingReferrals,
+} from '../lib/challenges';
 import type { ChallengeProgress } from '../lib/types';
 import { queryKeys } from './queryKeys';
 
@@ -58,5 +64,14 @@ export function useChallengeContributions(challengeId: string | undefined, enabl
     queryKey: queryKeys.challengeContributions(challengeId ?? ''),
     queryFn: () => fetchChallengeContributions(challengeId!),
     enabled: !!challengeId && enabled,
+  });
+}
+
+export function useMyDrawingReferrals(challengeId: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.drawingReferrals(challengeId ?? ''),
+    queryFn: () => fetchMyDrawingReferrals(challengeId!),
+    enabled: !!challengeId && enabled,
+    staleTime: 30_000,
   });
 }

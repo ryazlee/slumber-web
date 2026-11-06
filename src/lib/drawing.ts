@@ -259,6 +259,58 @@ export function drawingReferralCountsLine(signups: number, qualified: number): s
   return `${pluralCount(signups, 'signed up', 'signed up')} · ${pluralCount(qualified, 'sleep post')}`;
 }
 
+/** Accepted people on a prize-drawing card. */
+export function drawingJoinedLabel(count: number): string {
+  return `${pluralCount(Math.max(0, count), 'person', 'people')} joined`;
+}
+
+export type DrawingReferralPerson = {
+  userId: string;
+  username: string;
+  avatarUrl: string | null;
+  qualified: boolean;
+  hasProfile: boolean;
+  createdAt: string;
+};
+
+export function drawingReferralPersonStatus(qualified: boolean): string {
+  return qualified ? 'Posted sleep' : 'Signed up';
+}
+
+export function parseDrawingReferrals(raw: unknown): DrawingReferralPerson[] {
+  if (!Array.isArray(raw)) return [];
+  const people: DrawingReferralPerson[] = [];
+  for (const row of raw) {
+    if (!row || typeof row !== 'object') continue;
+    const record = row as {
+      user_id?: unknown;
+      username?: unknown;
+      avatar_url?: unknown;
+      qualified?: unknown;
+      has_profile?: unknown;
+      created_at?: unknown;
+    };
+    const userId = typeof record.user_id === 'string' ? record.user_id : '';
+    if (!userId) continue;
+    const hasProfile = record.has_profile === true;
+    const username = typeof record.username === 'string' && record.username.trim()
+      ? record.username.trim()
+      : 'Deleted account';
+    const avatarUrl = typeof record.avatar_url === 'string' && record.avatar_url.trim()
+      ? record.avatar_url.trim()
+      : null;
+    people.push({
+      userId,
+      username,
+      avatarUrl,
+      qualified: record.qualified === true,
+      hasProfile,
+      createdAt: typeof record.created_at === 'string' ? record.created_at : '',
+    });
+  }
+  return people;
+}
+
 export function drawingReferralStatusLine(signups: number, qualified: number): string {
   return `Referrals ${drawingReferralCountsLine(signups, qualified)}`;
 }

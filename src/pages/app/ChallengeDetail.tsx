@@ -26,6 +26,7 @@ import {
 } from '../../lib/format';
 import ChallengeKindChip from '../../components/ChallengeKindChip';
 import CollapsibleSection from '../../components/CollapsibleSection';
+import DrawingReferralsSection from '../../components/DrawingReferralsSection';
 import {
   drawingEntriesFactsLine,
   drawingPrizeImageUrls,
@@ -266,6 +267,10 @@ export default function ChallengeDetail() {
                 <strong>{drawingBreakdown.earned} / {drawingBreakdown.max}</strong>
               </div>
               <div>
+                <span className="drawing-entry-label">Joined</span>
+                <strong>{accepted.length}</strong>
+              </div>
+              <div>
                 <span className="drawing-entry-label">In the drawing</span>
                 <strong>{pluralCount(drawingPool, 'entry')}</strong>
               </div>
@@ -329,6 +334,9 @@ export default function ChallengeDetail() {
 
       <div className={showBoard ? 'challenge-detail-grid' : 'challenge-detail-main'}>
         <div className="challenge-detail-main">
+          {challenge.isDrawing && drawingReferralsEnabled(challenge) && canUseChallengeBoard ? (
+            <DrawingReferralsSection challengeId={challenge.id} />
+          ) : null}
           {rankedProgress.length > 0 && (
             <CollapsibleSection
               title={challenge.isDrawing ? 'Joined' : 'Progress'}

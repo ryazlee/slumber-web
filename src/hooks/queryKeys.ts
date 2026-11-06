@@ -30,6 +30,7 @@ export const queryKeys = {
   lifetimeStats: (userId: string) => ['lifetime-stats', userId] as const,
   challengeProgress: (id: string) => ['challenge-progress', id] as const,
   challengeContributions: (id: string) => ['challenge-contributions', id] as const,
+  drawingReferrals: (id: string) => ['drawing-referrals', id] as const,
   /** Infinite keyset pages (newest-first batches, displayed ascending). */
   boardMessages: (entityType: string, entityId: string) =>
     ['board-messages', 'v2', entityType, entityId] as const,

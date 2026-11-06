@@ -1,6 +1,10 @@
+import { queryKeys } from '../hooks/queryKeys';
 import { supabase } from './supabase';
 import { avatarRoleKeysFromProfile } from './avatarRoles';
 import { fetchCurrentStreakMap } from './currentStreaks';
+import { isRecentlyCreatedAccount } from './freshAccount';
+import { prefetchCachedImageUrls } from './imageCache';
+import { queryClient } from './queryClient';
 import { normalizeUsername } from './username';
 import type { WebProfile } from './types';
 
@@ -84,6 +88,7 @@ export async function fetchProfileSummary(userId: string): Promise<WebProfile | 
     id: row.id,
     username: row.username,
     avatarUrl: row.avatar_url ?? undefined,
+    joinedAt: typeof row.created_at === 'string' ? row.created_at : undefined,
     userRoles: avatarRoleKeysFromProfile(row.user_roles, row.is_premium),
     isPremium: row.is_premium ?? false,
     friendsCount: typeof friendsCountRes.data === 'number' ? friendsCountRes.data : 0,
@@ -106,6 +111,64 @@ export async function fetchMyProfile(): Promise<WebProfile | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
   return fetchProfileSummary(user.id);
+}
+
+type FreshProfileSeed = {
+  userId: string;
+  username: string;
+  avatarUrl?: string | null;
+  createdAt?: string | null;
+  hasProfile?: boolean;
+};
+
+function emptySeedProfile(person: FreshProfileSeed, joinedAt: string | undefined): WebProfile {
+  return {
+    id: person.userId,
+    username: person.username.trim(),
+    avatarUrl: person.avatarUrl?.trim() || undefined,
+    joinedAt,
+    friendsCount: 0,
+    postsCount: 0,
+    streak: 0,
+    longestStreak: 0,
+    avgAsleepMinutes: 0,
+    sleepGoalMinutes: 480,
+    challengeRecord: { wins: 0, losses: 0, ties: 0 },
+    isOwnProfile: false,
+    friendStatus: 'none',
+  };
+}
+
+/**
+ * Paint a referral row immediately. A just-created account still refetches
+ * (`useProfile` staleTime 0). Older profiles are not written into the query cache.
+ */
+export function seedFreshReferralProfile(person: FreshProfileSeed): void {
+  if (!person.userId || person.hasProfile === false) return;
+  const joinedAt = person.createdAt?.trim() || undefined;
+  const avatarUrl = person.avatarUrl?.trim() || undefined;
+  if (avatarUrl) prefetchCachedImageUrls([avatarUrl]);
+  if (!isRecentlyCreatedAccount(joinedAt)) return;
+
+  queryClient.setQueryData<WebProfile>(queryKeys.profile(person.userId), (current) => {
+    if (!current || current.id !== person.userId) return emptySeedProfile(person, joinedAt);
+    const nextAvatar = current.avatarUrl?.trim() ? current.avatarUrl : avatarUrl;
+    const username = current.username.trim() ? current.username : person.username.trim();
+    const nextJoinedAt = current.joinedAt ?? joinedAt;
+    if (
+      nextAvatar === current.avatarUrl
+      && username === current.username
+      && nextJoinedAt === current.joinedAt
+    ) {
+      return current;
+    }
+    return {
+      ...current,
+      username,
+      avatarUrl: nextAvatar,
+      joinedAt: nextJoinedAt,
+    };
+  });
 }
 
 export async function getUserIdByUsername(username: string): Promise<string | null> {

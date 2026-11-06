@@ -92,6 +92,8 @@ export type WebProfile = {
   id: string;
   username: string;
   avatarUrl?: string;
+  /** `profiles.created_at`. Set for a just-created account so the page refetches. */
+  joinedAt?: string;
   userRoles?: string[];
   isPremium?: boolean;
   friendsCount: number;
