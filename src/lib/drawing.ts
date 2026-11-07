@@ -53,7 +53,7 @@ export const DRAWING_ENTRY_KIND_CATALOG: DrawingEntryKindDef[] = [
   {
     kind: 'goal',
     label: 'Goal',
-    adminHint: 'Awarded when they hit the wearable sleep goal (or AMOE).',
+    adminHint: 'Awarded when they hit the wearable sleep goal. AMOE is a count you set on each person.',
     perEvent: false,
   },
   {
@@ -153,9 +153,11 @@ function goalQualified(opts: {
   goalMinutes: number;
   ineligible?: boolean;
   alternate?: boolean;
+  alternateEntries?: number;
 }): boolean {
   if (opts.ineligible) return false;
   if (opts.alternate) return true;
+  if ((opts.alternateEntries ?? 0) > 0) return true;
   if (!Number.isFinite(opts.accruedMinutes) || !Number.isFinite(opts.goalMinutes) || opts.goalMinutes <= 0) {
     return false;
   }
@@ -171,13 +173,13 @@ export function drawingEntryBreakdown(opts: {
   referralsQualified?: number;
   ineligible?: boolean;
   alternate?: boolean;
+  alternateEntries?: number;
 }): DrawingEntryBreakdown {
   const rules = parseDrawingEntryConfig(
     opts.config,
     opts.isDrawing !== false,
     opts.drawingReferrals === true,
   );
-  const qualified = goalQualified(opts);
   const slices: DrawingEntrySlice[] = [];
 
   for (const def of DRAWING_ENTRY_KIND_CATALOG) {
@@ -185,12 +187,22 @@ export function drawingEntryBreakdown(opts: {
     if (!rule?.enabled || rule.max <= 0) continue;
     let earned = 0;
     if (def.kind === 'goal') {
-      earned = qualified ? rule.entries : 0;
+      const hitGoal = goalQualified({ ...opts, alternate: false, alternateEntries: 0 });
+      const fromGoal = hitGoal ? rule.entries : 0;
+      const fromAmoe = opts.ineligible
+        ? 0
+        : Math.max(0, opts.alternateEntries ?? (opts.alternate ? rule.entries : 0));
+      earned = Math.max(fromGoal, fromAmoe);
     } else if (def.kind === 'referral') {
       const events = Math.max(0, opts.referralsQualified ?? 0);
       earned = Math.min(rule.max, events * rule.entries);
     }
-    slices.push({ kind: def.kind, label: def.label, earned, max: rule.max });
+    slices.push({
+      kind: def.kind,
+      label: def.label,
+      earned,
+      max: def.kind === 'goal' ? Math.max(rule.max, earned) : rule.max,
+    });
   }
 
   const earned = slices.reduce((sum, slice) => sum + slice.earned, 0);

@@ -1195,6 +1195,7 @@ export type AdminDrawingRosterRow = {
   drawing_attested_at: string | null;
   drawing_ineligible_at: string | null;
   drawing_alternate_entry: boolean;
+  drawing_alternate_entries: number;
   joined_at: string | null;
   entries: number;
   referrals_joined: number;
@@ -1370,6 +1371,7 @@ export function slumberChallengeErrorMessage(err: unknown, fallback: string): st
   if (message.includes('drawing_locked')) return 'Drawing vs race can only be changed before Start.';
   if (message.includes('attestation_required')) return 'That person still needs to agree to the official rules.';
   if (message.includes('not_drawing')) return 'That challenge is not a drawing.';
+  if (message.includes('invalid_alternate_entries')) return 'AMOE entries must be between 0 and 100.';
   return message;
 }
 
@@ -1394,13 +1396,13 @@ export async function fetchAdminDrawingRoster(challengeId: string): Promise<Admi
 export async function setAdminDrawingParticipant(
   challengeId: string,
   userId: string,
-  patch: { ineligible?: boolean; alternateEntry?: boolean },
+  patch: { ineligible?: boolean; alternateEntries?: number },
 ): Promise<void> {
   const { error } = await supabase.rpc('admin_set_drawing_participant', {
     p_challenge_id: challengeId,
     p_user_id: userId,
     p_ineligible: patch.ineligible ?? null,
-    p_alternate_entry: patch.alternateEntry ?? null,
+    p_alternate_entries: patch.alternateEntries ?? null,
   });
   if (error) throw error;
 }

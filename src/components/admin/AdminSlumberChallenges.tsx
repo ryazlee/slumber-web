@@ -592,8 +592,8 @@ function downloadDrawingCsv(
 ) {
   const list = qualifiedOnly ? rows.filter((row) => row.entries > 0) : rows;
   const header = includeReferrals
-    ? ['username', 'user_id', 'email', 'hours', 'entries', 'referred_by', 'referrals_joined', 'referrals_qualified']
-    : ['username', 'user_id', 'email', 'hours', 'entries'];
+    ? ['username', 'user_id', 'email', 'hours', 'entries', 'amoe_entries', 'referred_by', 'referrals_joined', 'referrals_qualified']
+    : ['username', 'user_id', 'email', 'hours', 'entries', 'amoe_entries'];
   const lines = [
     header.join(','),
     ...list.map((row) => {
@@ -603,6 +603,7 @@ function downloadDrawingCsv(
         csvEscape(row.email ?? ''),
         String(Math.round((row.accrued_minutes / 60) * 10) / 10),
         String(row.entries),
+        String(row.drawing_alternate_entries ?? 0),
       ];
       if (!includeReferrals) return base.join(',');
       return [
@@ -634,6 +635,33 @@ function DrawingRosterDialog({
   const roster = rosterQuery.data;
   const people = roster?.rows ?? [];
   const includeReferrals = Boolean(row.drawing_referrals);
+  const [amoeDrafts, setAmoeDrafts] = useState<Record<string, string>>({});
+  const [amoeError, setAmoeError] = useState<string | null>(null);
+  const goalEntryDefault = useMemo(() => {
+    const rules = parseDrawingEntryConfig(row.drawing_entry_config, true, Boolean(row.drawing_referrals));
+    const goal = rules.find((rule) => rule.kind === 'goal');
+    return Math.max(1, goal?.entries ?? 1);
+  }, [row.drawing_entry_config, row.drawing_referrals]);
+
+  const amoeValue = (person: AdminDrawingRosterRow) => {
+    if (person.user_id in amoeDrafts) return amoeDrafts[person.user_id];
+    if ((person.drawing_alternate_entries ?? 0) > 0) return String(person.drawing_alternate_entries);
+    return String(goalEntryDefault);
+  };
+
+  const grantAmoe = (person: AdminDrawingRosterRow) => {
+    const count = Math.round(Number(amoeValue(person)));
+    if (!Number.isFinite(count) || count < 1 || count > 100) {
+      setAmoeError('AMOE entries must be between 1 and 100.');
+      return;
+    }
+    setAmoeError(null);
+    void setParticipant.mutateAsync({
+      challengeId: row.id,
+      userId: person.user_id,
+      patch: { alternateEntries: count },
+    });
+  };
 
   return (
     <AdminFormDialog open wide onClose={onClose} title={`Entries · ${row.title?.trim() || 'drawing'}`}>
@@ -645,7 +673,13 @@ function DrawingRosterDialog({
         <p className="admin-muted">
           {roster.joined} joined · {roster.qualified} entered
           {includeReferrals ? ` · ${roster.referralJoins} referral signups` : ''}
+          {' · '}
+          AMOE is that person’s goal entries. If they also hit the sleep goal, they get the higher count.
         </p>
+      ) : null}
+      {amoeError ? <p className="admin-error">{amoeError}</p> : null}
+      {setParticipant.error ? (
+        <p className="admin-error">{slumberChallengeErrorMessage(setParticipant.error, 'Could not update that entry.')}</p>
       ) : null}
       <div className="admin-form-actions">
         <button
@@ -688,7 +722,11 @@ function DrawingRosterDialog({
                 </td>
                 <td>{person.email ?? '—'}</td>
                 <td>{Math.round((person.accrued_minutes / 60) * 10) / 10}</td>
-                <td>{person.entries}{person.drawing_ineligible_at ? ' (out)' : ''}{person.drawing_alternate_entry ? ' AMOE' : ''}</td>
+                <td>
+                  {person.entries}
+                  {person.drawing_ineligible_at ? ' (out)' : ''}
+                  {(person.drawing_alternate_entries ?? 0) > 0 ? ` · AMOE ${person.drawing_alternate_entries}` : ''}
+                </td>
                 {includeReferrals ? (
                   <td>{person.referred_by_username ? `@${person.referred_by_username}` : '—'}</td>
                 ) : null}
@@ -708,17 +746,37 @@ function DrawingRosterDialog({
                     >
                       {person.drawing_ineligible_at ? 'Restore' : 'Disqualify'}
                     </AdminGridAction>
-                    <AdminGridAction
-                      onClick={() => {
-                        void setParticipant.mutateAsync({
-                          challengeId: row.id,
-                          userId: person.user_id,
-                          patch: { alternateEntry: !person.drawing_alternate_entry },
-                        });
+                    <input
+                      className="admin-input admin-amoe-count"
+                      type="number"
+                      min={1}
+                      max={100}
+                      aria-label={`AMOE entries for @${person.username}`}
+                      value={amoeValue(person)}
+                      onChange={(e) => {
+                        setAmoeDrafts((prev) => ({ ...prev, [person.user_id]: e.target.value }));
                       }}
+                    />
+                    <AdminGridAction
+                      disabled={setParticipant.isPending}
+                      onClick={() => grantAmoe(person)}
                     >
-                      {person.drawing_alternate_entry ? 'Clear AMOE' : 'Grant AMOE'}
+                      {(person.drawing_alternate_entries ?? 0) > 0 ? 'Update' : 'Grant'}
                     </AdminGridAction>
+                    {(person.drawing_alternate_entries ?? 0) > 0 ? (
+                      <AdminGridAction
+                        disabled={setParticipant.isPending}
+                        onClick={() => {
+                          void setParticipant.mutateAsync({
+                            challengeId: row.id,
+                            userId: person.user_id,
+                            patch: { alternateEntries: 0 },
+                          });
+                        }}
+                      >
+                        Clear
+                      </AdminGridAction>
+                    ) : null}
                   </AdminGridActions>
                 </td>
               </tr>

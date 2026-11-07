@@ -3113,6 +3113,12 @@ a.admin-metric-card--link:focus-visible {
   width: 88px;
 }
 
+.admin-amoe-count {
+  width: 72px;
+  min-height: 32px;
+  padding: 4px 8px;
+}
+
 .admin-metric-grid--dense {
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }

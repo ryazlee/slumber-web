@@ -38,7 +38,7 @@ export const prizeDrawingRulesSections = [
     body: [
       'Entry types and amounts are set per drawing in Slumber admin and shown in the app (for example, entries for hitting the goal, and optional extra entries when a new account from your invite posts sleep, up to a cap).',
       'You cannot buy entries. Extra sleep past the goal does not add more goal entries unless the challenge says otherwise.',
-      'A free alternate method of entry (AMOE) may be offered as described on that challenge or by emailing useslumber@gmail.com with the challenge name before the window ends. AMOE, if granted, awards the same goal entries as hitting the sleep goal.',
+      'A free alternate method of entry (AMOE) may be offered as described on that challenge or by emailing useslumber@gmail.com with the challenge name before the window ends. AMOE, if granted, awards the number of entries recorded for that person. If they also hit the sleep goal, they receive the higher of the two counts.',
     ],
   },
   {

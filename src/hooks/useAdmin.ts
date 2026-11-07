@@ -832,7 +832,7 @@ export function useSetAdminDrawingParticipant() {
     }: {
       challengeId: string;
       userId: string;
-      patch: { ineligible?: boolean; alternateEntry?: boolean };
+      patch: { ineligible?: boolean; alternateEntries?: number };
     }) => setAdminDrawingParticipant(challengeId, userId, patch),
     onSuccess: (_data, vars) => {
       void qc.invalidateQueries({ queryKey: ['admin', 'drawing-roster', vars.challengeId] });
