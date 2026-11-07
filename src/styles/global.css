@@ -5682,6 +5682,17 @@ span.admin-mobile-card-title:hover {
   gap: 14px;
 }
 
+.admin-role-grant-holders {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-role-grant-has {
+  color: var(--warning);
+  font-size: 12px;
+  font-weight: 650;
+}
+
 .admin-role-grant-results {
   border: 1px solid var(--border);
   border-radius: 10px;

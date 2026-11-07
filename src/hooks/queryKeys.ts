@@ -56,6 +56,7 @@ export const queryKeys = {
     tags: (filters: CatalogListFilters = {}) => ['admin', 'tags', filters] as const,
     tagSuggestions: ['admin', 'tag-suggestions'] as const,
     roleDefinitions: (filters: CatalogListFilters = {}) => ['admin', 'role-definitions', filters] as const,
+    roleMembers: (roleKey: string) => ['admin', 'role-members', roleKey] as const,
     appVersions: ['admin', 'app-versions'] as const,
     analyticsMetrics: (filters: AnalyticsFilters) => ['admin', 'analytics', 'metrics', filters] as const,
     analyticsActivity: (filters: AnalyticsFilters) => ['admin', 'analytics', 'activity', filters] as const,

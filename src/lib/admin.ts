@@ -856,6 +856,65 @@ export function mergeRoleGrantIdentifiers(...groups: string[][]): string[] {
   return parseRoleGrantIdentifiers(groups.flat().join('\n'));
 }
 
+export type RoleMember = {
+  id: string;
+  username: string;
+  email: string | null;
+};
+
+export type RoleMemberList = {
+  total: number;
+  truncated: boolean;
+  rows: RoleMember[];
+};
+
+/** People in `members` whose username or email is in `identifiers`. */
+export function roleMembersInIdentifiers(members: RoleMember[], identifiers: string[]): RoleMember[] {
+  const wanted = new Set(identifiers.map((id) => id.trim().toLowerCase()).filter(Boolean));
+  return members.filter((member) => {
+    const username = member.username.trim().toLowerCase();
+    const email = member.email?.trim().toLowerCase() ?? '';
+    return wanted.has(username) || (email !== '' && wanted.has(email));
+  });
+}
+
+export async function fetchAdminRoleMembers(roleKey: string): Promise<RoleMemberList> {
+  const { data, error } = await supabase.rpc('admin_list_role_members', {
+    p_role: roleKey,
+  });
+  if (error) throw error;
+  const raw = (data ?? {}) as Partial<RoleMemberList>;
+  const rows = Array.isArray(raw.rows) ? raw.rows.filter((row) => row && typeof row.id === 'string' && typeof row.username === 'string') : [];
+  return {
+    total: Number(raw.total ?? rows.length),
+    truncated: Boolean(raw.truncated),
+    rows: rows.map((row) => ({
+      id: row.id,
+      username: row.username,
+      email: row.email ?? null,
+    })),
+  };
+}
+
+export function roleMembersErrorMessage(err: unknown): string {
+  if (
+    err
+    && typeof err === 'object'
+    && 'message' in err
+    && isMissingAdminRpc(err as PostgrestError, 'admin_list_role_members')
+  ) {
+    return `The current member list is not available yet. ${ADMIN_MIGRATION_HINT}`;
+  }
+  const message = err && typeof err === 'object' && 'message' in err
+    ? String((err as { message: unknown }).message)
+    : err instanceof Error
+      ? err.message
+      : '';
+  if (message.includes('not_authorized')) return 'You need an admin role to see who has this role.';
+  if (message.includes('invalid_role')) return 'That role no longer exists. Refresh and try again.';
+  return message || 'Could not load who already has this role.';
+}
+
 export async function grantRoleToUsers(
   roleKey: string,
   identifiers: string[],

@@ -24,6 +24,7 @@ import {
   updateUserPremium,
   updateUserRoles,
   grantRoleToUsers,
+  fetchAdminRoleMembers,
   upsertAdminRoleDefinition,
   approveAdminTagSuggestion,
   upsertAdminTag,
@@ -437,13 +438,23 @@ export function useDeleteAdminRole() {
   });
 }
 
+export function useAdminRoleMembers(roleKey: string | null) {
+  return useQuery({
+    queryKey: queryKeys.admin.roleMembers(roleKey ?? ''),
+    queryFn: () => fetchAdminRoleMembers(roleKey!),
+    enabled: Boolean(roleKey),
+    ...adminQueryOptions,
+  });
+}
+
 export function useGrantRoleToUsers() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ roleKey, identifiers }: { roleKey: string; identifiers: string[] }) =>
       grantRoleToUsers(roleKey, identifiers),
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
       void qc.invalidateQueries({ queryKey: ['admin', 'role-definitions'] });
+      void qc.invalidateQueries({ queryKey: queryKeys.admin.roleMembers(vars.roleKey) });
       void qc.invalidateQueries({ queryKey: ['admin', 'user-search'] });
       void qc.invalidateQueries({ queryKey: ['admin', 'user-detail'] });
       void qc.invalidateQueries({ queryKey: ['admin', 'analytics', 'users'] });
