@@ -767,6 +767,12 @@ function DrawingRosterDialog({
                       <AdminGridAction
                         disabled={setParticipant.isPending}
                         onClick={() => {
+                          setAmoeDrafts((prev) => {
+                            const next = { ...prev };
+                            delete next[person.user_id];
+                            return next;
+                          });
+                          setAmoeError(null);
                           void setParticipant.mutateAsync({
                             challengeId: row.id,
                             userId: person.user_id,
