@@ -317,7 +317,38 @@ export type AdminUserDetail = {
   longest_streak: number;
   last_post_at: string | null;
   device_tokens: number;
+  /** Push-token platforms, e.g. ios / android. Empty when none are registered. */
+  platforms?: string[];
+  /** Wearable on the latest sleep post, when it is a real device name. */
+  latest_source_device?: string | null;
+  preferred_sleep_source?: string | null;
 };
+
+const PLATFORM_LABEL: Record<string, string> = {
+  ios: 'iOS',
+  android: 'Android',
+};
+
+const SLEEP_SOURCE_LABEL: Record<string, string> = {
+  healthkit: 'Apple Health',
+  health_connect: 'Health Connect',
+  google_health: 'Google Health',
+};
+
+/** Phone platform plus the latest wearable, for the admin user summary. */
+export function formatAdminUserDevice(detail: Pick<AdminUserDetail, 'platforms' | 'latest_source_device'>): string {
+  const platforms = (detail.platforms ?? [])
+    .map((platform) => PLATFORM_LABEL[platform] ?? platform)
+    .filter((platform) => platform.length > 0);
+  const wearable = detail.latest_source_device?.trim() || null;
+  const parts = [...platforms, wearable].filter((part): part is string => Boolean(part));
+  return parts.length > 0 ? parts.join(' · ') : '—';
+}
+
+export function formatAdminSleepSource(source: string | null | undefined): string | null {
+  if (!source || source === 'auto') return null;
+  return SLEEP_SOURCE_LABEL[source] ?? source;
+}
 
 export type AdminConnectionUser = {
   id: string;
@@ -1433,7 +1464,11 @@ export async function fetchAdminUserDetail(userId: string): Promise<AdminUserDet
     p_user_id: userId,
   });
   if (error) throw error;
-  return data as AdminUserDetail;
+  const row = (data ?? {}) as AdminUserDetail;
+  const platforms = Array.isArray(row.platforms)
+    ? row.platforms.filter((platform): platform is string => typeof platform === 'string' && platform.length > 0)
+    : [];
+  return { ...row, platforms };
 }
 
 export async function fetchAdminUserConnections(userId: string): Promise<AdminUserConnections> {

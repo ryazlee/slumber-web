@@ -84,6 +84,8 @@ export const queryKeys = {
     postEngagement: (postId: string) => ['admin', 'post-engagement', postId] as const,
     userPosts: (filters: AnalyticsFilters) => ['admin', 'user-posts', filters] as const,
     campaigns: ['admin', 'campaigns'] as const,
+    devThreads: ['admin', 'dev-threads'] as const,
+    devMessages: (userId: string) => ['admin', 'dev-messages', userId] as const,
     appUpdatePolicy: ['admin', 'app-update-policy'] as const,
   },
 };

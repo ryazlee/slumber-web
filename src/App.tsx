@@ -13,6 +13,7 @@ import AdminPostsPage from './pages/admin/AdminPostsPage';
 import AdminTagUsagePage from './pages/admin/AdminTagUsagePage';
 import AdminPremiumPage from './pages/admin/AdminPremiumPage';
 import AdminNotifyPage from './pages/admin/AdminNotifyPage';
+import AdminDevMessagesPage from './pages/admin/AdminDevMessagesPage';
 import AdminCampaignsPage from './pages/admin/AdminCampaignsPage';
 import AdminAppUpdatePage from './pages/admin/AdminAppUpdatePage';
 import AdminReportsPage from './pages/admin/AdminReportsPage';
@@ -102,6 +103,7 @@ export default function App() {
           <Route path="races" element={<AdminSlumberChallengesPage />} />
           <Route path="premium" element={<AdminPremiumPage />} />
           <Route path="notify" element={<AdminNotifyPage />} />
+          <Route path="messages" element={<AdminDevMessagesPage />} />
           <Route path="campaigns" element={<AdminCampaignsPage />} />
           <Route path="app-update" element={<AdminAppUpdatePage />} />
           <Route path="configure">

@@ -28,6 +28,7 @@ export const ADMIN_PAGE_TITLES: Record<string, string> = {
   '/admin/races': 'Slumber challenges',
   '/admin/premium': 'Premium',
   '/admin/notify': 'Notify',
+  '/admin/messages': 'Messages',
   '/admin/campaigns': 'Campaigns',
   '/admin/app-update': 'App update',
   '/admin/configure/tags': 'Tag catalog',
@@ -57,6 +58,7 @@ function buildAdminNavGroups(pendingReports = 0, pendingTags = 0): AdminNavGroup
       label: 'Tools',
       items: [
         { to: '/admin/notify', label: 'Notify' },
+        { to: '/admin/messages', label: 'Messages' },
         { to: '/admin/campaigns', label: 'Campaigns' },
         { to: '/admin/app-update', label: 'App update' },
         {

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
-import type { RecentPostRow, RecentUserRow } from '../../lib/admin';
+import { formatAdminUserDevice, type RecentPostRow, type RecentUserRow } from '../../lib/admin';
 import { getOptionalQueryErrorMessage } from '../../lib/queryError';
 import {
   useAdminUserDetail,
@@ -173,6 +173,7 @@ export default function AdminUserDetailPanel({
       {detail ? (
         <dl className="admin-user-detail-grid">
           <div><dt>Joined</dt><dd>{formatWhen(detail.created_at)}</dd></div>
+          <div><dt>Device</dt><dd>{formatAdminUserDevice(detail)}</dd></div>
           <div><dt>Posts</dt><dd>{detail.posts_count}</dd></div>
           <div><dt>Friends</dt><dd>{detail.friends_count}</dd></div>
           <div><dt>Streak</dt><dd>{detail.current_streak} (best {detail.longest_streak})</dd></div>
