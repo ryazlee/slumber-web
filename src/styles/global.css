@@ -5780,7 +5780,8 @@ span.admin-mobile-card-title:hover {
   align-items: start;
 }
 
-.admin-dev-new {
+.admin-dev-new,
+.admin-dev-thread-search {
   display: grid;
   gap: 8px;
   margin-bottom: 12px;

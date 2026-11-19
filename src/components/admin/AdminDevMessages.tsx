@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { FormEvent, KeyboardEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { getOptionalQueryErrorMessage } from '../../lib/queryError';
@@ -11,6 +11,7 @@ import { DEV_MESSAGE_MAX_LENGTH } from '../../lib/devMessages';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useAdminUserDetail, useAdminUserSearch } from '../../hooks/useAdmin';
 import {
+  useAdminDevMessageUserIds,
   useAdminDevMessages,
   useAdminDevReply,
   useAdminDevThreads,
@@ -24,9 +25,13 @@ export default function AdminDevMessages() {
   const [picked, setPicked] = useState<{ id: string; username: string } | null>(null);
   const [starting, setStarting] = useState(false);
   const [search, setSearch] = useState('');
+  const [threadSearch, setThreadSearch] = useState('');
   const [draft, setDraft] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const debouncedSearch = useDebouncedValue(search.trim());
+  const debouncedThreadSearch = useDebouncedValue(threadSearch.trim());
+  const threadSearchActive = debouncedThreadSearch.length >= 2;
+  const bodySearch = useAdminDevMessageUserIds(debouncedThreadSearch);
   const canSearch = starting && debouncedSearch.length >= 2;
   const peopleQuery = useAdminUserSearch(
     { query: debouncedSearch, page: 0, pageSize: 8 },
@@ -44,6 +49,17 @@ export default function AdminDevMessages() {
 
   const threadsError = getOptionalQueryErrorMessage(threadsQuery.error, 'Could not load conversations.');
   const messagesError = getOptionalQueryErrorMessage(messagesQuery.error, 'Could not load messages.');
+  const threadSearchError = getOptionalQueryErrorMessage(bodySearch.error, 'Could not search messages.');
+  const bodyMatchIds = useMemo(() => new Set(bodySearch.data ?? []), [bodySearch.data]);
+  const visibleThreads = useMemo(() => {
+    if (!threadSearchActive) return threads;
+    const usernameQuery = debouncedThreadSearch.replace(/^@/, '').toLowerCase();
+    return threads.filter((thread) => {
+      const usernameHit = usernameQuery.length > 0
+        && thread.username.toLowerCase().includes(usernameQuery);
+      return usernameHit || bodyMatchIds.has(thread.user_id);
+    });
+  }, [threads, threadSearchActive, debouncedThreadSearch, bodyMatchIds]);
 
   const send = async () => {
     if (!canSend) return;
@@ -136,12 +152,41 @@ export default function AdminDevMessages() {
               </>
             ) : null}
           </div>
+          <div className="admin-dev-new">
+            <label className="admin-label" htmlFor="dev-thread-search">Search</label>
+            <input
+              id="dev-thread-search"
+              className="admin-input"
+              type="search"
+              value={threadSearch}
+              onChange={(event) => setThreadSearch(event.target.value)}
+              placeholder="Message or username"
+              autoComplete="off"
+            />
+            {debouncedThreadSearch.length > 0 && debouncedThreadSearch.length < 2 ? (
+              <p className="admin-field-hint">Type at least 2 characters.</p>
+            ) : null}
+            {threadSearchActive && bodySearch.isLoading ? (
+              <p className="admin-muted">Searching…</p>
+            ) : null}
+            {threadSearchActive && threadSearchError ? (
+              <p className="admin-error">{threadSearchError}</p>
+            ) : null}
+          </div>
           {threadsQuery.isLoading ? <p className="admin-muted">Loading conversations…</p> : null}
           {!threadsQuery.isLoading && threads.length === 0 ? (
             <p className="admin-empty-inline">No messages yet.</p>
           ) : null}
+          {!threadsQuery.isLoading
+            && threadSearchActive
+            && !threadSearchError
+            && threads.length > 0
+            && visibleThreads.length === 0
+            && !bodySearch.isLoading ? (
+            <p className="admin-empty-inline">No conversations match that.</p>
+          ) : null}
           <ul className="admin-dev-threads">
-            {threads.map((thread) => {
+            {visibleThreads.map((thread) => {
               const waiting = thread.last_sender === 'user';
               return (
                 <li key={thread.user_id}>

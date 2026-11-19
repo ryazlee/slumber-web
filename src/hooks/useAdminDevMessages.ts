@@ -3,6 +3,7 @@ import {
   fetchAdminDevMessages,
   fetchAdminDevThreads,
   replyAdminDevMessage,
+  searchAdminDevMessageUserIds,
 } from '../lib/devMessages';
 import { queryKeys } from './queryKeys';
 
@@ -12,6 +13,17 @@ export function useAdminDevThreads() {
   return useQuery({
     queryKey: queryKeys.admin.devThreads,
     queryFn: fetchAdminDevThreads,
+    refetchInterval: REFRESH_MS,
+  });
+}
+
+/** User ids with a message body match. Disabled until the query is at least 2 characters. */
+export function useAdminDevMessageUserIds(query: string) {
+  const q = query.trim();
+  return useQuery({
+    queryKey: queryKeys.admin.devMessageSearch(q),
+    queryFn: () => searchAdminDevMessageUserIds(q),
+    enabled: q.length >= 2,
     refetchInterval: REFRESH_MS,
   });
 }
@@ -36,6 +48,7 @@ export function useAdminDevReply(userId: string | null) {
       if (!userId) return;
       void qc.invalidateQueries({ queryKey: queryKeys.admin.devMessages(userId) });
       void qc.invalidateQueries({ queryKey: queryKeys.admin.devThreads });
+      void qc.invalidateQueries({ queryKey: queryKeys.admin.devMessageSearches });
     },
   });
 }

@@ -86,6 +86,8 @@ export const queryKeys = {
     campaigns: ['admin', 'campaigns'] as const,
     devThreads: ['admin', 'dev-threads'] as const,
     devMessages: (userId: string) => ['admin', 'dev-messages', userId] as const,
+    devMessageSearches: ['admin', 'dev-message-search'] as const,
+    devMessageSearch: (query: string) => ['admin', 'dev-message-search', query] as const,
     appUpdatePolicy: ['admin', 'app-update-policy'] as const,
   },
 };

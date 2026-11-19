@@ -34,6 +34,43 @@ function rowsFrom<T>(data: unknown, map: (row: Record<string, unknown>) => T): T
   return raw.map((row) => map(row as Record<string, unknown>));
 }
 
+/** Literal substring for Postgres ILIKE. `%` and `_` stay characters, not wildcards. */
+function ilikeContains(query: string): string {
+  const literal = query.replace(/[\\%_]/g, (char) => `\\${char}`);
+  return `%${literal}%`;
+}
+
+/**
+ * User ids whose message history contains `query` (any row, not only the latest).
+ * Moderators can SELECT every dev_messages row; this does not need a new RPC.
+ */
+export async function searchAdminDevMessageUserIds(query: string): Promise<string[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+
+  const pageSize = 1000;
+  const maxRows = 5000;
+  const ids = new Set<string>();
+
+  for (let from = 0; from < maxRows; from += pageSize) {
+    const { data, error } = await supabase
+      .from('dev_messages')
+      .select('user_id')
+      .ilike('body', ilikeContains(q))
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    const rows = (data ?? []) as { user_id?: unknown }[];
+    for (const row of rows) {
+      if (typeof row.user_id === 'string' && row.user_id) ids.add(row.user_id);
+    }
+    if (rows.length < pageSize) break;
+  }
+
+  return [...ids];
+}
+
 export async function fetchAdminDevThreads(): Promise<DevThread[]> {
   const { data, error } = await supabase.rpc('admin_list_dev_threads');
   if (error) throw error;
