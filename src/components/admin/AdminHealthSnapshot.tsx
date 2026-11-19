@@ -8,6 +8,8 @@ import {
   useHealthMetrics,
   useTopInviters,
 } from '../../hooks/useAdmin';
+import { useAdminDevThreads } from '../../hooks/useAdminDevMessages';
+import { countWaitingDevThreads } from '../../lib/devMessages';
 import { isMissingAdminRpc } from '../../lib/adminRpc';
 import type { AnalyticsFilters, DailyActivityRow } from '../../lib/admin';
 import {
@@ -242,10 +244,12 @@ export default function AdminHealthSnapshot() {
   const healthQuery = useHealthMetrics(range);
   const invitersQuery = useTopInviters(range);
   const suggestionsQuery = useAdminTagSuggestions();
+  const threadsQuery = useAdminDevThreads();
 
   const health = healthQuery.data ?? null;
   const pendingReports = (metrics?.pending_post_reports ?? 0) + (metrics?.pending_comment_reports ?? 0);
   const pendingTags = suggestionsQuery.data?.length ?? 0;
+  const waitingMessages = countWaitingDevThreads(threadsQuery.data ?? []);
   const days = health?.days ?? dayCount(range);
   const windowLabel = healthWindowLabel(range, days);
   const rangeNote = healthRangeNote(range, days);
@@ -458,6 +462,16 @@ export default function AdminHealthSnapshot() {
             {pendingTags} new tag{pendingTags === 1 ? '' : 's'} waiting for approval
           </span>
           <span className="admin-attention-banner-action">Review tags →</span>
+        </Link>
+      ) : null}
+      {waitingMessages > 0 ? (
+        <Link to="/admin/messages" className="admin-attention-banner admin-attention-banner--accent">
+          <span className="admin-attention-banner-title">
+            {waitingMessages === 1
+              ? '1 person is waiting for a reply'
+              : `${waitingMessages} people are waiting for a reply`}
+          </span>
+          <span className="admin-attention-banner-action">Open messages →</span>
         </Link>
       ) : null}
 

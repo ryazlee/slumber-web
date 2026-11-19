@@ -1,6 +1,8 @@
 import { NavLink } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext';
 import { useAdminTagSuggestions } from '../../hooks/useAdmin';
+import { useAdminDevThreads } from '../../hooks/useAdminDevMessages';
+import { countWaitingDevThreads } from '../../lib/devMessages';
 
 export type AdminNavItem = {
   to: string;
@@ -35,7 +37,11 @@ export const ADMIN_PAGE_TITLES: Record<string, string> = {
   '/admin/configure/roles': 'Roles',
 };
 
-function buildAdminNavGroups(pendingReports = 0, pendingTags = 0): AdminNavGroup[] {
+function buildAdminNavGroups(
+  pendingReports = 0,
+  pendingTags = 0,
+  waitingMessages = 0,
+): AdminNavGroup[] {
   return [
     {
       label: 'Engagement',
@@ -58,7 +64,12 @@ function buildAdminNavGroups(pendingReports = 0, pendingTags = 0): AdminNavGroup
       label: 'Tools',
       items: [
         { to: '/admin/notify', label: 'Notify' },
-        { to: '/admin/messages', label: 'Messages' },
+        {
+          to: '/admin/messages',
+          label: 'Messages',
+          badge: waitingMessages > 0 ? waitingMessages : undefined,
+          badgeTone: 'accent',
+        },
         { to: '/admin/campaigns', label: 'Campaigns' },
         { to: '/admin/app-update', label: 'App update' },
         {
@@ -91,9 +102,11 @@ type Props = {
 export default function AdminNav({ onNavigate }: Props) {
   const { metrics } = useAdmin();
   const suggestionsQuery = useAdminTagSuggestions();
+  const threadsQuery = useAdminDevThreads();
   const pendingReports = (metrics?.pending_post_reports ?? 0) + (metrics?.pending_comment_reports ?? 0);
   const pendingTags = suggestionsQuery.data?.length ?? 0;
-  const groups = buildAdminNavGroups(pendingReports, pendingTags);
+  const waitingMessages = countWaitingDevThreads(threadsQuery.data ?? []);
+  const groups = buildAdminNavGroups(pendingReports, pendingTags, waitingMessages);
 
   return (
     <nav className="admin-nav" aria-label="Admin sections">

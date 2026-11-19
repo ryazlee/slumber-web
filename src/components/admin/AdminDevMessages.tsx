@@ -7,7 +7,7 @@ import {
   formatAdminUserDevice,
   type AdminUserDetail,
 } from '../../lib/admin';
-import { DEV_MESSAGE_MAX_LENGTH } from '../../lib/devMessages';
+import { DEV_MESSAGE_MAX_LENGTH, countWaitingDevThreads, isWaitingDevThread } from '../../lib/devMessages';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useAdminUserDetail, useAdminUserSearch } from '../../hooks/useAdmin';
 import {
@@ -52,14 +52,21 @@ export default function AdminDevMessages() {
   const threadSearchError = getOptionalQueryErrorMessage(bodySearch.error, 'Could not search messages.');
   const bodyMatchIds = useMemo(() => new Set(bodySearch.data ?? []), [bodySearch.data]);
   const visibleThreads = useMemo(() => {
-    if (!threadSearchActive) return threads;
-    const usernameQuery = debouncedThreadSearch.replace(/^@/, '').toLowerCase();
-    return threads.filter((thread) => {
-      const usernameHit = usernameQuery.length > 0
-        && thread.username.toLowerCase().includes(usernameQuery);
-      return usernameHit || bodyMatchIds.has(thread.user_id);
+    const filtered = !threadSearchActive
+      ? threads
+      : threads.filter((thread) => {
+        const usernameQuery = debouncedThreadSearch.replace(/^@/, '').toLowerCase();
+        const usernameHit = usernameQuery.length > 0
+          && thread.username.toLowerCase().includes(usernameQuery);
+        return usernameHit || bodyMatchIds.has(thread.user_id);
+      });
+    return filtered.slice().sort((a, b) => {
+      const rank = (thread: typeof a) => (isWaitingDevThread(thread) ? 0 : 1);
+      return rank(a) - rank(b);
     });
   }, [threads, threadSearchActive, debouncedThreadSearch, bodyMatchIds]);
+  const waitingCount = countWaitingDevThreads(threads);
+  const selectedWaiting = selected ? isWaitingDevThread(selected) : false;
 
   const send = async () => {
     if (!canSend) return;
@@ -91,132 +98,150 @@ export default function AdminDevMessages() {
     >
       <div className={`admin-dev-messages${selectedId ? ' admin-dev-messages--open' : ''}`}>
         <div className="admin-dev-thread-list">
-          <div className="admin-dev-new">
-            <button
-              type="button"
-              className="admin-button admin-button-ghost"
-              onClick={() => {
-                setStarting((open) => !open);
-                setSearch('');
-              }}
-            >
-              {starting ? 'Cancel' : 'New message'}
-            </button>
-            {starting ? (
-              <>
-                <label className="admin-label" htmlFor="dev-user-search">Person</label>
-                <input
-                  id="dev-user-search"
-                  className="admin-input"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Username or email"
-                  autoComplete="off"
-                />
-                {debouncedSearch.length > 0 && debouncedSearch.length < 2 ? (
-                  <p className="admin-field-hint">Type at least 2 characters.</p>
-                ) : null}
-                {peopleQuery.isFetching && canSearch ? (
-                  <p className="admin-muted">Searching…</p>
-                ) : null}
-                {peopleQuery.error ? (
-                  <p className="admin-error">
-                    {getOptionalQueryErrorMessage(peopleQuery.error, 'Could not search people.')}
-                  </p>
-                ) : null}
-                {canSearch && !peopleQuery.isFetching && (peopleQuery.data?.rows.length ?? 0) === 0 ? (
-                  <p className="admin-empty-inline">No one matches that.</p>
-                ) : null}
-                <ul className="admin-dev-search-results">
-                  {(peopleQuery.data?.rows ?? []).map((person) => (
-                    <li key={person.id}>
-                      <button
-                        type="button"
-                        className="admin-dev-thread"
-                        onClick={() => {
-                          setPicked({ id: person.id, username: person.username });
-                          setStarting(false);
-                          setSearch('');
-                          setDraft('');
-                          setFormError(null);
-                        }}
-                      >
-                        <span className="admin-dev-thread-name">@{person.username}</span>
-                        {person.email ? (
-                          <span className="admin-dev-thread-preview">{person.email}</span>
-                        ) : null}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            ) : null}
+          <div className="admin-dev-list-tools">
+            <div className="admin-dev-new">
+              <button
+                type="button"
+                className="admin-button admin-button-ghost"
+                onClick={() => {
+                  setStarting((open) => !open);
+                  setSearch('');
+                }}
+              >
+                {starting ? 'Cancel' : 'New message'}
+              </button>
+              {starting ? (
+                <>
+                  <label className="admin-label" htmlFor="dev-user-search">Person</label>
+                  <input
+                    id="dev-user-search"
+                    className="admin-input"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Username or email"
+                    autoComplete="off"
+                  />
+                  {debouncedSearch.length > 0 && debouncedSearch.length < 2 ? (
+                    <p className="admin-field-hint">Type at least 2 characters.</p>
+                  ) : null}
+                  {peopleQuery.isFetching && canSearch ? (
+                    <p className="admin-muted">Searching…</p>
+                  ) : null}
+                  {peopleQuery.error ? (
+                    <p className="admin-error">
+                      {getOptionalQueryErrorMessage(peopleQuery.error, 'Could not search people.')}
+                    </p>
+                  ) : null}
+                  {canSearch && !peopleQuery.isFetching && (peopleQuery.data?.rows.length ?? 0) === 0 ? (
+                    <p className="admin-empty-inline">No one matches that.</p>
+                  ) : null}
+                  <ul className="admin-dev-search-results">
+                    {(peopleQuery.data?.rows ?? []).map((person) => (
+                      <li key={person.id}>
+                        <button
+                          type="button"
+                          className="admin-dev-thread"
+                          onClick={() => {
+                            setPicked({ id: person.id, username: person.username });
+                            setStarting(false);
+                            setSearch('');
+                            setDraft('');
+                            setFormError(null);
+                          }}
+                        >
+                          <span className="admin-dev-thread-name">@{person.username}</span>
+                          {person.email ? (
+                            <span className="admin-dev-thread-preview">{person.email}</span>
+                          ) : null}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
+            </div>
+            <div className="admin-dev-thread-search">
+              <label className="admin-label" htmlFor="dev-thread-search">Search</label>
+              <input
+                id="dev-thread-search"
+                className="admin-input"
+                type="search"
+                value={threadSearch}
+                onChange={(event) => setThreadSearch(event.target.value)}
+                placeholder="Message or username"
+                autoComplete="off"
+              />
+              {debouncedThreadSearch.length > 0 && debouncedThreadSearch.length < 2 ? (
+                <p className="admin-field-hint">Type at least 2 characters.</p>
+              ) : null}
+              {threadSearchActive && bodySearch.isLoading ? (
+                <p className="admin-muted">Searching…</p>
+              ) : null}
+              {threadSearchActive && threadSearchError ? (
+                <p className="admin-error">{threadSearchError}</p>
+              ) : null}
+              {!threadsQuery.isLoading && waitingCount > 0 && !threadSearchActive ? (
+                <p className="admin-dev-queue">
+                  {waitingCount === 1
+                    ? '1 person is waiting'
+                    : `${waitingCount} people are waiting`}
+                </p>
+              ) : null}
+            </div>
           </div>
-          <div className="admin-dev-new">
-            <label className="admin-label" htmlFor="dev-thread-search">Search</label>
-            <input
-              id="dev-thread-search"
-              className="admin-input"
-              type="search"
-              value={threadSearch}
-              onChange={(event) => setThreadSearch(event.target.value)}
-              placeholder="Message or username"
-              autoComplete="off"
-            />
-            {debouncedThreadSearch.length > 0 && debouncedThreadSearch.length < 2 ? (
-              <p className="admin-field-hint">Type at least 2 characters.</p>
+          <div className="admin-dev-thread-scroll">
+            {threadsQuery.isLoading ? <p className="admin-muted">Loading conversations…</p> : null}
+            {!threadsQuery.isLoading && threads.length === 0 ? (
+              <div className="admin-dev-empty">
+                <p className="admin-dev-empty-title">No messages yet</p>
+                <p className="admin-dev-empty-copy">
+                  When someone writes from Settings, their thread shows up here.
+                </p>
+              </div>
             ) : null}
-            {threadSearchActive && bodySearch.isLoading ? (
-              <p className="admin-muted">Searching…</p>
+            {!threadsQuery.isLoading
+              && threadSearchActive
+              && !threadSearchError
+              && threads.length > 0
+              && visibleThreads.length === 0
+              && !bodySearch.isLoading ? (
+              <p className="admin-empty-inline">No conversations match that.</p>
             ) : null}
-            {threadSearchActive && threadSearchError ? (
-              <p className="admin-error">{threadSearchError}</p>
-            ) : null}
+            <ul className="admin-dev-threads">
+              {visibleThreads.map((thread) => {
+                const waiting = isWaitingDevThread(thread);
+                const active = thread.user_id === selectedId;
+                return (
+                  <li key={thread.user_id}>
+                    <button
+                      type="button"
+                      className={`admin-dev-thread${active ? ' admin-dev-thread--active' : ''}${waiting ? ' admin-dev-thread--waiting' : ''}`}
+                      onClick={() => {
+                        setPicked({ id: thread.user_id, username: thread.username });
+                        setStarting(false);
+                        setFormError(null);
+                      }}
+                    >
+                      <span className="admin-dev-thread-name">
+                        @{thread.username}
+                        {waiting ? <span className="admin-dev-waiting">Waiting</span> : null}
+                      </span>
+                      <span className="admin-dev-thread-preview">{thread.last_body}</span>
+                      <span className="admin-dev-thread-meta">
+                        {waiting ? 'Needs a reply' : 'You replied'}
+                        {thread.last_at ? ` · ${formatWhen(thread.last_at)}` : ''}
+                        {' · '}
+                        {thread.message_count} {thread.message_count === 1 ? 'message' : 'messages'}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
-          {threadsQuery.isLoading ? <p className="admin-muted">Loading conversations…</p> : null}
-          {!threadsQuery.isLoading && threads.length === 0 ? (
-            <p className="admin-empty-inline">No messages yet.</p>
-          ) : null}
-          {!threadsQuery.isLoading
-            && threadSearchActive
-            && !threadSearchError
-            && threads.length > 0
-            && visibleThreads.length === 0
-            && !bodySearch.isLoading ? (
-            <p className="admin-empty-inline">No conversations match that.</p>
-          ) : null}
-          <ul className="admin-dev-threads">
-            {visibleThreads.map((thread) => {
-              const waiting = thread.last_sender === 'user';
-              return (
-                <li key={thread.user_id}>
-                  <button
-                    type="button"
-                    className={`admin-dev-thread${thread.user_id === selectedId ? ' admin-dev-thread--active' : ''}`}
-                    onClick={() => {
-                      setPicked({ id: thread.user_id, username: thread.username });
-                      setStarting(false);
-                      setFormError(null);
-                    }}
-                  >
-                    <span className="admin-dev-thread-name">
-                      @{thread.username}
-                      {waiting ? <span className="admin-dev-waiting">Waiting</span> : null}
-                    </span>
-                    <span className="admin-dev-thread-preview">{thread.last_body}</span>
-                    <span className="admin-dev-thread-meta">
-                      {thread.last_at ? formatWhen(thread.last_at) : ''}
-                      {' · '}
-                      {thread.message_count}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
         </div>
 
-        <div className="admin-dev-thread-pane">
+        <div className={`admin-dev-thread-pane${picked ? '' : ' admin-dev-thread-pane--empty'}`}>
           {picked ? (
             <>
               <div className="admin-dev-pane-header">
@@ -228,8 +253,11 @@ export default function AdminDevMessages() {
                   All conversations
                 </button>
                 <div className="admin-dev-pane-heading">
-                  <h2 className="admin-dev-pane-title">@{username}</h2>
-                  <Link to={`/profile/${picked.id}`} className="admin-muted">
+                  <div className="admin-dev-pane-title-row">
+                    <h2 className="admin-dev-pane-title">@{username}</h2>
+                    {selectedWaiting ? <span className="admin-dev-waiting">Waiting</span> : null}
+                  </div>
+                  <Link to={`/profile/${picked.id}`} className="admin-dev-profile">
                     Open profile
                   </Link>
                 </div>
@@ -240,12 +268,15 @@ export default function AdminDevMessages() {
                 error={getOptionalQueryErrorMessage(detailQuery.error, 'Could not load this person.')}
               />
               {messagesError ? <p className="admin-error">{messagesError}</p> : null}
-              <div className="admin-dev-log">
+              <div className="admin-dev-log" aria-label="Conversation">
                 {messagesQuery.isLoading && messages.length === 0 ? (
                   <p className="admin-muted">Loading messages…</p>
                 ) : null}
                 {!messagesQuery.isLoading && messages.length === 0 ? (
-                  <p className="admin-empty-inline">No messages yet. This will be the first one.</p>
+                  <div className="admin-dev-empty">
+                    <p className="admin-dev-empty-title">No messages yet</p>
+                    <p className="admin-dev-empty-copy">This will be the first one.</p>
+                  </div>
                 ) : null}
                 {messages.map((message) => {
                   const fromDev = message.sender === 'dev';
@@ -263,7 +294,7 @@ export default function AdminDevMessages() {
                   );
                 })}
               </div>
-              <form className="admin-compose-form" onSubmit={handleSubmit}>
+              <form className="admin-compose-form admin-dev-compose" onSubmit={handleSubmit}>
                 <label className="admin-label" htmlFor="dev-reply">
                   {messages.length === 0 ? 'Message' : 'Reply'}
                 </label>
@@ -290,7 +321,12 @@ export default function AdminDevMessages() {
               </form>
             </>
           ) : (
-            <p className="admin-empty-inline admin-dev-pick">Pick a conversation.</p>
+            <div className="admin-dev-pick">
+              <p className="admin-dev-pick-title">Pick a conversation</p>
+              <p className="admin-dev-pick-copy">
+                People waiting on a reply are marked in the list. Or start with New message.
+              </p>
+            </div>
           )}
         </div>
       </div>

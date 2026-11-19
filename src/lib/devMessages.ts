@@ -26,6 +26,17 @@ function asSender(value: unknown): DevMessageSender {
   return value === 'dev' ? 'dev' : 'user';
 }
 
+/** The app user wrote last, so this thread is waiting on an admin reply. */
+export function isWaitingDevThread(thread: { last_sender: DevMessageSender }): boolean {
+  return thread.last_sender === 'user';
+}
+
+export function countWaitingDevThreads(
+  threads: readonly { last_sender: DevMessageSender }[],
+): number {
+  return threads.reduce((count, thread) => count + (isWaitingDevThread(thread) ? 1 : 0), 0);
+}
+
 function rowsFrom<T>(data: unknown, map: (row: Record<string, unknown>) => T): T[] {
   const raw = data && typeof data === 'object' && 'rows' in data
     ? (data as { rows?: unknown }).rows

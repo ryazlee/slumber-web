@@ -7,6 +7,8 @@ import { AdminProvider, useAdmin } from '../../context/AdminContext';
 import { useAuth } from '../../context/AuthContext';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useAdminTagSuggestions, useIsModerator } from '../../hooks/useAdmin';
+import { useAdminDevThreads } from '../../hooks/useAdminDevMessages';
+import { countWaitingDevThreads } from '../../lib/devMessages';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 function AdminShell() {
@@ -19,8 +21,10 @@ function AdminShell() {
   const navId = useId();
 
   const suggestionsQuery = useAdminTagSuggestions();
+  const threadsQuery = useAdminDevThreads();
   const pendingReports = (metrics?.pending_post_reports ?? 0) + (metrics?.pending_comment_reports ?? 0);
   const pendingTags = suggestionsQuery.data?.length ?? 0;
+  const waitingMessages = countWaitingDevThreads(threadsQuery.data ?? []);
 
   const closeNav = useCallback(() => setNavOpen(false), []);
   const openNav = useCallback(() => setNavOpen(true), []);
@@ -77,6 +81,18 @@ function AdminShell() {
               {!navOpen && pendingTags > 0 ? (
                 <span className="admin-nav-badge admin-nav-badge--accent" aria-label={`${pendingTags} tags waiting for approval`}>
                   {pendingTags}
+                </span>
+              ) : null}
+              {!navOpen && waitingMessages > 0 ? (
+                <span
+                  className="admin-nav-badge admin-nav-badge--accent"
+                  aria-label={
+                    waitingMessages === 1
+                      ? '1 person is waiting for a reply'
+                      : `${waitingMessages} people are waiting for a reply`
+                  }
+                >
+                  {waitingMessages}
                 </span>
               ) : null}
             </button>
