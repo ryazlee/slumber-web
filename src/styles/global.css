@@ -5780,6 +5780,20 @@ span.admin-mobile-card-title:hover {
   align-items: start;
 }
 
+.admin-dev-new {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.admin-dev-search-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
 .admin-dev-threads {
   list-style: none;
   margin: 0;

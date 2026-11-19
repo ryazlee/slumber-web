@@ -8,7 +8,8 @@ import {
   type AdminUserDetail,
 } from '../../lib/admin';
 import { DEV_MESSAGE_MAX_LENGTH } from '../../lib/devMessages';
-import { useAdminUserDetail } from '../../hooks/useAdmin';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import { useAdminUserDetail, useAdminUserSearch } from '../../hooks/useAdmin';
 import {
   useAdminDevMessages,
   useAdminDevReply,
@@ -20,10 +21,20 @@ import { formatWhen } from './format';
 export default function AdminDevMessages() {
   const threadsQuery = useAdminDevThreads();
   const threads = threadsQuery.data ?? [];
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [picked, setPicked] = useState<{ id: string; username: string } | null>(null);
+  const [starting, setStarting] = useState(false);
+  const [search, setSearch] = useState('');
   const [draft, setDraft] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+  const debouncedSearch = useDebouncedValue(search.trim());
+  const canSearch = starting && debouncedSearch.length >= 2;
+  const peopleQuery = useAdminUserSearch(
+    { query: debouncedSearch, page: 0, pageSize: 8 },
+    canSearch,
+  );
+  const selectedId = picked?.id ?? null;
   const selected = threads.find((thread) => thread.user_id === selectedId) ?? null;
+  const username = selected?.username ?? picked?.username ?? '';
   const detailQuery = useAdminUserDetail(selectedId);
   const messagesQuery = useAdminDevMessages(selectedId);
   const reply = useAdminDevReply(selectedId);
@@ -41,7 +52,7 @@ export default function AdminDevMessages() {
       await reply.mutateAsync(trimmed);
       setDraft('');
     } catch (err: unknown) {
-      setFormError(err instanceof Error ? err.message : 'Could not send the reply.');
+      setFormError(err instanceof Error ? err.message : 'Could not send the message.');
     }
   };
 
@@ -59,11 +70,72 @@ export default function AdminDevMessages() {
 
   return (
     <AdminSection
-      lead="Replies are sent as the developer. People can message you from Settings, and a reply pushes a notification."
+      lead="Message someone first, or reply when they write from Settings. Either way they get a notification."
       error={threadsError}
     >
       <div className={`admin-dev-messages${selectedId ? ' admin-dev-messages--open' : ''}`}>
         <div className="admin-dev-thread-list">
+          <div className="admin-dev-new">
+            <button
+              type="button"
+              className="admin-button admin-button-ghost"
+              onClick={() => {
+                setStarting((open) => !open);
+                setSearch('');
+              }}
+            >
+              {starting ? 'Cancel' : 'New message'}
+            </button>
+            {starting ? (
+              <>
+                <label className="admin-label" htmlFor="dev-user-search">Person</label>
+                <input
+                  id="dev-user-search"
+                  className="admin-input"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Username or email"
+                  autoComplete="off"
+                />
+                {debouncedSearch.length > 0 && debouncedSearch.length < 2 ? (
+                  <p className="admin-field-hint">Type at least 2 characters.</p>
+                ) : null}
+                {peopleQuery.isFetching && canSearch ? (
+                  <p className="admin-muted">Searching…</p>
+                ) : null}
+                {peopleQuery.error ? (
+                  <p className="admin-error">
+                    {getOptionalQueryErrorMessage(peopleQuery.error, 'Could not search people.')}
+                  </p>
+                ) : null}
+                {canSearch && !peopleQuery.isFetching && (peopleQuery.data?.rows.length ?? 0) === 0 ? (
+                  <p className="admin-empty-inline">No one matches that.</p>
+                ) : null}
+                <ul className="admin-dev-search-results">
+                  {(peopleQuery.data?.rows ?? []).map((person) => (
+                    <li key={person.id}>
+                      <button
+                        type="button"
+                        className="admin-dev-thread"
+                        onClick={() => {
+                          setPicked({ id: person.id, username: person.username });
+                          setStarting(false);
+                          setSearch('');
+                          setDraft('');
+                          setFormError(null);
+                        }}
+                      >
+                        <span className="admin-dev-thread-name">@{person.username}</span>
+                        {person.email ? (
+                          <span className="admin-dev-thread-preview">{person.email}</span>
+                        ) : null}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+          </div>
           {threadsQuery.isLoading ? <p className="admin-muted">Loading conversations…</p> : null}
           {!threadsQuery.isLoading && threads.length === 0 ? (
             <p className="admin-empty-inline">No messages yet.</p>
@@ -77,7 +149,8 @@ export default function AdminDevMessages() {
                     type="button"
                     className={`admin-dev-thread${thread.user_id === selectedId ? ' admin-dev-thread--active' : ''}`}
                     onClick={() => {
-                      setSelectedId(thread.user_id);
+                      setPicked({ id: thread.user_id, username: thread.username });
+                      setStarting(false);
                       setFormError(null);
                     }}
                   >
@@ -99,19 +172,19 @@ export default function AdminDevMessages() {
         </div>
 
         <div className="admin-dev-thread-pane">
-          {selected ? (
+          {picked ? (
             <>
               <div className="admin-dev-pane-header">
                 <button
                   type="button"
                   className="admin-button admin-button-ghost admin-dev-back"
-                  onClick={() => setSelectedId(null)}
+                  onClick={() => setPicked(null)}
                 >
                   All conversations
                 </button>
                 <div className="admin-dev-pane-heading">
-                  <h2 className="admin-dev-pane-title">@{selected.username}</h2>
-                  <Link to={`/profile/${selected.user_id}`} className="admin-muted">
+                  <h2 className="admin-dev-pane-title">@{username}</h2>
+                  <Link to={`/profile/${picked.id}`} className="admin-muted">
                     Open profile
                   </Link>
                 </div>
@@ -126,6 +199,9 @@ export default function AdminDevMessages() {
                 {messagesQuery.isLoading && messages.length === 0 ? (
                   <p className="admin-muted">Loading messages…</p>
                 ) : null}
+                {!messagesQuery.isLoading && messages.length === 0 ? (
+                  <p className="admin-empty-inline">No messages yet. This will be the first one.</p>
+                ) : null}
                 {messages.map((message) => {
                   const fromDev = message.sender === 'dev';
                   return (
@@ -133,7 +209,7 @@ export default function AdminDevMessages() {
                       key={message.id}
                       className={`admin-dev-bubble${fromDev ? ' admin-dev-bubble--dev' : ''}`}
                     >
-                      <p className="admin-dev-bubble-who">{fromDev ? 'You' : `@${selected.username}`}</p>
+                      <p className="admin-dev-bubble-who">{fromDev ? 'You' : `@${username}`}</p>
                       <p className="admin-dev-bubble-body">{message.body}</p>
                       <p className="admin-dev-bubble-time">
                         {message.created_at ? formatWhen(message.created_at) : ''}
@@ -143,7 +219,9 @@ export default function AdminDevMessages() {
                 })}
               </div>
               <form className="admin-compose-form" onSubmit={handleSubmit}>
-                <label className="admin-label" htmlFor="dev-reply">Reply</label>
+                <label className="admin-label" htmlFor="dev-reply">
+                  {messages.length === 0 ? 'Message' : 'Reply'}
+                </label>
                 <textarea
                   id="dev-reply"
                   className="admin-input admin-textarea"
@@ -152,7 +230,7 @@ export default function AdminDevMessages() {
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
                   onKeyDown={onKeyDown}
-                  placeholder={`Reply to @${selected.username}…`}
+                  placeholder={messages.length === 0 ? `Message @${username}…` : `Reply to @${username}…`}
                   disabled={reply.isPending}
                 />
                 <p className="admin-field-hint admin-compose-meta">
@@ -161,7 +239,7 @@ export default function AdminDevMessages() {
                 {formError ? <p className="admin-error">{formError}</p> : null}
                 <div className="admin-form-actions">
                   <button className="admin-button" type="submit" disabled={!canSend}>
-                    {reply.isPending ? 'Sending…' : 'Send reply'}
+                    {reply.isPending ? 'Sending…' : messages.length === 0 ? 'Send message' : 'Send reply'}
                   </button>
                 </div>
               </form>
