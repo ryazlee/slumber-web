@@ -9,7 +9,6 @@ import {
 } from '../../lib/admin';
 import { DEV_MESSAGE_MAX_LENGTH, countWaitingDevThreads, isWaitingDevThread } from '../../lib/devMessages';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
-import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useAdminUserDetail, useAdminUserSearch } from '../../hooks/useAdmin';
 import {
   useAdminDevMessageUserIds,
@@ -19,9 +18,6 @@ import {
 } from '../../hooks/useAdminDevMessages';
 import AdminSection from './AdminSection';
 import { formatWhen } from './format';
-
-/** Matches the admin drawer breakpoint in global.css. */
-const NARROW_ADMIN_QUERY = '(max-width: 900px)';
 
 /**
  * Lift the thread above the on-screen keyboard. The layout viewport often
@@ -71,7 +67,6 @@ function useAdminDevKeyboardInset() {
 
 export default function AdminDevMessages() {
   useAdminDevKeyboardInset();
-  const narrow = useMediaQuery(NARROW_ADMIN_QUERY);
   const threadsQuery = useAdminDevThreads();
   const threads = threadsQuery.data ?? [];
   const [picked, setPicked] = useState<{ id: string; username: string } | null>(null);
@@ -327,10 +322,10 @@ export default function AdminDevMessages() {
               </div>
               <div className="admin-dev-thread-body">
                 <AdminDevUserFacts
+                  key={picked.id}
                   detail={detailQuery.data ?? null}
                   loading={detailQuery.isLoading}
                   error={getOptionalQueryErrorMessage(detailQuery.error, 'Could not load this person.')}
-                  narrow={narrow}
                 />
                 {messagesError ? <p className="admin-error">{messagesError}</p> : null}
                 <div className="admin-dev-log" aria-label="Conversation" ref={logRef}>
@@ -405,41 +400,34 @@ function AdminDevUserFacts({
   detail,
   loading,
   error,
-  narrow,
 }: {
   detail: AdminUserDetail | null;
   loading: boolean;
   error: string | null;
-  narrow: boolean;
 }) {
-  if (error) return <p className="admin-error">{error}</p>;
-  if (!detail) {
-    return loading ? <p className="admin-muted">Loading their details…</p> : null;
-  }
-  const sleepSource = formatAdminSleepSource(detail.preferred_sleep_source);
-  const version = detail.last_app_version ? `v${detail.last_app_version}` : '—';
-  const grid = (
-    <dl className="admin-user-detail-grid admin-dev-facts">
-      <div><dt>Device</dt><dd>{formatAdminUserDevice(detail)}</dd></div>
-      <div><dt>Version</dt><dd>{version}</dd></div>
-      <div><dt>Posts</dt><dd>{detail.posts_count}</dd></div>
-      <div><dt>Friends</dt><dd>{detail.friends_count}</dd></div>
-      <div><dt>Streak</dt><dd>{detail.current_streak} (best {detail.longest_streak})</dd></div>
-      <div><dt>Premium</dt><dd>{detail.is_premium ? 'Yes' : 'No'}</dd></div>
-      <div><dt>Last post</dt><dd>{detail.last_post_at ? formatWhen(detail.last_post_at) : '—'}</dd></div>
-      <div><dt>Joined</dt><dd>{detail.created_at ? formatWhen(detail.created_at) : '—'}</dd></div>
-      <div><dt>Email</dt><dd>{detail.email || '—'}</dd></div>
-      {sleepSource ? <div><dt>Sleep source</dt><dd>{sleepSource}</dd></div> : null}
-      {detail.is_suspended ? <div><dt>Status</dt><dd>Suspended</dd></div> : null}
-    </dl>
-  );
-
-  if (!narrow) return grid;
+  const sleepSource = detail ? formatAdminSleepSource(detail.preferred_sleep_source) : null;
+  const version = detail?.last_app_version ? `v${detail.last_app_version}` : '—';
 
   return (
     <details className="admin-dev-facts-disclosure">
       <summary>About this person</summary>
-      {grid}
+      {error ? <p className="admin-error">{error}</p> : null}
+      {!error && !detail && loading ? <p className="admin-muted">Loading their details…</p> : null}
+      {detail ? (
+        <dl className="admin-user-detail-grid admin-dev-facts">
+          <div><dt>Device</dt><dd>{formatAdminUserDevice(detail)}</dd></div>
+          <div><dt>Version</dt><dd>{version}</dd></div>
+          <div><dt>Posts</dt><dd>{detail.posts_count}</dd></div>
+          <div><dt>Friends</dt><dd>{detail.friends_count}</dd></div>
+          <div><dt>Streak</dt><dd>{detail.current_streak} (best {detail.longest_streak})</dd></div>
+          <div><dt>Premium</dt><dd>{detail.is_premium ? 'Yes' : 'No'}</dd></div>
+          <div><dt>Last post</dt><dd>{detail.last_post_at ? formatWhen(detail.last_post_at) : '—'}</dd></div>
+          <div><dt>Joined</dt><dd>{detail.created_at ? formatWhen(detail.created_at) : '—'}</dd></div>
+          <div><dt>Email</dt><dd>{detail.email || '—'}</dd></div>
+          {sleepSource ? <div><dt>Sleep source</dt><dd>{sleepSource}</dd></div> : null}
+          {detail.is_suspended ? <div><dt>Status</dt><dd>Suspended</dd></div> : null}
+        </dl>
+      ) : null}
     </details>
   );
 }
