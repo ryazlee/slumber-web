@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { getOptionalQueryErrorMessage } from '../../lib/queryError';
@@ -9,6 +9,7 @@ import {
 } from '../../lib/admin';
 import { DEV_MESSAGE_MAX_LENGTH, countWaitingDevThreads, isWaitingDevThread } from '../../lib/devMessages';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useAdminUserDetail, useAdminUserSearch } from '../../hooks/useAdmin';
 import {
   useAdminDevMessageUserIds,
@@ -19,7 +20,58 @@ import {
 import AdminSection from './AdminSection';
 import { formatWhen } from './format';
 
+/** Matches the admin drawer breakpoint in global.css. */
+const NARROW_ADMIN_QUERY = '(max-width: 900px)';
+
+/**
+ * Lift the thread above the on-screen keyboard. The layout viewport often
+ * stays full height while the visual viewport shrinks, which parks the
+ * composer under the keyboard.
+ */
+function useAdminDevKeyboardInset() {
+  useEffect(() => {
+    const root = document.documentElement;
+    const viewport = window.visualViewport;
+    if (!viewport) return undefined;
+
+    let frame = 0;
+    let alive = true;
+
+    const sync = () => {
+      if (!alive) return;
+      const active = document.activeElement;
+      const typing = active instanceof HTMLElement
+        && active.closest('.admin-dev-messages') != null
+        && (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement);
+      const obscured = Math.max(0, window.innerHeight - viewport.offsetTop - viewport.height);
+      root.style.setProperty('--admin-dev-keyboard', typing ? `${Math.round(obscured)}px` : '0px');
+    };
+
+    const schedule = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(sync);
+    };
+
+    schedule();
+    viewport.addEventListener('resize', schedule);
+    viewport.addEventListener('scroll', schedule);
+    document.addEventListener('focusin', schedule);
+    document.addEventListener('focusout', schedule);
+    return () => {
+      alive = false;
+      cancelAnimationFrame(frame);
+      viewport.removeEventListener('resize', schedule);
+      viewport.removeEventListener('scroll', schedule);
+      document.removeEventListener('focusin', schedule);
+      document.removeEventListener('focusout', schedule);
+      root.style.removeProperty('--admin-dev-keyboard');
+    };
+  }, []);
+}
+
 export default function AdminDevMessages() {
+  useAdminDevKeyboardInset();
+  const narrow = useMediaQuery(NARROW_ADMIN_QUERY);
   const threadsQuery = useAdminDevThreads();
   const threads = threadsQuery.data ?? [];
   const [picked, setPicked] = useState<{ id: string; username: string } | null>(null);
@@ -44,6 +96,13 @@ export default function AdminDevMessages() {
   const messagesQuery = useAdminDevMessages(selectedId);
   const reply = useAdminDevReply(selectedId);
   const messages = messagesQuery.data ?? [];
+  const logRef = useRef<HTMLDivElement>(null);
+  const lastMessageId = messages[messages.length - 1]?.id ?? '';
+  useEffect(() => {
+    const log = logRef.current;
+    if (!log) return;
+    log.scrollTop = log.scrollHeight;
+  }, [selectedId, lastMessageId]);
   const trimmed = draft.trim();
   const canSend = Boolean(selectedId && trimmed && !reply.isPending);
 
@@ -93,6 +152,7 @@ export default function AdminDevMessages() {
 
   return (
     <AdminSection
+      className="admin-dev-page"
       lead="Message someone first, or reply when they write from Settings. Either way they get a notification."
       error={threadsError}
     >
@@ -149,7 +209,9 @@ export default function AdminDevMessages() {
                             setFormError(null);
                           }}
                         >
-                          <span className="admin-dev-thread-name">@{person.username}</span>
+                          <span className="admin-dev-thread-name">
+                            <span className="admin-dev-thread-handle">@{person.username}</span>
+                          </span>
                           {person.email ? (
                             <span className="admin-dev-thread-preview">{person.email}</span>
                           ) : null}
@@ -223,7 +285,7 @@ export default function AdminDevMessages() {
                       }}
                     >
                       <span className="admin-dev-thread-name">
-                        @{thread.username}
+                        <span className="admin-dev-thread-handle">@{thread.username}</span>
                         {waiting ? <span className="admin-dev-waiting">Waiting</span> : null}
                       </span>
                       <span className="admin-dev-thread-preview">{thread.last_body}</span>
@@ -249,8 +311,9 @@ export default function AdminDevMessages() {
                   type="button"
                   className="admin-button admin-button-ghost admin-dev-back"
                   onClick={() => setPicked(null)}
+                  aria-label="Back to conversations"
                 >
-                  All conversations
+                  Back
                 </button>
                 <div className="admin-dev-pane-heading">
                   <div className="admin-dev-pane-title-row">
@@ -262,37 +325,40 @@ export default function AdminDevMessages() {
                   </Link>
                 </div>
               </div>
-              <AdminDevUserFacts
-                detail={detailQuery.data ?? null}
-                loading={detailQuery.isLoading}
-                error={getOptionalQueryErrorMessage(detailQuery.error, 'Could not load this person.')}
-              />
-              {messagesError ? <p className="admin-error">{messagesError}</p> : null}
-              <div className="admin-dev-log" aria-label="Conversation">
-                {messagesQuery.isLoading && messages.length === 0 ? (
-                  <p className="admin-muted">Loading messages…</p>
-                ) : null}
-                {!messagesQuery.isLoading && messages.length === 0 ? (
-                  <div className="admin-dev-empty">
-                    <p className="admin-dev-empty-title">No messages yet</p>
-                    <p className="admin-dev-empty-copy">This will be the first one.</p>
-                  </div>
-                ) : null}
-                {messages.map((message) => {
-                  const fromDev = message.sender === 'dev';
-                  return (
-                    <div
-                      key={message.id}
-                      className={`admin-dev-bubble${fromDev ? ' admin-dev-bubble--dev' : ''}`}
-                    >
-                      <p className="admin-dev-bubble-who">{fromDev ? 'You' : `@${username}`}</p>
-                      <p className="admin-dev-bubble-body">{message.body}</p>
-                      <p className="admin-dev-bubble-time">
-                        {message.created_at ? formatWhen(message.created_at) : ''}
-                      </p>
+              <div className="admin-dev-thread-body">
+                <AdminDevUserFacts
+                  detail={detailQuery.data ?? null}
+                  loading={detailQuery.isLoading}
+                  error={getOptionalQueryErrorMessage(detailQuery.error, 'Could not load this person.')}
+                  narrow={narrow}
+                />
+                {messagesError ? <p className="admin-error">{messagesError}</p> : null}
+                <div className="admin-dev-log" aria-label="Conversation" ref={logRef}>
+                  {messagesQuery.isLoading && messages.length === 0 ? (
+                    <p className="admin-muted">Loading messages…</p>
+                  ) : null}
+                  {!messagesQuery.isLoading && messages.length === 0 ? (
+                    <div className="admin-dev-empty">
+                      <p className="admin-dev-empty-title">No messages yet</p>
+                      <p className="admin-dev-empty-copy">This will be the first one.</p>
                     </div>
-                  );
-                })}
+                  ) : null}
+                  {messages.map((message) => {
+                    const fromDev = message.sender === 'dev';
+                    return (
+                      <div
+                        key={message.id}
+                        className={`admin-dev-bubble${fromDev ? ' admin-dev-bubble--dev' : ''}`}
+                      >
+                        <p className="admin-dev-bubble-who">{fromDev ? 'You' : `@${username}`}</p>
+                        <p className="admin-dev-bubble-body">{message.body}</p>
+                        <p className="admin-dev-bubble-time">
+                          {message.created_at ? formatWhen(message.created_at) : ''}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
               <form className="admin-compose-form admin-dev-compose" onSubmit={handleSubmit}>
                 <label className="admin-label" htmlFor="dev-reply">
@@ -310,7 +376,8 @@ export default function AdminDevMessages() {
                   disabled={reply.isPending}
                 />
                 <p className="admin-field-hint admin-compose-meta">
-                  {trimmed.length}/{DEV_MESSAGE_MAX_LENGTH} · ⌘/Ctrl + Enter to send
+                  {trimmed.length}/{DEV_MESSAGE_MAX_LENGTH}
+                  <span className="admin-dev-compose-shortcut"> · ⌘/Ctrl + Enter to send</span>
                 </p>
                 {formError ? <p className="admin-error">{formError}</p> : null}
                 <div className="admin-form-actions">
@@ -338,10 +405,12 @@ function AdminDevUserFacts({
   detail,
   loading,
   error,
+  narrow,
 }: {
   detail: AdminUserDetail | null;
   loading: boolean;
   error: string | null;
+  narrow: boolean;
 }) {
   if (error) return <p className="admin-error">{error}</p>;
   if (!detail) {
@@ -349,7 +418,7 @@ function AdminDevUserFacts({
   }
   const sleepSource = formatAdminSleepSource(detail.preferred_sleep_source);
   const version = detail.last_app_version ? `v${detail.last_app_version}` : '—';
-  return (
+  const grid = (
     <dl className="admin-user-detail-grid admin-dev-facts">
       <div><dt>Device</dt><dd>{formatAdminUserDevice(detail)}</dd></div>
       <div><dt>Version</dt><dd>{version}</dd></div>
@@ -363,5 +432,14 @@ function AdminDevUserFacts({
       {sleepSource ? <div><dt>Sleep source</dt><dd>{sleepSource}</dd></div> : null}
       {detail.is_suspended ? <div><dt>Status</dt><dd>Suspended</dd></div> : null}
     </dl>
+  );
+
+  if (!narrow) return grid;
+
+  return (
+    <details className="admin-dev-facts-disclosure">
+      <summary>About this person</summary>
+      {grid}
+    </details>
   );
 }
