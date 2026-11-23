@@ -1,4 +1,5 @@
 import { Link, Navigate, useLocation } from 'react-router-dom';
+import AccentBubbles from '../../components/AccentBubbles';
 import LoginForm from '../../components/LoginForm';
 import { useAuth } from '../../context/AuthContext';
 
@@ -10,6 +11,7 @@ export default function AppEntry() {
   if (loading) {
     return (
       <div className="login-page">
+        <AccentBubbles />
         <main className="login-page-main">
           <p className="app-muted">Loading…</p>
         </main>
@@ -23,6 +25,7 @@ export default function AppEntry() {
 
   return (
     <div className="login-page">
+      <AccentBubbles />
       <main className="login-page-main">
         <LoginForm
           description="Browse your feed, social, stats, and challenges and leave kudos and comments. Log sleep, accept invites, and manage friends in the mobile app. Use the email tied to your Slumber account."

@@ -14,6 +14,8 @@ type Props = {
   variant?: 'bar' | 'line';
   /** First and last ticks include the year. All time, or any span that crosses a year. */
   edgeYear?: boolean;
+  /** Shown in the header until a day is hovered. A share snapshot can put the window total here. */
+  summary?: string;
 };
 
 const BAR_GAP = 1;
@@ -228,6 +230,7 @@ export default function AdminActivityChart({
   color = 'var(--accent)',
   variant = 'bar',
   edgeYear = false,
+  summary,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
@@ -309,6 +312,8 @@ export default function AdminActivityChart({
           <p className="admin-chart-hover-summary">
             {formatDayTooltip(hovered.day)}: <strong>{formatChartValue(hoveredValue)}</strong>
           </p>
+        ) : summary ? (
+          <p className="admin-chart-hover-summary">{summary}</p>
         ) : (
           <p className="admin-chart-hover-summary admin-chart-hover-summary--hint">Hover or tap a day</p>
         )}

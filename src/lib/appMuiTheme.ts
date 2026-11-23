@@ -1,31 +1,35 @@
 import { createTheme } from '@mui/material/styles';
+import type { ThemeMode } from './themePreference';
 
 /** Matches `global.css` tokens — used for MUI Skeleton in the signed-in app shell. */
-export const appMuiTheme = createTheme({
-  palette: {
-    mode: 'dark',
-    primary: { main: '#7b3fa0' },
-    background: {
-      default: '#0c0c0e',
-      paper: '#17171a',
+export function createAppMuiTheme(mode: ThemeMode) {
+  const dark = mode === 'dark';
+  return createTheme({
+    palette: {
+      mode,
+      primary: { main: '#7b3fa0' },
+      background: {
+        default: dark ? '#0c0c0e' : '#f4f6f9',
+        paper: dark ? '#17171a' : '#ffffff',
+      },
+      text: {
+        primary: dark ? '#f4f4f5' : '#0f172a',
+        secondary: dark ? '#a1a1aa' : '#64748b',
+      },
+      divider: dark ? 'rgba(255, 255, 255, 0.08)' : '#d5d9e1',
     },
-    text: {
-      primary: '#f4f4f5',
-      secondary: '#a1a1aa',
+    typography: {
+      fontFamily: 'inherit',
+      fontSize: 14,
     },
-    divider: 'rgba(255, 255, 255, 0.08)',
-  },
-  typography: {
-    fontFamily: 'inherit',
-    fontSize: 14,
-  },
-  components: {
-    MuiSkeleton: {
-      styleOverrides: {
-        root: {
-          backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    components: {
+      MuiSkeleton: {
+        styleOverrides: {
+          root: {
+            backgroundColor: dark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(15, 23, 42, 0.08)',
+          },
         },
       },
     },
-  },
-});
+  });
+}

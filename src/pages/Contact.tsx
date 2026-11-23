@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import AccentBubbles from '../components/AccentBubbles';
 import '../styles/home.css';
 import '../styles/download.css';
 import '../styles/contact.css';
@@ -11,7 +12,7 @@ export default function Contact() {
   return (
     <div className="home-marketing download-page contact-page">
       <section className="download-hero contact-hero" aria-labelledby="contact-headline">
-        <div className="home-hero-glow" aria-hidden="true" />
+        <AccentBubbles />
         <div className="download-hero-inner contact-hero-inner content-wrap">
           <div className="home-brand-lockup download-brand">
             <img

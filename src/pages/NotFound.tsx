@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import AccentBubbles from '../components/AccentBubbles';
 import '../styles/home.css';
 import '../styles/download.css';
 import '../styles/not-found.css';
@@ -9,7 +10,7 @@ export default function NotFound() {
   return (
     <div className="home-marketing download-page not-found-page">
       <section className="download-hero" aria-labelledby="not-found-headline">
-        <div className="home-hero-glow" aria-hidden="true" />
+        <AccentBubbles />
         <div className="download-hero-inner content-wrap">
           <div className="home-brand-lockup download-brand">
             <img

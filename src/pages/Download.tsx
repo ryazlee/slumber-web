@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import AccentBubbles from '../components/AccentBubbles';
 import { StoreBadgePair } from '../components/StoreBadges';
 import { useAuth } from '../context/AuthContext';
 import '../styles/home.css';
@@ -13,7 +14,7 @@ export default function Download() {
   return (
     <div className="home-marketing download-page">
       <section className="download-hero" aria-labelledby="download-headline">
-        <div className="home-hero-glow" aria-hidden="true" />
+        <AccentBubbles />
         <div className="download-hero-inner content-wrap">
           <div className="home-brand-lockup download-brand">
             <img

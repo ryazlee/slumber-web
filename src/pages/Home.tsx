@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import AccentBubbles from '../components/AccentBubbles';
 import HomeHeroPhone from '../components/HomeHeroPhone';
 import HomeHypnogram from '../components/HomeHypnogram';
 import HomeScreenshots from '../components/HomeScreenshots';
@@ -15,7 +16,7 @@ export default function Home() {
   return (
     <div className="home-marketing">
       <section className="home-hero" aria-labelledby="home-headline">
-        <div className="home-hero-glow" aria-hidden="true" />
+        <AccentBubbles />
         <div className="home-hero-inner content-wrap">
           <div className="home-hero-copy">
             <div className="home-brand-lockup">
@@ -110,24 +111,39 @@ export default function Home() {
           <h2 id="home-essentials-title">Built for friends</h2>
           <ul className="home-essentials-list">
             <li>
-              <strong>Feed</strong>
-              <span>Nights and naps as they land — hypnograms, vibes, dreams, PRs.</span>
+              <span className="home-essential-mark home-essential-mark--core" aria-hidden="true" />
+              <div>
+                <strong>Feed</strong>
+                <span>Nights and naps as they land — hypnograms, vibes, dreams, PRs.</span>
+              </div>
             </li>
             <li>
-              <strong>Stats</strong>
-              <span>This week, the last 30 days, who sleeps like you, and a monthly recap.</span>
+              <span className="home-essential-mark home-essential-mark--deep" aria-hidden="true" />
+              <div>
+                <strong>Stats</strong>
+                <span>This week, the last 30 days, who sleeps like you, and a monthly recap.</span>
+              </div>
             </li>
             <li>
-              <strong>Compare</strong>
-              <span>Your sleep next to theirs, not a random population score.</span>
+              <span className="home-essential-mark home-essential-mark--rem" aria-hidden="true" />
+              <div>
+                <strong>Compare</strong>
+                <span>Your sleep next to theirs, not a random population score.</span>
+              </div>
             </li>
             <li>
-              <strong>Challenges, clubs &amp; boards</strong>
-              <span>Race for sleep logged, keep a room for your people, and rank wearable nights.</span>
+              <span className="home-essential-mark home-essential-mark--accent" aria-hidden="true" />
+              <div>
+                <strong>Challenges, clubs &amp; boards</strong>
+                <span>Race for sleep logged, keep a room for your people, and rank wearable nights.</span>
+              </div>
             </li>
             <li>
-              <strong>Privacy</strong>
-              <span>Mutual friends by default. Private posts, blurred dreams, block anytime.</span>
+              <span className="home-essential-mark home-essential-mark--awake" aria-hidden="true" />
+              <div>
+                <strong>Privacy</strong>
+                <span>Mutual friends by default. Private posts, blurred dreams, block anytime.</span>
+              </div>
             </li>
           </ul>
         </section>

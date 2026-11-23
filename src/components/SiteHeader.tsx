@@ -6,6 +6,7 @@ import AppBottomNav, { NavLabel, useBottomNavItems, usePrimaryNavItems } from '.
 import HeaderMenu from './HeaderMenu';
 import HeaderProfileLink from './HeaderProfileLink';
 import HeaderSearch from './HeaderSearch';
+import ThemeToggle from './ThemeToggle';
 
 const base = import.meta.env.BASE_URL;
 
@@ -56,6 +57,7 @@ export default function SiteHeader() {
 
           <div className="site-header-end">
             <div className="site-header-actions">
+              <ThemeToggle />
               {isLoggedIn ? (
                 <>
                   <HeaderSearch />
