@@ -3,8 +3,10 @@
 
   python3 website/scripts/build-og-image.py
 
-Moon art lives in website/scripts/og-moon-art.png. Headless Firefox by
-default (same as media/scripts/marketing-promo); --renderer chrome works too.
+Moon art lives in website/scripts/og-moon-art.png. The lockup icon is
+website/public/icon-512.png, published from assets/brand/icon/light.png by
+media/scripts/sync_website_brand.py. Headless Firefox by default (same as
+media/scripts/marketing-promo); --renderer chrome works too.
 """
 
 from __future__ import annotations
