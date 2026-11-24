@@ -173,8 +173,8 @@ function RaceForm({
       return;
     }
     if (!locked) {
-      if (!Number.isFinite(goalHours) || goalHours < 10 || goalHours > 100) {
-        setFormError('Goal must be between 10 and 100 hours.');
+      if (!Number.isFinite(goalHours) || goalHours < 10 || goalHours > 200) {
+        setFormError('Goal must be between 10 and 200 hours.');
         return;
       }
       if (maxParticipants != null && (!Number.isInteger(maxParticipants) || maxParticipants < 2 || maxParticipants > 10000)) {
@@ -501,7 +501,7 @@ function RaceForm({
               className="admin-input"
               type="number"
               min={10}
-              max={100}
+              max={200}
               step="0.5"
               disabled={locked}
               value={draft.goalHours}

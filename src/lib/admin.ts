@@ -1385,7 +1385,7 @@ export function slumberChallengeErrorMessage(err: unknown, fallback: string): st
   const message = adminErrorMessage(err, fallback);
   if (message.includes('invalid_title')) return 'Title must be 1–80 characters.';
   if (message.includes('invalid_description')) return 'Description must be 280 characters or fewer.';
-  if (message.includes('invalid_goal')) return 'Goal must be between 10 and 100 hours.';
+  if (message.includes('invalid_goal')) return 'Goal must be between 10 and 200 hours.';
   if (message.includes('invalid_expiration_days')) return 'Duration must be between 1 and 100 days.';
   if (message.includes('invalid_window')) return 'The end date has to be after the challenge started.';
   if (message.includes('invalid_max_participants')) return 'Max participants must be between 2 and 10,000, or left blank.';
