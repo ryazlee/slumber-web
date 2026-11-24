@@ -462,6 +462,59 @@ textarea {
   top: 46%;
 }
 
+/* Soft dust in the same clipped layer as the circles. Motion is transform-only. */
+.accent-speck {
+  --speck-color: color-mix(in srgb, #fff 78%, var(--accent-bright));
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  background: var(--speck-color);
+  opacity: var(--speck-o, 0.2);
+  animation-name: accent-speck-drift;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+.accent-speck--cool {
+  --speck-color: color-mix(in srgb, #fff 74%, var(--core));
+}
+
+.accent-speck--warm {
+  --speck-color: color-mix(in srgb, #fff 72%, var(--rem));
+}
+
+html[data-theme='light'] .accent-speck {
+  --speck-color: color-mix(in srgb, var(--text-dim) 42%, var(--accent));
+  opacity: var(--speck-o-light, 0.36);
+}
+
+html[data-theme='light'] .accent-speck--cool {
+  --speck-color: color-mix(in srgb, var(--text-dim) 38%, var(--core));
+}
+
+html[data-theme='light'] .accent-speck--warm {
+  --speck-color: color-mix(in srgb, var(--text-dim) 36%, var(--deep));
+}
+
+@keyframes accent-speck-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  42% {
+    transform: translate3d(var(--dx, 12px), calc(var(--dy, -10px) * 0.6), 0);
+  }
+  74% {
+    transform: translate3d(calc(var(--dx, 12px) * -0.45), var(--dy, -10px), 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .accent-speck {
+    animation: none;
+  }
+}
+
 .header-profile-link {
   display: inline-flex;
   align-items: center;
