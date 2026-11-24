@@ -58,6 +58,10 @@ function formatGoal(minutes: number): string {
 }
 
 function windowLabel(row: AdminSlumberChallengeRow): string {
+  if (row.status === 'pending' && row.started_at) {
+    const start = new Date(row.started_at).toLocaleDateString(undefined, { dateStyle: 'medium' });
+    return `Starts ${start}`;
+  }
   if (row.no_expiration) return 'No end';
   if (!row.started_at) return `${row.expiration_days} days`;
   if (!row.expires_at) return 'No end';
@@ -70,6 +74,7 @@ type Draft = {
   goalHours: string;
   noExpiration: boolean;
   expirationDays: string;
+  startsOn: string;
   endsOn: string;
   maxParticipants: string;
   joinEnabled: boolean;
@@ -93,6 +98,7 @@ function draftFromRow(row: AdminSlumberChallengeRow): Draft {
     goalHours: goalHoursLabel(row.goal_minutes),
     noExpiration: row.no_expiration,
     expirationDays: String(row.expiration_days || 10),
+    startsOn: row.status === 'pending' ? isoToLocalDateInput(row.started_at) : '',
     endsOn: isoToLocalDateInput(row.expires_at),
     maxParticipants: row.max_participants != null ? String(row.max_participants) : '',
     joinEnabled: row.join_enabled,
@@ -120,6 +126,7 @@ const EMPTY_DRAFT: Draft = {
   goalHours: '40',
   noExpiration: false,
   expirationDays: '10',
+  startsOn: '',
   endsOn: '',
   maxParticipants: '',
   joinEnabled: true,
@@ -151,7 +158,7 @@ function RaceForm({
   const updateMutation = useUpdateAdminSlumberChallenge();
   const [draft, setDraft] = useState<Draft>(row ? draftFromRow(row) : EMPTY_DRAFT);
   const [formError, setFormError] = useState<string | null>(null);
-  const started = Boolean(row?.started_at);
+  const windowOpen = row != null && row.status !== 'pending';
   const locked = row != null && !EDITABLE_STATUSES.has(row.status);
   const saving = createMutation.isPending || updateMutation.isPending;
 
@@ -181,11 +188,11 @@ function RaceForm({
         setFormError('Max participants must be between 2 and 10,000, or left blank.');
         return;
       }
-      if (!draft.noExpiration && !started && (!Number.isInteger(days) || days < 1 || days > 100)) {
+      if (!draft.noExpiration && !windowOpen && (!Number.isInteger(days) || days < 1 || days > 100)) {
         setFormError('Duration must be between 1 and 100 days.');
         return;
       }
-      if (!draft.noExpiration && started && !draft.endsOn) {
+      if (!draft.noExpiration && windowOpen && !draft.endsOn) {
         setFormError('Pick an end date, or leave the challenge without an end.');
         return;
       }
@@ -202,6 +209,7 @@ function RaceForm({
           noExpiration: draft.isDrawing ? false : draft.noExpiration,
           expiresInDays: draft.noExpiration && !draft.isDrawing ? 10 : days,
           maxParticipants,
+          startsAt: draft.startsOn ? localDateInputToIso(draft.startsOn, 'start') : null,
           isDrawing: draft.isDrawing,
           drawingReferrals: draft.isDrawing && Boolean(draft.entryRules.find((r) => r.kind === 'referral')?.enabled),
           drawingEntryConfig: draft.isDrawing ? draft.entryRules : [],
@@ -224,7 +232,8 @@ function RaceForm({
             goalMinutes,
             noExpiration: draft.isDrawing ? false : draft.noExpiration,
             expirationDays: Number.isInteger(days) ? days : row.expiration_days,
-            expiresAt: draft.noExpiration || !started ? null : localDateInputToIso(draft.endsOn, 'end'),
+            expiresAt: draft.noExpiration || !windowOpen ? null : localDateInputToIso(draft.endsOn, 'end'),
+            startsAt: windowOpen ? undefined : (draft.startsOn ? localDateInputToIso(draft.startsOn, 'start') : null),
             maxParticipants,
             joinEnabled: draft.joinEnabled,
             isDrawing: draft.isDrawing,
@@ -258,10 +267,10 @@ function RaceForm({
         {row
           ? locked
             ? 'This challenge has finished. The name can still be changed.'
-            : started
+            : windowOpen
               ? 'The start time stays put. A later end date keeps the challenge going. An end date that has already passed opens the catch-up window.'
-              : 'Start the challenge from the table when it should go live. Duration is how many days it runs after that.'
-          : 'This creates a pending challenge hosted by Slumber. Type is a field: leave Drawing off for a race, or turn it on for a prize challenge (entries at the goal; winner is drawn off-app). Start it from the table when it should go live. Link a campaign separately if you want a promo — you are not added as a participant.'}
+              : 'Set a start date to open the window that morning, or leave it blank and press Start on the table. Duration is how many days it runs after the start.'
+          : 'This creates a pending challenge hosted by Slumber. Type is a field: leave Drawing off for a race, or turn it on for a prize challenge (entries at the goal; winner is drawn off-app). Set a start date, or press Start on the table when it should go live. Link a campaign separately if you want a promo — you are not added as a participant.'}
       </p>
       <form className="admin-role-grant-form" onSubmit={(e) => { void handleSubmit(e); }}>
         <div className="admin-field">
@@ -291,7 +300,7 @@ function RaceForm({
           <input
             type="checkbox"
             checked={draft.isDrawing}
-            disabled={locked || started}
+            disabled={locked || windowOpen}
             onChange={(e) => setDraft((prev) => ({
               ...prev,
               isDrawing: e.target.checked,
@@ -507,6 +516,7 @@ function RaceForm({
               value={draft.goalHours}
               onChange={(e) => setDraft((prev) => ({ ...prev, goalHours: e.target.value }))}
             />
+            <p className="admin-panel-desc">10 to 200 hours.</p>
           </AdminFilterField>
           <AdminFilterField label="Max participants" htmlFor="slumber-race-max">
             <input
@@ -530,7 +540,7 @@ function RaceForm({
           />
           <span>No end date</span>
         </label>
-        {!draft.noExpiration && !started ? (
+        {!draft.noExpiration && !windowOpen ? (
           <AdminFilterField label="Duration (days)" htmlFor="slumber-race-days">
             <input
               id="slumber-race-days"
@@ -544,7 +554,21 @@ function RaceForm({
             />
           </AdminFilterField>
         ) : null}
-        {!draft.noExpiration && started && !locked ? (
+        {!windowOpen ? (
+          <AdminDateField
+            id="slumber-race-start"
+            label="Starts"
+            value={draft.startsOn}
+            placeholder="Open when you press Start"
+            onChange={(startsOn) => setDraft((prev) => ({ ...prev, startsOn }))}
+          />
+        ) : null}
+        {!windowOpen ? (
+          <p className="admin-panel-desc">
+            Local midnight. A future date stays pending until that morning, then the window runs for the duration. People can join and invite before then.
+          </p>
+        ) : null}
+        {!draft.noExpiration && windowOpen && !locked ? (
           <AdminDateField
             id="slumber-race-end"
             label="Ends"
@@ -911,7 +935,14 @@ export default function AdminSlumberChallenges() {
               onClick={(e) => {
                 e.stopPropagation();
                 const name = row.title?.trim() || 'this challenge';
-                if (!window.confirm(`Start “${name}” now? The challenge window opens immediately.`)) return;
+                const scheduled = row.started_at != null && new Date(row.started_at).getTime() > Date.now();
+                const when = scheduled
+                  ? new Date(row.started_at as string).toLocaleDateString(undefined, { dateStyle: 'medium' })
+                  : null;
+                const msg = when
+                  ? `Start “${name}” now instead of ${when}? The window opens immediately.`
+                  : `Start “${name}” now? The challenge window opens immediately.`;
+                if (!window.confirm(msg)) return;
                 void runAction(row.id, () => startMutation.mutateAsync(row.id), 'Could not start the challenge.');
               }}
             >
@@ -958,7 +989,7 @@ export default function AdminSlumberChallenges() {
     <AdminSection
       className="admin-slumber-races"
       error={error}
-      lead="Official challenges hosted by Slumber (races and drawings). Create them here, Start when they should score, and link a campaign separately if you want a promo. Campaign dates do not have to match the challenge window. Drawings: entries at the goal; export the roster for an off-app drawing."
+      lead="Official challenges hosted by Slumber (races and drawings). Set a start date, or press Start to open the window now. Goals can be up to 200 hours. Link a campaign separately if you want a promo. Campaign dates do not have to match the challenge window. Drawings: entries at the goal; export the roster for an off-app drawing."
     >
       <AdminListToolbar
         actions={(

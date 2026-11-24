@@ -1196,6 +1196,8 @@ export type AdminSlumberChallengeDraft = {
   noExpiration: boolean;
   expirationDays: number;
   expiresAt: string | null;
+  /** Pending only. Null clears a scheduled start. Omit once the window is open. */
+  startsAt?: string | null;
   maxParticipants: number | null;
   joinEnabled: boolean;
   isDrawing?: boolean;
@@ -1265,6 +1267,7 @@ export async function createAdminSlumberChallenge(input: {
   noExpiration: boolean;
   expiresInDays: number;
   maxParticipants: number | null;
+  startsAt?: string | null;
   isDrawing?: boolean;
   drawingReferrals?: boolean;
   drawingEntryConfig?: Array<{
@@ -1302,11 +1305,25 @@ export async function createAdminSlumberChallenge(input: {
   if (error) throw error;
   const row = (data ?? {}) as { id?: string; title?: string };
   if (!row.id) throw new Error('Could not create the race.');
+  if (input.startsAt) {
+    await setAdminSlumberChallengeStart(row.id, input.startsAt);
+  }
   await setAdminDrawingReferrals(row.id, Boolean(input.isDrawing && input.drawingReferrals));
   if (input.isDrawing) {
     await setAdminDrawingEntryConfig(row.id, input.drawingEntryConfig ?? null);
   }
   return { id: row.id, title: row.title ?? input.title };
+}
+
+export async function setAdminSlumberChallengeStart(
+  challengeId: string,
+  startsAt: string | null,
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_set_slumber_challenge_start', {
+    p_challenge_id: challengeId,
+    p_starts_at: startsAt,
+  });
+  if (error) throw error;
 }
 
 export async function startAdminSlumberChallenge(challengeId: string): Promise<void> {
@@ -1341,6 +1358,9 @@ export async function updateAdminSlumberChallenge(
     p_official_rules_url: draft.officialRulesUrl?.trim() || null,
   });
   if (error) throw error;
+  if (draft.startsAt !== undefined) {
+    await setAdminSlumberChallengeStart(challengeId, draft.startsAt);
+  }
   await setAdminDrawingReferrals(challengeId, Boolean(draft.isDrawing && draft.drawingReferrals));
   if (draft.isDrawing) {
     await setAdminDrawingEntryConfig(challengeId, draft.drawingEntryConfig ?? null);
@@ -1386,6 +1406,7 @@ export function slumberChallengeErrorMessage(err: unknown, fallback: string): st
   if (message.includes('invalid_title')) return 'Title must be 1–80 characters.';
   if (message.includes('invalid_description')) return 'Description must be 280 characters or fewer.';
   if (message.includes('invalid_goal')) return 'Goal must be between 10 and 200 hours.';
+  if (message.includes('start_required')) return 'Pick a start date.';
   if (message.includes('invalid_expiration_days')) return 'Duration must be between 1 and 100 days.';
   if (message.includes('invalid_window')) return 'The end date has to be after the challenge started.';
   if (message.includes('invalid_max_participants')) return 'Max participants must be between 2 and 10,000, or left blank.';
