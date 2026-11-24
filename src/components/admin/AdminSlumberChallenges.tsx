@@ -698,7 +698,7 @@ function DrawingRosterDialog({
           {roster.joined} joined · {roster.qualified} entered
           {includeReferrals ? ` · ${roster.referralJoins} referral signups` : ''}
           {' · '}
-          AMOE is that person’s goal entries. If they also hit the sleep goal, they get the higher count.
+          AMOE stacks on top of wearable-goal and referral entries.
         </p>
       ) : null}
       {amoeError ? <p className="admin-error">{amoeError}</p> : null}

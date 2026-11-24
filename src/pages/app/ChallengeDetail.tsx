@@ -28,6 +28,7 @@ import ChallengeKindChip from '../../components/ChallengeKindChip';
 import CollapsibleSection from '../../components/CollapsibleSection';
 import DrawingReferralsSection from '../../components/DrawingReferralsSection';
 import {
+  drawingEntriesCountLabel,
   drawingEntriesFactsLine,
   drawingPrizeImageUrls,
   drawingHowItWorksLine,
@@ -264,7 +265,12 @@ export default function ChallengeDetail() {
             <div className="drawing-entry-row">
               <div>
                 <span className="drawing-entry-label">Your entries</span>
-                <strong>{drawingBreakdown.earned} / {drawingBreakdown.max}</strong>
+                <strong>
+                  {drawingEntriesCountLabel({
+                    earned: drawingBreakdown.earned,
+                    max: drawingBreakdown.max,
+                  })}
+                </strong>
               </div>
               <div>
                 <span className="drawing-entry-label">Joined</span>

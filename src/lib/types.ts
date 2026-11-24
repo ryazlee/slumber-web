@@ -123,6 +123,9 @@ export type ChallengeParticipant = {
   inviteStatus: 'pending' | 'accepted' | 'declined' | 'left';
   role: 'creator' | 'participant';
   referredBy?: string | null;
+  drawingIneligibleAt?: string | null;
+  drawingAlternateEntry?: boolean;
+  drawingAlternateEntries?: number;
 };
 
 export type Comment = {

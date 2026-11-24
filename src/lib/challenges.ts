@@ -78,6 +78,7 @@ function sessionStartsBeforeFreeze(
 
 const PARTICIPANT_SELECT = `
   challenge_id, user_id, role, invite_status, joined_at, referred_by,
+  drawing_ineligible_at, drawing_alternate_entry, drawing_alternate_entries,
   profiles!user_id ( username, avatar_url, user_roles )
 `;
 
@@ -87,8 +88,12 @@ function mapParticipantRow(row: {
   role: 'creator' | 'participant';
   invite_status: ChallengeParticipant['inviteStatus'];
   referred_by?: string | null;
+  drawing_ineligible_at?: string | null;
+  drawing_alternate_entry?: boolean | null;
+  drawing_alternate_entries?: number | null;
   profiles?: { username: string; avatar_url: string | null; user_roles?: string[] | null } | null;
 }): ChallengeParticipant {
+  const alternateEntries = Number(row.drawing_alternate_entries);
   return {
     userId: row.user_id,
     username: row.profiles?.username ?? 'unknown',
@@ -97,6 +102,11 @@ function mapParticipantRow(row: {
     inviteStatus: row.invite_status,
     role: row.role,
     referredBy: row.referred_by ?? null,
+    drawingIneligibleAt: row.drawing_ineligible_at ?? null,
+    drawingAlternateEntry: row.drawing_alternate_entry === true,
+    drawingAlternateEntries: Number.isFinite(alternateEntries)
+      ? Math.max(0, Math.round(alternateEntries))
+      : 0,
   };
 }
 

@@ -1424,6 +1424,14 @@ export function slumberChallengeErrorMessage(err: unknown, fallback: string): st
   if (message.includes('attestation_required')) return 'That person still needs to agree to the official rules.';
   if (message.includes('not_drawing')) return 'That challenge is not a drawing.';
   if (message.includes('invalid_alternate_entries')) return 'AMOE entries must be between 0 and 100.';
+  if (
+    message.includes('schema cache')
+    || message.includes('drawing_compute_entries')
+    || message.includes('referrer_was_participant')
+    || message.includes('admin_set_drawing_participant')
+  ) {
+    return `Drawing AMOE is not fully migrated on this database yet. Apply migrations 228, 231, and 241. ${ADMIN_MIGRATION_HINT}`;
+  }
   return message;
 }
 

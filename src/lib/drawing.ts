@@ -53,7 +53,7 @@ export const DRAWING_ENTRY_KIND_CATALOG: DrawingEntryKindDef[] = [
   {
     kind: 'goal',
     label: 'Goal',
-    adminHint: 'Awarded when they hit the wearable sleep goal. AMOE is a count you set on each person.',
+    adminHint: 'Awarded when they hit the wearable sleep goal. AMOE stacks on top of this count.',
     perEvent: false,
   },
   {
@@ -71,8 +71,11 @@ export type DrawingEntryRule = {
   max: number;
 };
 
+/** Display slices include AMOE, which is not a configurable entry kind. */
+export type DrawingEntrySliceKind = DrawingEntryKindId | 'amoe';
+
 export type DrawingEntrySlice = {
-  kind: DrawingEntryKindId;
+  kind: DrawingEntrySliceKind;
   label: string;
   earned: number;
   max: number;
@@ -80,10 +83,29 @@ export type DrawingEntrySlice = {
 
 export type DrawingEntryBreakdown = {
   slices: DrawingEntrySlice[];
+  /** Lottery total: goal + AMOE + referrals. Matches drawing_compute_entries. */
   earned: number;
+  /** Personal cap: goal max + AMOE + referral max. */
   max: number;
   qualified: boolean;
 };
+
+export function drawingAmoeSlice(
+  breakdown: DrawingEntryBreakdown | null | undefined,
+): DrawingEntrySlice | null {
+  const slice = breakdown?.slices.find((row) => row.kind === 'amoe');
+  return slice && slice.earned > 0 ? slice : null;
+}
+
+/** Personal entry count over raffle caps + AMOE. */
+export function drawingEntriesCountLabel(opts: {
+  earned: number;
+  max: number;
+}): string {
+  return opts.max > 0
+    ? `${opts.earned} / ${opts.max}`
+    : pluralCount(opts.earned, 'entry');
+}
 
 function clampInt(value: unknown, min: number, max: number, fallback: number): number {
   const n = typeof value === 'number' ? value : Number(value);
@@ -181,32 +203,65 @@ export function drawingEntryBreakdown(opts: {
     opts.drawingReferrals === true,
   );
   const slices: DrawingEntrySlice[] = [];
+  let fromGoal = 0;
+  let fromAmoe = 0;
+  let goalMax = 0;
+  let referralEarned = 0;
+  let referralMax = 0;
 
   for (const def of DRAWING_ENTRY_KIND_CATALOG) {
     const rule = rules.find((row) => row.kind === def.kind);
     if (!rule?.enabled || rule.max <= 0) continue;
-    let earned = 0;
     if (def.kind === 'goal') {
       const hitGoal = goalQualified({ ...opts, alternate: false, alternateEntries: 0 });
-      const fromGoal = hitGoal ? rule.entries : 0;
-      const fromAmoe = opts.ineligible
+      fromGoal = hitGoal ? rule.entries : 0;
+      goalMax = rule.max;
+      fromAmoe = opts.ineligible
         ? 0
         : Math.max(0, opts.alternateEntries ?? (opts.alternate ? rule.entries : 0));
-      earned = Math.max(fromGoal, fromAmoe);
-    } else if (def.kind === 'referral') {
-      const events = Math.max(0, opts.referralsQualified ?? 0);
-      earned = Math.min(rule.max, events * rule.entries);
+      slices.push({
+        kind: 'goal',
+        label: def.label,
+        earned: fromGoal,
+        max: goalMax,
+      });
+      if (fromAmoe > 0) {
+        slices.push({
+          kind: 'amoe',
+          label: 'AMOE',
+          earned: fromAmoe,
+          max: fromAmoe,
+        });
+      }
+      continue;
     }
-    slices.push({
-      kind: def.kind,
-      label: def.label,
-      earned,
-      max: def.kind === 'goal' ? Math.max(rule.max, earned) : rule.max,
-    });
+    if (def.kind === 'referral') {
+      const events = Math.max(0, opts.referralsQualified ?? 0);
+      referralEarned = Math.min(rule.max, events * rule.entries);
+      referralMax = rule.max;
+      slices.push({
+        kind: 'referral',
+        label: def.label,
+        earned: referralEarned,
+        max: referralMax,
+      });
+    }
   }
 
-  const earned = slices.reduce((sum, slice) => sum + slice.earned, 0);
-  const max = slices.reduce((sum, slice) => sum + slice.max, 0);
+  if (fromAmoe === 0 && !opts.ineligible) {
+    fromAmoe = Math.max(0, opts.alternateEntries ?? (opts.alternate ? 1 : 0));
+    if (fromAmoe > 0 && !slices.some((slice) => slice.kind === 'amoe')) {
+      slices.unshift({
+        kind: 'amoe',
+        label: 'AMOE',
+        earned: fromAmoe,
+        max: fromAmoe,
+      });
+    }
+  }
+
+  const earned = fromGoal + fromAmoe + referralEarned;
+  const max = goalMax + fromAmoe + referralMax;
   return { slices, earned, max, qualified: earned > 0 };
 }
 
@@ -264,6 +319,7 @@ export type DrawingPoolPerson = {
   referredBy?: string | null;
   ineligible?: boolean;
   alternate?: boolean;
+  alternateEntries?: number;
   hasPostedSleep?: boolean;
 };
 
@@ -328,6 +384,7 @@ export function drawingReferralStatusLine(signups: number, qualified: number): s
 }
 
 /** Hours plus each entry kind, one line. */
+/** Hours plus each entry source, including AMOE. */
 export function drawingEntriesFactsLine(
   accruedMinutes: number,
   goalMinutes: number,
@@ -335,24 +392,41 @@ export function drawingEntriesFactsLine(
 ): string {
   const progress = `${formatMins(accruedMinutes)} / ${goalHours(goalMinutes)}`;
   const kinds = slices
-    .filter((slice) => slice.max > 0)
-    .map((slice) => `${slice.label} ${slice.earned}/${slice.max}`)
+    .filter((slice) => slice.max > 0 || slice.earned > 0)
+    .map((slice) => (
+      slice.kind === 'amoe'
+        ? `${slice.label} ${slice.earned}`
+        : `${slice.label} ${slice.earned}/${slice.max}`
+    ))
     .join(' · ');
   return kinds ? `${progress} · ${kinds}` : progress;
 }
 
 export function drawingPeopleFromRoster(
-  participants: Array<{ userId: string; referredBy?: string | null; inviteStatus?: string }>,
+  participants: Array<{
+    userId: string;
+    referredBy?: string | null;
+    inviteStatus?: string;
+    drawingIneligibleAt?: string | null;
+    drawingAlternateEntry?: boolean;
+    drawingAlternateEntries?: number;
+  }>,
   progress: Array<{ userId: string; accruedMinutes: number }>,
 ): DrawingPoolPerson[] {
   const minutes = new Map(progress.map((row) => [row.userId, row.accruedMinutes]));
   return participants
     .filter((person) => !person.inviteStatus || person.inviteStatus === 'accepted')
-    .map((person) => ({
-      userId: person.userId,
-      accruedMinutes: minutes.get(person.userId) ?? 0,
-      referredBy: person.referredBy ?? null,
-    }));
+    .map((person) => {
+      const alternateEntries = Math.max(0, Math.round(person.drawingAlternateEntries ?? 0));
+      return {
+        userId: person.userId,
+        accruedMinutes: minutes.get(person.userId) ?? 0,
+        referredBy: person.referredBy ?? null,
+        ineligible: person.drawingIneligibleAt != null,
+        alternate: person.drawingAlternateEntry === true || alternateEntries > 0,
+        alternateEntries,
+      };
+    });
 }
 
 export function drawingPoolTotal(opts: {
@@ -377,6 +451,7 @@ export function drawingPoolTotal(opts: {
       referralsQualified,
       ineligible: person.ineligible,
       alternate: person.alternate,
+      alternateEntries: person.alternateEntries,
     }).earned;
   }, 0);
 }
@@ -463,6 +538,9 @@ export function summarizeDrawingStatus(
     : undefined;
   const referralJoinedCount = referral?.signups ?? 0;
   const referralQualifiedCount = referral?.qualified ?? 0;
+  const viewer = opts.currentUserId
+    ? opts.people.find((person) => person.userId === opts.currentUserId)
+    : undefined;
   const breakdown = drawingEntryBreakdown({
     config: challenge.drawingEntryConfig,
     isDrawing: true,
@@ -470,6 +548,9 @@ export function summarizeDrawingStatus(
     accruedMinutes: opts.accruedMinutes,
     goalMinutes: challenge.goalMinutes,
     referralsQualified: referralQualifiedCount,
+    ineligible: viewer?.ineligible,
+    alternate: viewer?.alternate,
+    alternateEntries: viewer?.alternateEntries,
   });
   const pool = drawingPoolTotal({
     config: challenge.drawingEntryConfig,
