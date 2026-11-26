@@ -14,8 +14,9 @@ import AdminGridAction from './AdminGridAction';
 import AdminGridActions from './AdminGridActions';
 import AdminMetricCard from './AdminMetricCard';
 import AdminSection from './AdminSection';
+import AdminUserLink from './AdminUserLink';
 import { dateColumn } from './dateColumn';
-import { gridActionsColumn } from './gridColumnHelpers';
+import { gridActionsColumn, usernameColumn } from './gridColumnHelpers';
 
 export default function AdminCommunity() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -54,13 +55,12 @@ export default function AdminCommunity() {
       minWidth: 160,
       valueGetter: (_v, row) => `${row.emoji ? `${row.emoji} ` : ''}${row.name}`,
     },
-    {
+    usernameColumn<AdminClubRow>('Owner', {
       field: 'owner_username',
-      headerName: 'Owner',
       flex: 1,
       minWidth: 120,
-      valueFormatter: (value) => `@${value}`,
-    },
+      userIdField: 'owner_id',
+    }),
     {
       field: 'member_count',
       headerName: 'Members',
@@ -108,7 +108,12 @@ export default function AdminCommunity() {
     title: (row: AdminClubRow) => `${row.emoji ? `${row.emoji} ` : ''}${row.name}`,
     searchText: (row: AdminClubRow) => `${row.name} ${row.owner_username}`,
     facts: [
-      { label: 'Owner', value: (row: AdminClubRow) => `@${row.owner_username}` },
+      {
+        label: 'Owner',
+        value: (row: AdminClubRow) => (
+          <AdminUserLink id={row.owner_id} username={row.owner_username} />
+        ),
+      },
       { label: 'Members', value: (row: AdminClubRow) => row.member_count },
       { label: 'Posted 7d', value: (row: AdminClubRow) => row.active_members_7d ?? 0 },
     ],

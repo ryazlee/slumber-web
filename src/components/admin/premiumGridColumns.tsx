@@ -57,7 +57,7 @@ export function buildPremiumSubscriberColumns({
   onRevoke,
 }: PremiumColumnOptions): GridColDef<PremiumUserRow>[] {
   return [
-    usernameColumn<PremiumUserRow>('User', { minWidth: 130 }),
+    usernameColumn<PremiumUserRow>('User', { minWidth: 130, userIdField: 'id' }),
     emailColumn<PremiumUserRow>(),
     {
       field: 'grant_type',

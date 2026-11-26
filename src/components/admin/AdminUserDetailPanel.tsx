@@ -159,7 +159,7 @@ export default function AdminUserDetailPanel({
   ].filter(Boolean).join(' · ');
 
   return (
-    <AdminFormDialog open onClose={onClose} title={`@${user.username}`} wide>
+    <AdminFormDialog open onClose={onClose} title={`@${detail?.username ?? user.username}`} wide>
       {onBack ? (
         <div className="admin-user-detail-header-actions">
           <button type="button" className="admin-button admin-button-ghost" onClick={onBack}>

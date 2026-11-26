@@ -1,4 +1,6 @@
-import { APP_STORE_URL, PLAY_STORE_URL, isAndroidUserAgent } from '../lib/deepLinks';
+import { useState, type ReactNode } from 'react';
+import { APP_STORE_URL, isAndroidUserAgent } from '../lib/deepLinks';
+import AndroidBetaPopup from './AndroidBetaPopup';
 
 type StoreKind = 'ios' | 'android';
 
@@ -31,41 +33,73 @@ function PlayIcon() {
   );
 }
 
-const COPY: Record<StoreKind, { href: string; eyebrow: string; title: string; label: string }> = {
+const COPY: Record<StoreKind, { eyebrow: string; title: string; label: string }> = {
   ios: {
-    href: APP_STORE_URL,
     eyebrow: 'Download on the',
     title: 'App Store',
     label: 'Download on the App Store',
   },
   android: {
-    href: PLAY_STORE_URL,
     eyebrow: 'Get it on',
     title: 'Google Play',
     label: 'Get it on Google Play',
   },
 };
 
-export function StoreBadge({ store, emphasis, className = '' }: StoreBadgeProps) {
+function StoreBadgeContent({ store }: { store: StoreKind }) {
   const copy = COPY[store];
-  const preferPlay = isAndroidUserAgent();
-  const resolvedEmphasis =
-    emphasis ?? (store === (preferPlay ? 'android' : 'ios') ? 'primary' : 'secondary');
-
   return (
-    <a
-      href={copy.href}
-      className={`store-badge store-badge--${resolvedEmphasis} ${className}`.trim()}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label={copy.label}
-    >
+    <>
       {store === 'ios' ? <AppleIcon /> : <PlayIcon />}
       <span className="store-badge-text">
         <span className="store-badge-eyebrow">{copy.eyebrow}</span>
         <span className="store-badge-title">{copy.title}</span>
       </span>
-    </a>
+    </>
+  );
+}
+
+export function StoreBadge({ store, emphasis, className = '' }: StoreBadgeProps) {
+  const [androidBetaOpen, setAndroidBetaOpen] = useState(false);
+  const copy = COPY[store];
+  const preferPlay = isAndroidUserAgent();
+  const resolvedEmphasis =
+    emphasis ?? (store === (preferPlay ? 'android' : 'ios') ? 'primary' : 'secondary');
+  const badgeClass = `store-badge store-badge--${resolvedEmphasis} ${className}`.trim();
+
+  let control: ReactNode;
+  if (store === 'android') {
+    control = (
+      <button
+        type="button"
+        className={badgeClass}
+        aria-label={copy.label}
+        onClick={() => setAndroidBetaOpen(true)}
+      >
+        <StoreBadgeContent store={store} />
+      </button>
+    );
+  } else {
+    control = (
+      <a
+        href={APP_STORE_URL}
+        className={badgeClass}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={copy.label}
+      >
+        <StoreBadgeContent store={store} />
+      </a>
+    );
+  }
+
+  return (
+    <>
+      {control}
+      {store === 'android' ? (
+        <AndroidBetaPopup open={androidBetaOpen} onClose={() => setAndroidBetaOpen(false)} />
+      ) : null}
+    </>
   );
 }
 

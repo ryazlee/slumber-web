@@ -26,6 +26,7 @@ import {
 import AdminActivityChart from './AdminActivityChart';
 import AdminMetricCard from './AdminMetricCard';
 import AdminSubsection from './AdminSubsection';
+import AdminUserLink from './AdminUserLink';
 import { formatNumber, metricDelta } from './format';
 import { withCumulativeUsers } from './userGrowth';
 
@@ -538,9 +539,13 @@ export default function AdminHealthSnapshot() {
                 <ol className="admin-inviter-list">
                   {topInviters.map((row) => (
                     <li key={row.user_id} className="admin-inviter-row">
-                      <Link className="admin-inviter-name" to={`/admin/users?q=${encodeURIComponent(row.username)}`}>
+                      <AdminUserLink
+                        id={row.user_id}
+                        username={row.username}
+                        className="admin-inviter-name"
+                      >
                         {row.username}
-                      </Link>
+                      </AdminUserLink>
                       <span className="admin-inviter-count">
                         {formatNumber(row.signups)} invited · {formatNumber(row.posted)} posted
                       </span>

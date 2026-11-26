@@ -7,6 +7,7 @@ import { useAdminChallenges, useAdminClubs } from '../../hooks/useAdmin';
 import AdminGridAction from './AdminGridAction';
 import AdminGridActions from './AdminGridActions';
 import AdminSubsection from './AdminSubsection';
+import AdminUserLink from './AdminUserLink';
 
 const DEFAULT_LIST_CAP = 12;
 
@@ -225,7 +226,7 @@ function ChallengePeople({ row }: { row: AdminChallengeRow }) {
   if (people.length === 0) {
     return (
       <span className="admin-user-rel-people">
-        <Link to={`/profile/${row.creator_id}`} className="admin-inline-link">@{row.creator_username}</Link>
+        <AdminUserLink id={row.creator_id} username={row.creator_username} />
       </span>
     );
   }
@@ -235,7 +236,7 @@ function ChallengePeople({ row }: { row: AdminChallengeRow }) {
       {people.map((person, index) => (
         <span key={person.id}>
           {index > 0 ? ', ' : null}
-          <Link to={`/profile/${person.id}`} className="admin-inline-link">@{person.username}</Link>
+          <AdminUserLink id={person.id} username={person.username} />
         </span>
       ))}
       {extra > 0 ? ` +${extra}` : null}

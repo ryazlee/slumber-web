@@ -20,6 +20,7 @@ import AdminMetricCard from './AdminMetricCard';
 import AdminPostPreviewDialog from './AdminPostPreviewDialog';
 import AdminPostRawPanel from './AdminPostRawPanel';
 import AdminSection, { AdminTableSummary } from './AdminSection';
+import AdminUserLink from './AdminUserLink';
 import { buildRecentPostColumns, postMobileSummary } from './postGridColumns';
 
 const POST_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -158,7 +159,16 @@ export default function AdminPosts({
     <AdminSection
       className="admin-posts"
       lead={userId
-        ? 'Posts for one user in the selected date range.'
+        ? (
+          <>
+            Posts for{' '}
+            <AdminUserLink
+              id={userId}
+              username={posts[0]?.username ?? 'this user'}
+            />
+            {' '}in the selected date range.
+          </>
+        )
         : 'Browse sleep posts in the selected date range (paginated). Inspect the raw sleep_posts row, soft-delete, or open a post. Lookup any post by ID (not shown in the friends feed).'}
       error={error}
     >

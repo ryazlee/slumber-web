@@ -1,8 +1,8 @@
-import { Link } from 'react-router-dom';
 import type { AdminPostEngagement as Engagement, AdminRawRow } from '../../lib/admin';
 import { getOptionalQueryErrorMessage } from '../../lib/queryError';
 import { useAdminPostEngagement } from '../../hooks/useAdmin';
 import CollapsibleSection from '../CollapsibleSection';
+import AdminUserLink from './AdminUserLink';
 import { AdminJsonBlock } from './AdminPostRawJson';
 import { formatWhen } from './format';
 
@@ -22,16 +22,14 @@ function usernameOf(userId: string | null, usernames: Record<string, string>): s
   return usernames[userId] || 'unknown';
 }
 
-function adminUserHref(username: string) {
-  return `/admin/users?q=${encodeURIComponent(username)}`;
-}
-
-function UserLink({ username }: { username: string }) {
+function UserLink({ userId, username }: { userId: string | null; username: string }) {
   if (username === 'unknown') return <span>@{username}</span>;
   return (
-    <Link to={adminUserHref(username)} className="admin-report-link">
-      @{username}
-    </Link>
+    <AdminUserLink
+      id={userId}
+      username={username}
+      className="admin-report-link"
+    />
   );
 }
 
@@ -87,7 +85,7 @@ function EngagementBody({ data }: { data: Engagement }) {
               return (
                 <li key={id} className="admin-engagement-item">
                   <p className="admin-engagement-meta">
-                    <UserLink username={username} />
+                    <UserLink userId={userId} username={username} />
                     {createdAt ? ` · ${formatWhen(createdAt)}` : ''}
                   </p>
                   <blockquote className="admin-report-quote">{text || '—'}</blockquote>
@@ -101,7 +99,7 @@ function EngagementBody({ data }: { data: Engagement }) {
                         return (
                           <span key={likeKey}>
                             {i > 0 ? ', ' : ''}
-                            <UserLink username={likeName} />
+                            <UserLink userId={likeUserId} username={likeName} />
                           </span>
                         );
                       })}
@@ -130,7 +128,7 @@ function EngagementBody({ data }: { data: Engagement }) {
               const key = rowString(row, 'id') ?? `${userId ?? 'kudos'}-${i}`;
               return (
                 <li key={key} className="admin-engagement-kudo">
-                  <UserLink username={username} />
+                  <UserLink userId={userId} username={username} />
                   {createdAt ? (
                     <span className="admin-engagement-meta"> · {formatWhen(createdAt)}</span>
                   ) : null}

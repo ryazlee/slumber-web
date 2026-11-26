@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { AdminPostRaw, RecentPostRow } from '../../lib/admin';
 import { getOptionalQueryErrorMessage } from '../../lib/queryError';
 import { useAdminPost } from '../../hooks/useAdmin';
@@ -5,6 +6,7 @@ import CollapsibleSection from '../CollapsibleSection';
 import AdminFormDialog from './AdminFormDialog';
 import AdminPostEngagement from './AdminPostEngagement';
 import { AdminJsonBlock } from './AdminPostRawJson';
+import AdminUserLink from './AdminUserLink';
 
 type Props = {
   postId: string | null;
@@ -65,6 +67,7 @@ export default function AdminPostPreviewDialog({ postId, row = null, onClose }: 
   const error = getOptionalQueryErrorMessage(query.error, 'Could not load post.');
 
   const username = row?.username?.trim() || null;
+  const userId = row?.user_id?.trim() || rawString(raw, 'user_id');
   const title = row?.title?.trim() || rawString(raw, 'title');
   const sleepDate = row?.sleep_date?.trim() || rawString(raw, 'sleep_date');
   const bedtime = rawString(raw, 'bedtime');
@@ -80,8 +83,13 @@ export default function AdminPostPreviewDialog({ postId, row = null, onClose }: 
   const dreamText = rawString(raw, 'dream_log');
   const deletedAt = rawString(raw, 'deleted_at');
 
-  const facts: { label: string; value: string }[] = [];
-  if (username) facts.push({ label: 'User', value: `@${username}` });
+  const facts: { label: string; value: ReactNode }[] = [];
+  if (username) {
+    facts.push({
+      label: 'User',
+      value: <AdminUserLink id={userId} username={username} />,
+    });
+  }
   if (sleepDate) facts.push({ label: 'Sleep date', value: formatSleepDate(sleepDate) });
   if (title) facts.push({ label: 'Title', value: title });
   if (bedtime) facts.push({ label: 'Bedtime', value: bedtime });

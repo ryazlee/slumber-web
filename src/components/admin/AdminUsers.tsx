@@ -38,12 +38,24 @@ const QUICK_FILTER_LABEL: Record<Exclude<QuickFilter, null>, string> = {
   inactive: 'users with no post in 14 days',
 };
 
+function stubUser(id: string, username = '…'): RecentUserRow {
+  return {
+    id,
+    username,
+    created_at: '',
+    user_roles: null,
+    is_premium: false,
+    posts_count: 0,
+  };
+}
+
 export default function AdminUsers() {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlFilter = (QUICK_FILTERS.some((item) => item.id === searchParams.get('filter'))
     ? searchParams.get('filter')
     : null) as QuickFilter;
   const urlQuery = searchParams.get('q') ?? '';
+  const urlUserId = searchParams.get('user');
 
   const [query, setQuery] = useState(urlQuery);
   const [roleFilter, setRoleFilter] = useState('');
@@ -104,13 +116,23 @@ export default function AdminUsers() {
     setQuery(urlQuery);
   }, [urlQuery]);
 
-  const writeSearchParams = (filter: QuickFilter, nextQuery = query) => {
+  const writeSearchParams = (filter: QuickFilter, nextQuery = query, userId = urlUserId) => {
     const params = new URLSearchParams();
     const trimmed = nextQuery.trim();
     if (trimmed) params.set('q', trimmed);
     if (filter) params.set('filter', filter);
+    if (userId) params.set('user', userId);
     setSearchParams(params);
   };
+
+  const setUserParam = useCallback((userId: string | null) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (userId) next.set('user', userId);
+      else next.delete('user');
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
 
   const resetFilters = () => {
     setQuery('');
@@ -119,21 +141,28 @@ export default function AdminUsers() {
     setMinPosts('');
     setJoinedWithin('');
     setQuickFilter(null);
-    setSearchParams({});
+    setSearchParams((prev) => {
+      const user = prev.get('user');
+      const params = new URLSearchParams();
+      if (user) params.set('user', user);
+      return params;
+    });
   };
 
   const closeDetail = useCallback(() => {
     setSelectedUser(null);
     setDetailHistory([]);
-  }, []);
+    setUserParam(null);
+  }, [setUserParam]);
 
   const goBack = useCallback(() => {
     setDetailHistory((history) => {
       const prev = history[history.length - 1] ?? null;
       setSelectedUser(prev);
+      setUserParam(prev?.id ?? null);
       return history.slice(0, -1);
     });
-  }, []);
+  }, [setUserParam]);
 
   const openDetail = useCallback((user: RecentUserRow, fromGraph = false) => {
     if (fromGraph) {
@@ -147,20 +176,28 @@ export default function AdminUsers() {
       setDetailHistory([]);
       setSelectedUser(user);
     }
-  }, []);
+    setUserParam(user.id);
+  }, [setUserParam]);
 
+  // Deep link: /admin/users?user=<id> opens the detail panel.
+  useEffect(() => {
+    if (!urlUserId) return;
+    setSelectedUser((current) => {
+      if (current?.id === urlUserId) {
+        const known = users.find((row) => row.id === urlUserId);
+        if (known && (current.username === '…' || !current.created_at)) return known;
+        return current;
+      }
+      const known = users.find((row) => row.id === urlUserId);
+      setDetailHistory([]);
+      return known ?? stubUser(urlUserId);
+    });
+  }, [urlUserId, users]);
 
   const openConnectedUser = (user: { id: string; username: string }) => {
     if (selectedUser?.id === user.id) return;
     const known = users.find((row) => row.id === user.id);
-    openDetail(known ?? {
-      id: user.id,
-      username: user.username,
-      created_at: '',
-      user_roles: null,
-      is_premium: false,
-      posts_count: 0,
-    }, true);
+    openDetail(known ?? stubUser(user.id, user.username), true);
   };
 
   const toggleQuickFilter = (next: QuickFilter) => {

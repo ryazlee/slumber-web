@@ -17,6 +17,7 @@ import {
   useAdminDevThreads,
 } from '../../hooks/useAdminDevMessages';
 import AdminSection from './AdminSection';
+import AdminUserLink from './AdminUserLink';
 import { formatWhen } from './format';
 
 /**
@@ -312,7 +313,9 @@ export default function AdminDevMessages() {
                 </button>
                 <div className="admin-dev-pane-heading">
                   <div className="admin-dev-pane-title-row">
-                    <h2 className="admin-dev-pane-title">@{username}</h2>
+                    <h2 className="admin-dev-pane-title">
+                      <AdminUserLink id={picked.id} username={username} className="admin-inline-link" />
+                    </h2>
                     {selectedWaiting ? <span className="admin-dev-waiting">Waiting</span> : null}
                   </div>
                   <Link to={`/profile/${picked.id}`} className="admin-dev-profile">

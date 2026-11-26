@@ -31,6 +31,7 @@ import AdminGridActions from './AdminGridActions';
 import AdminListToolbar from './AdminListToolbar';
 import { pluralCount } from './format';
 import AdminSection from './AdminSection';
+import AdminUserLink from './AdminUserLink';
 import { AdminStatusPill, gridActionsColumn } from './gridColumnHelpers';
 
 const STATUS_FILTERS: { value: string; label: string }[] = [
@@ -740,9 +741,7 @@ function DrawingRosterDialog({
             {people.map((person) => (
               <tr key={person.user_id}>
                 <td>
-                  <Link to={`/profile/${person.user_id}`} className="admin-inline-link">
-                    @{person.username}
-                  </Link>
+                  <AdminUserLink id={person.user_id} username={person.username} />
                 </td>
                 <td>{person.email ?? '—'}</td>
                 <td>{Math.round((person.accrued_minutes / 60) * 10) / 10}</td>
@@ -752,7 +751,14 @@ function DrawingRosterDialog({
                   {(person.drawing_alternate_entries ?? 0) > 0 ? ` · AMOE ${person.drawing_alternate_entries}` : ''}
                 </td>
                 {includeReferrals ? (
-                  <td>{person.referred_by_username ? `@${person.referred_by_username}` : '—'}</td>
+                  <td>
+                    {person.referred_by_username ? (
+                      <AdminUserLink
+                        id={person.referred_by}
+                        username={person.referred_by_username}
+                      />
+                    ) : '—'}
+                  </td>
                 ) : null}
                 {includeReferrals ? (
                   <td>{drawingReferralCountsLine(person.referrals_joined, person.referrals_qualified)}</td>

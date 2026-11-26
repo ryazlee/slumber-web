@@ -17,6 +17,7 @@ import AdminMetricCard from './AdminMetricCard';
 import AdminFormDialog from './AdminFormDialog';
 import AdminSection, { AdminTableSummary } from './AdminSection';
 import { AdminUserPickerList, AdminUserPickerSearchField } from './AdminUserPicker';
+import AdminUserLink from './AdminUserLink';
 import { pluralCount, formatNumber } from './format';
 import { buildPremiumSubscriberColumns, premiumMobileSummary } from './premiumGridColumns';
 
@@ -248,7 +249,8 @@ export default function AdminPremium() {
           {selectedUser ? (
             <div className="admin-premium-grant-form">
               <p className="admin-muted">
-                Granting <strong>@{selectedUser.username}</strong>
+                Granting{' '}
+                <AdminUserLink id={selectedUser.id} username={selectedUser.username} />
                 {selectedUser.is_premium ? ' · already Premium — save to update expiry' : ''}
               </p>
               <div className="admin-form-actions">

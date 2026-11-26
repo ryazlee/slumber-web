@@ -16,7 +16,8 @@ import AdminGridAction from './AdminGridAction';
 import AdminGridActions from './AdminGridActions';
 import AdminMetricCard from './AdminMetricCard';
 import AdminSection from './AdminSection';
-import { AdminStatusPill, gridActionsColumn } from './gridColumnHelpers';
+import AdminUserLink from './AdminUserLink';
+import { AdminStatusPill, gridActionsColumn, usernameColumn } from './gridColumnHelpers';
 import { dateColumn } from './dateColumn';
 
 function formatGoalMinutes(minutes: number): string {
@@ -33,7 +34,12 @@ const challengeMobileSummary = {
     </AdminStatusPill>
   ),
   facts: [
-    { label: 'Creator', value: (row: AdminChallengeRow) => `@${row.creator_username}` },
+    {
+      label: 'Creator',
+      value: (row: AdminChallengeRow) => (
+        <AdminUserLink id={row.creator_id} username={row.creator_username} />
+      ),
+    },
     { label: 'Players', value: (row: AdminChallengeRow) => row.participant_count },
     { label: 'Goal', value: (row: AdminChallengeRow) => formatGoalMinutes(row.goal_minutes) },
   ],
@@ -95,13 +101,12 @@ export default function AdminChallenges() {
         </AdminStatusPill>
       ),
     },
-    {
+    usernameColumn<AdminChallengeRow>('Creator', {
       field: 'creator_username',
-      headerName: 'Creator',
       flex: 1,
       minWidth: 120,
-      valueFormatter: (value) => `@${value}`,
-    },
+      userIdField: 'creator_id',
+    }),
     {
       field: 'goal_minutes',
       headerName: 'Goal',

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { GridColDef } from '@mui/x-data-grid';
 import { dateColumn } from './dateColumn';
 import AdminCopyButton from './AdminCopyButton';
+import AdminUserLink from './AdminUserLink';
 
 export function renderIdCode(value: unknown) {
   return value ? <code className="admin-code">{String(value)}</code> : '—';
@@ -29,12 +30,17 @@ export function idCodeColumn<T extends Record<string, unknown>>(
   };
 }
 
+type UsernameColumnOverrides<T extends Record<string, unknown>> = Partial<GridColDef<T>> & {
+  /** When set, the cell links to that user’s admin detail panel. */
+  userIdField?: string;
+};
+
 export function usernameColumn<T extends Record<string, unknown>>(
   headerName = 'Username',
-  overrides: Partial<GridColDef<T>> = {},
+  overrides: UsernameColumnOverrides<T> = {},
 ): GridColDef<T> {
   const field = (overrides.field ?? 'username') as Extract<keyof T, string>;
-  const { field: _field, ...rest } = overrides;
+  const { field: _field, userIdField, renderCell: overrideRenderCell, ...rest } = overrides;
   return {
     field,
     headerName,
@@ -42,6 +48,11 @@ export function usernameColumn<T extends Record<string, unknown>>(
     minWidth: 120,
     valueGetter: (_value, row) => String(row[field] ?? ''),
     valueFormatter: (value) => (value ? `@${value}` : '—'),
+    renderCell: overrideRenderCell ?? (({ row, value }) => {
+      const username = String(value ?? row[field] ?? '');
+      const id = userIdField ? String(row[userIdField] ?? '') : undefined;
+      return <AdminUserLink id={id || undefined} username={username} />;
+    }),
     ...rest,
   };
 }

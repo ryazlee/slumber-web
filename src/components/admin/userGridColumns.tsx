@@ -39,7 +39,7 @@ export function buildAdminUserSearchColumns(
   { renderActions }: UserSearchOptions = {},
 ): GridColDef<RecentUserRow>[] {
   const cols: GridColDef<RecentUserRow>[] = [
-    usernameColumn<RecentUserRow>('User', { minWidth: 130, flex: 1.1 }),
+    usernameColumn<RecentUserRow>('User', { minWidth: 130, flex: 1.1, userIdField: 'id' }),
     emailColumn<RecentUserRow>(),
     {
       field: 'user_roles',

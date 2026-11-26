@@ -6,6 +6,8 @@ import { pluralCount } from '../../lib/format';
 import { getOptionalQueryErrorMessage } from '../../lib/queryError';
 import { useAdminClubRoster } from '../../hooks/useAdmin';
 import AdminFormDialog from './AdminFormDialog';
+import AdminUserLink from './AdminUserLink';
+import { adminUserPath } from './adminPaths';
 
 type Props = {
   clubId: string;
@@ -70,24 +72,28 @@ export default function AdminClubRoster({ clubId, onClose }: Props) {
             {pluralCount(roster.active_members_7d, 'posted this week')}
             {roster.pending_invites > 0 ? ` · ${pluralCount(roster.pending_invites, 'pending invite')}` : ''}
             {' · '}
-            @{roster.owner_username}
+            <AdminUserLink id={roster.owner_id} username={roster.owner_username} />
           </p>
           {roster.description ? <p className="admin-club-roster-description">{roster.description}</p> : null}
           {roster.members.length === 0 ? (
             <p className="admin-muted">No members.</p>
           ) : (
             <ul className="admin-user-rel-list admin-live-list">
-              {roster.members.map((member) => (
-                <li key={member.id}>
-                  <Link to={`/profile/${member.id}`} className="admin-user-rel-row">
-                    <span className="admin-user-rel-main">
-                      <span className="admin-user-rel-title">@{member.username}</span>
-                      <span className="admin-user-rel-meta">{memberMeta(member)}</span>
-                    </span>
-                    <span className="admin-user-rel-go">Profile</span>
-                  </Link>
-                </li>
-              ))}
+              {roster.members.map((member) => {
+                const to = adminUserPath({ id: member.id, username: member.username });
+                if (!to) return null;
+                return (
+                  <li key={member.id}>
+                    <Link to={to} className="admin-user-rel-row">
+                      <span className="admin-user-rel-main">
+                        <span className="admin-user-rel-title">@{member.username}</span>
+                        <span className="admin-user-rel-meta">{memberMeta(member)}</span>
+                      </span>
+                      <span className="admin-user-rel-go">User</span>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </>

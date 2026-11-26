@@ -19,6 +19,7 @@ import AdminFieldGroup from './AdminFieldGroup';
 import AdminFilterBar, { AdminFilterField } from './AdminFilterBar';
 import AdminFormDialog from './AdminFormDialog';
 import AdminSection from './AdminSection';
+import AdminUserLink from './AdminUserLink';
 import { formatWhen } from './format';
 
 const MESSAGE_MAX = 500;
@@ -229,7 +230,11 @@ export default function AdminNotify() {
           {selectedUser ? (
             <div className="admin-recipient-chip">
               <span className="admin-recipient-label">To</span>
-              <span className="admin-recipient-name">@{selectedUser.username}</span>
+              <AdminUserLink
+                id={selectedUser.id}
+                username={selectedUser.username}
+                className="admin-recipient-name"
+              />
               {selectedUser.email ? <span className="admin-recipient-email">{selectedUser.email}</span> : null}
             </div>
           ) : (

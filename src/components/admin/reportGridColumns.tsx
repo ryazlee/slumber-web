@@ -1,5 +1,6 @@
 import type { GridColDef } from '@mui/x-data-grid';
 import type { CommentReportRow, PostReportRow } from '../../lib/admin';
+import AdminUserLink from './AdminUserLink';
 import { formatWhen } from './format';
 import {
   AdminStatusPill,
@@ -66,7 +67,13 @@ function reporterColumns<T extends {
   reporter_id: string;
 }>(): GridColDef<T>[] {
   return [
-    usernameColumn<T>('Reporter', { flex: 0.8, minWidth: 110, width: 130 }),
+    usernameColumn<T>('Reporter', {
+      field: 'reporter',
+      flex: 0.8,
+      minWidth: 110,
+      width: 130,
+      userIdField: 'reporter_id',
+    }),
     emailColumn<T>('Reporter email', { field: 'reporter_email', flex: 1, minWidth: 160 }),
     idCodeColumn<T>('reporter_id', 'Reporter ID'),
   ];
@@ -82,8 +89,18 @@ export const postReportMobileSummary: AdminMobileSummary = {
   ),
   facts: [
     { label: 'Post', value: (row: PostReportRow) => row.title?.trim() || '—' },
-    { label: 'Author', value: (row: PostReportRow) => `@${row.author}` },
-    { label: 'Reporter', value: (row: PostReportRow) => `@${row.reporter}` },
+    {
+      label: 'Author',
+      value: (row: PostReportRow) => (
+        <AdminUserLink id={row.author_id} username={row.author} />
+      ),
+    },
+    {
+      label: 'Reporter',
+      value: (row: PostReportRow) => (
+        <AdminUserLink id={row.reporter_id} username={row.reporter} />
+      ),
+    },
     { label: 'When', value: (row: PostReportRow) => (row.created_at ? formatWhen(row.created_at) : '—') },
   ],
 };
@@ -94,7 +111,12 @@ export const commentReportMobileSummary: AdminMobileSummary = {
   facts: [
     { label: 'Comment', value: (row: CommentReportRow) => row.comment_text?.trim() || '—' },
     { label: 'Post', value: (row: CommentReportRow) => row.post_title?.trim() || '—' },
-    { label: 'Author', value: (row: CommentReportRow) => `@${row.author}` },
+    {
+      label: 'Author',
+      value: (row: CommentReportRow) => (
+        <AdminUserLink id={row.author_id} username={row.author} />
+      ),
+    },
     { label: 'When', value: (row: CommentReportRow) => (row.created_at ? formatWhen(row.created_at) : '—') },
   ],
 };
@@ -110,7 +132,13 @@ export function buildPostReportColumns(): GridColDef<PostReportRow>[] {
       valueGetter: (_value, row) => row.title?.trim() || '',
       valueFormatter: (value) => (value ? String(value) : '—'),
     },
-    usernameColumn<PostReportRow>('Author', { field: 'author', flex: 0.7, minWidth: 110, width: 130 }),
+    usernameColumn<PostReportRow>('Author', {
+      field: 'author',
+      flex: 0.7,
+      minWidth: 110,
+      width: 130,
+      userIdField: 'author_id',
+    }),
     ...reporterColumns<PostReportRow>(),
     loggedAtColumn<PostReportRow>('created_at', 'Reported'),
     {
@@ -170,7 +198,13 @@ export function buildCommentReportColumns(): GridColDef<CommentReportRow>[] {
       valueGetter: (_value, row) => row.post_title?.trim() || '',
       valueFormatter: (value) => (value ? String(value) : '—'),
     },
-    usernameColumn<CommentReportRow>('Author', { field: 'author', flex: 0.7, minWidth: 110, width: 130 }),
+    usernameColumn<CommentReportRow>('Author', {
+      field: 'author',
+      flex: 0.7,
+      minWidth: 110,
+      width: 130,
+      userIdField: 'author_id',
+    }),
     ...reporterColumns<CommentReportRow>(),
     loggedAtColumn<CommentReportRow>('created_at', 'Reported'),
     {

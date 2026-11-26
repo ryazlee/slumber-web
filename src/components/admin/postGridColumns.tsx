@@ -4,10 +4,12 @@ import AdminGridAction from './AdminGridAction';
 import AdminGridActions from './AdminGridActions';
 import AdminPostRawCell from './AdminPostRawCell';
 import { dateColumn } from './dateColumn';
+import AdminUserLink from './AdminUserLink';
 import {
   AdminStatusPill,
   gridActionsColumn,
   idCodeColumn,
+  usernameColumn,
   type AdminMobileSummary,
 } from './gridColumnHelpers';
 
@@ -64,7 +66,12 @@ export const postMobileSummary: AdminMobileSummary = {
   searchText: (row: RecentPostRow) => [row.title, row.username, postSourceLabel(row), row.sleep_date].filter(Boolean).join(' '),
   status: (row: RecentPostRow) => <AdminStatusPill>{postSourceLabel(row)}</AdminStatusPill>,
   facts: [
-    { label: 'User', value: (row: RecentPostRow) => `@${row.username}` },
+    {
+      label: 'User',
+      value: (row: RecentPostRow) => (
+        <AdminUserLink id={row.user_id} username={row.username} />
+      ),
+    },
     { label: 'Night', value: (row: RecentPostRow) => sleepDateLabel(row) },
     {
       label: 'Asleep',
@@ -81,14 +88,11 @@ export function buildRecentPostColumns(
   const { actingPostId = null, expandedRawIds, onToggleRaw, onOpenPost, onSoftDelete } = options;
 
   const cols: GridColDef<RecentPostRow>[] = [
-    {
-      field: 'username',
-      headerName: 'User',
+    usernameColumn<RecentPostRow>('User', {
       flex: 0.8,
       minWidth: 110,
-      valueGetter: (_value, row) => row.username,
-      valueFormatter: (value) => `@${value}`,
-    },
+      userIdField: 'user_id',
+    }),
     {
       field: 'sleep_date',
       headerName: 'Sleep date',

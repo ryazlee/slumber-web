@@ -3408,6 +3408,44 @@ button.app-back-link {
   padding: 12px 0;
 }
 
+.android-beta-popup {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.android-beta-popup p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.android-beta-popup a {
+  color: var(--accent-bright);
+  word-break: break-word;
+}
+
+.android-beta-popup-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #fff !important;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  text-align: center;
+}
+
+.android-beta-popup-cta:hover {
+  filter: brightness(1.08);
+}
+
 /* Kudos popup */
 .kudos-list {
   list-style: none;

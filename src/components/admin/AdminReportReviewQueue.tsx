@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import type { CommentReportGroup, PostReportGroup } from '../../lib/groupReports';
 import { formatRoleList } from '../../lib/userRoles';
 import AdminCopyButton from './AdminCopyButton';
 import AdminGridAction from './AdminGridAction';
 import AdminGridActions from './AdminGridActions';
+import AdminUserLink from './AdminUserLink';
 import { formatWhen } from './format';
 
 type Tab = 'posts' | 'comments';
@@ -27,12 +27,9 @@ function sleepDateLabel(value: string) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function adminUserHref(username: string) {
-  return `/admin/users?q=${encodeURIComponent(username)}`;
-}
-
 function AuthorMeta({
   author,
+  authorId,
   authorJoined,
   authorPostsCount,
   authorReportCount,
@@ -50,9 +47,7 @@ function AuthorMeta({
       <div>
         <dt>Author</dt>
         <dd>
-          <Link to={adminUserHref(author)} className="admin-report-link">
-            @{author}
-          </Link>
+          <AdminUserLink id={authorId} username={author} className="admin-report-link" />
         </dd>
       </div>
       <div>
@@ -77,6 +72,7 @@ function AuthorMeta({
 
 function ReporterContact({
   reporter,
+  reporterId,
   reporterEmail,
 }: {
   reporter: string;
@@ -85,9 +81,7 @@ function ReporterContact({
 }) {
   return (
     <div className="admin-report-reporter">
-      <Link to={adminUserHref(reporter)} className="admin-report-link">
-        @{reporter}
-      </Link>
+      <AdminUserLink id={reporterId} username={reporter} className="admin-report-link" />
       {reporterEmail ? (
         <span className="admin-report-reporter-email">
           <a href={`mailto:${reporterEmail}`} className="admin-report-link">

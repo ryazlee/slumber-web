@@ -1,8 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   APP_STORE_URL,
-  PLAY_STORE_URL,
   buildSchemeUrl,
   isAndroidUserAgent,
   isRestrictedInAppBrowser,
@@ -10,6 +9,7 @@ import {
   tryOpenInApp,
 } from '../lib/deepLinks';
 import { detectInAppBrowser } from '../lib/inAppBrowserEscape';
+import AndroidBetaPopup from './AndroidBetaPopup';
 
 export type DeepLinkIntent =
   | 'friend-invite'
@@ -54,20 +54,6 @@ type Props = {
 
 const base = import.meta.env.BASE_URL;
 
-function storeLinks() {
-  const preferPlay = isAndroidUserAgent();
-  return {
-    primaryHref: preferPlay ? PLAY_STORE_URL : APP_STORE_URL,
-    primaryLabel: preferPlay
-      ? 'Get Slumber on Google Play'
-      : 'Get Slumber on the App Store',
-    secondaryHref: preferPlay ? APP_STORE_URL : PLAY_STORE_URL,
-    secondaryLabel: preferPlay
-      ? 'Get Slumber on the App Store'
-      : 'Get Slumber on Google Play',
-  };
-}
-
 export default function DeepLinkLanding({
   intent,
   title,
@@ -78,9 +64,12 @@ export default function DeepLinkLanding({
   error = null,
   previewEmoji = null,
 }: Props) {
+  const [androidBetaOpen, setAndroidBetaOpen] = useState(false);
   const schemeUrl = buildSchemeUrl(schemePath);
   const previewIcon = previewEmoji?.trim() || INTENT_ICON[intent];
-  const stores = storeLinks();
+  const preferPlay = isAndroidUserAgent();
+  const appStoreLabel = 'Get Slumber on the App Store';
+  const playStoreLabel = 'Get Slumber on Google Play';
 
   useEffect(() => {
     return scheduleAppOpen(schemeUrl);
@@ -93,6 +82,27 @@ export default function DeepLinkLanding({
 
   const inAppBrowser = isRestrictedInAppBrowser();
   const captiveApp = detectInAppBrowser();
+
+  const appStoreLink = (
+    <a
+      href={APP_STORE_URL}
+      className="deeplink-cta-store"
+      target="_blank"
+      rel="noreferrer"
+    >
+      {appStoreLabel}
+    </a>
+  );
+
+  const playStoreControl = (
+    <button
+      type="button"
+      className="deeplink-cta-store"
+      onClick={() => setAndroidBetaOpen(true)}
+    >
+      {playStoreLabel}
+    </button>
+  );
 
   return (
     <main className="deeplink-page">
@@ -141,22 +151,8 @@ export default function DeepLinkLanding({
         >
           {captiveApp ? 'Continue in Safari' : 'Open in Slumber'}
         </button>
-        <a
-          href={stores.primaryHref}
-          className="deeplink-cta-store"
-          target="_blank"
-          rel="noreferrer"
-        >
-          {stores.primaryLabel}
-        </a>
-        <a
-          href={stores.secondaryHref}
-          className="deeplink-cta-store"
-          target="_blank"
-          rel="noreferrer"
-        >
-          {stores.secondaryLabel}
-        </a>
+        {preferPlay ? playStoreControl : appStoreLink}
+        {preferPlay ? appStoreLink : playStoreControl}
         <p className="deeplink-cta-hint">
           {captiveApp === 'instagram' ? (
             <>Opening in Safari… If nothing happens, tap <strong>Continue in Safari</strong>.</>
@@ -173,6 +169,8 @@ export default function DeepLinkLanding({
         <span aria-hidden>·</span>
         <Link to="/privacy">Privacy</Link>
       </footer>
+
+      <AndroidBetaPopup open={androidBetaOpen} onClose={() => setAndroidBetaOpen(false)} />
     </main>
   );
 }
